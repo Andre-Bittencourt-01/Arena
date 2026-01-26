@@ -1,0 +1,5 @@
+{
+  "name": "Arena MMA",
+  "description": "A mobile-first Fantasy MMA Pick'em platform where users predict fight outcomes, methods, and rounds to earn points and climb rankings.",
+  "requestFramePermissions": []
+}

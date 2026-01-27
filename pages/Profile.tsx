@@ -1,18 +1,47 @@
 import React from 'react';
 import { Screen } from '../App';
+import { useData } from '../contexts/DataContext';
 
 interface ProfileProps {
   onNavigate: (screen: Screen) => void;
 }
 
 const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
+  const { user, leaderboard } = useData();
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+        <div className="p-8 bg-card-dark rounded-xl border border-white/10 text-center max-w-md w-full">
+          <span className="material-symbols-outlined text-6xl text-white/20 mb-4">account_circle</span>
+          <h2 className="text-2xl font-bold font-condensed uppercase text-white mb-2">Login Necessário</h2>
+          <p className="text-gray-400 mb-6 font-mono text-sm">Faça login para acessar seu perfil e estatísticas.</p>
+          <button
+            onClick={() => onNavigate('login')}
+            className="w-full bg-primary hover:bg-primary-hover text-white font-bold font-condensed uppercase py-3 rounded shadow-neon transition-all"
+          >
+            Fazer Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate Rank
+  const userRankIndex = leaderboard.findIndex(u => u.id === user.id);
+  const userRank = userRankIndex !== -1 ? userRankIndex + 1 : 'N/A';
+  const totalUsers = leaderboard.length;
+  const rankPercentile = userRank !== 'N/A' && totalUsers > 0
+    ? Math.max(1, Math.ceil((Number(userRank) / totalUsers) * 100))
+    : 0;
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <section className="bg-card-dark rounded-sm border border-border-dark shadow-xl relative overflow-hidden">
         <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, #ec1313 0%, transparent 20%)' }}></div>
         <div className="p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-8 relative z-10">
           <div className="relative flex-shrink-0">
-            <div className="bg-center bg-no-repeat bg-cover h-32 w-32 md:h-40 md:w-40 rounded-sm border border-primary shadow-[0_0_20px_rgba(236,19,19,0.2)]" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuAy_EapvkihGHiQdlGtKfFdNmiZx3VvFs-MHE_SVfJKDEptqqHTTRYAJLrxu1UxckjC5Neaz8Kuz_2VdZW_6aqRNLHhG0vIBlHi_p7THDHm95EB3y4qZvNtS_3huGZqCN7Im10UM13f9LibTNaxNHi0_tIjeMq3PYBIHtYFoY9EHvjWVas_5bWwgfKlAsIQ3kv94xnrvbHOQtvshYYZv3-RIroS0qL6B8_IzhS6eDm9lBhBSlSxG29v2ujioIKWgpOA7mer0_6c9XDp")' }}></div>
+            <div className="bg-center bg-no-repeat bg-cover h-32 w-32 md:h-40 md:w-40 rounded-sm border border-primary shadow-[0_0_20px_rgba(236,19,19,0.2)]" style={{ backgroundImage: `url("${user.avatar_url}")` }}></div>
             <div className="absolute -bottom-2 -right-2 bg-primary text-white text-[10px] font-bold font-condensed px-2 py-0.5 rounded-sm uppercase tracking-wider shadow-md">
               Pro Member
             </div>
@@ -20,17 +49,17 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
           <div className="flex-1 w-full">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
               <div>
-                <h1 className="text-4xl md:text-5xl font-bold font-condensed uppercase leading-none tracking-tight text-white mb-1">Campeão do Octógono</h1>
-                <p className="text-text-secondary text-base font-medium font-mono mb-3">@usuario_mma</p>
+                <h1 className="text-4xl md:text-5xl font-bold font-condensed uppercase leading-none tracking-tight text-white mb-1">{user.name}</h1>
+                <p className="text-text-secondary text-base font-medium font-mono mb-3">{user.email}</p>
                 <div className="flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-1 bg-border-dark px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider text-white border border-white/5">
                     <span className="material-symbols-outlined !text-sm text-primary">verified</span> Verificado
                   </span>
                   <span className="inline-flex items-center gap-1 bg-border-dark px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider text-white border border-white/5">
-                    <span className="material-symbols-outlined !text-sm text-text-secondary">calendar_month</span> Desde 2023
+                    <span className="material-symbols-outlined !text-sm text-text-secondary">calendar_month</span> Desde 2025
                   </span>
                   <span className="inline-flex items-center gap-1 bg-border-dark px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider text-white border border-white/5">
-                    <span className="material-symbols-outlined !text-sm text-text-secondary">group</span> Team Alpha
+                    <span className="material-symbols-outlined !text-sm text-text-secondary">group</span> Team Arena
                   </span>
                 </div>
               </div>
@@ -54,15 +83,15 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             <div className="grid grid-cols-3 gap-4 mt-6 border-t border-border-dark pt-6 w-full md:max-w-lg">
               <div>
                 <span className="block text-xs text-text-secondary uppercase tracking-widest font-bold">Vitórias</span>
-                <span className="block text-xl font-bold font-condensed text-white">245</span>
+                <span className="block text-xl font-bold font-condensed text-white">24</span>
               </div>
               <div>
                 <span className="block text-xs text-text-secondary uppercase tracking-widest font-bold">Precisão</span>
-                <span className="block text-xl font-bold font-condensed text-white">68%</span>
+                <span className="block text-xl font-bold font-condensed text-white">65%</span>
               </div>
               <div>
                 <span className="block text-xs text-text-secondary uppercase tracking-widest font-bold">Ligas</span>
-                <span className="block text-xl font-bold font-condensed text-white">4</span>
+                <span className="block text-xl font-bold font-condensed text-white">1</span>
               </div>
             </div>
           </div>
@@ -80,10 +109,10 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 <span className="material-symbols-outlined text-primary !text-lg">equalizer</span>
                 <h3 className="text-sm font-bold uppercase tracking-widest text-text-secondary">Pontos Totais</h3>
               </div>
-              <p className="text-6xl font-bold font-condensed text-white tracking-tight">12,450</p>
+              <p className="text-6xl font-bold font-condensed text-white tracking-tight">{user.points}</p>
               <div className="mt-2 inline-flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded text-green-500 text-xs font-bold uppercase tracking-wide border border-green-500/20">
                 <span className="material-symbols-outlined !text-sm">trending_up</span>
-                +125 ESTA SEMANA
+                +50 ESTA SEMANA
               </div>
             </div>
           </div>
@@ -96,10 +125,10 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 <span className="material-symbols-outlined text-primary !text-lg">public</span>
                 <h3 className="text-sm font-bold uppercase tracking-widest text-text-secondary">Ranking Atual</h3>
               </div>
-              <p className="text-6xl font-bold font-condensed text-white tracking-tight">#42</p>
+              <p className="text-6xl font-bold font-condensed text-white tracking-tight">#{userRank}</p>
               <div className="mt-2 inline-flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded text-green-500 text-xs font-bold uppercase tracking-wide border border-green-500/20">
                 <span className="material-symbols-outlined !text-sm">arrow_upward</span>
-                TOP 1% GLOBAL
+                TOP {rankPercentile}% GLOBAL
               </div>
             </div>
           </div>
@@ -112,10 +141,10 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 <span className="material-symbols-outlined text-primary !text-lg">military_tech</span>
                 <h3 className="text-sm font-bold uppercase tracking-widest text-text-secondary">Melhor Rodada</h3>
               </div>
-              <p className="text-6xl font-bold font-condensed text-white tracking-tight">UFC 299</p>
+              <p className="text-6xl font-bold font-condensed text-white tracking-tight">UFC 315</p>
               <div className="mt-2 inline-flex items-center gap-1 bg-border-dark px-2 py-0.5 rounded text-text-secondary text-xs font-bold uppercase tracking-wide border border-white/5">
                 <span className="material-symbols-outlined !text-sm">check</span>
-                1.250 PTS OBTIDOS
+                Em Breve
               </div>
             </div>
           </div>

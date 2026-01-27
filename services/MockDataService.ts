@@ -16,6 +16,8 @@ const MOCK_NAMES = [
 const WEIGHT_CLASSES = ['Mosca', 'Galo', 'Pena', 'Leve', 'Meio-Médio', 'Médio', 'M. Pesado', 'Pesado'];
 const METHODS = ['KO/TKO', 'DEC', 'SUB', 'DQ'];
 
+const DECISION_TYPES = ['UNÂNIME', 'DIVIDIDA', 'MAJORITÁRIA'];
+
 const initialFighters: Record<string, Fighter> = {
     'omally': { id: 'omally', name: "Sean O'Malley", nickname: "Suga", image_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuA3IRQha8n77KLDV0WzOA4olQxonShActFOXs5yazG1ixoRPnmRutcox7D4uPTVjBjzNF7o-j35uiE7InRiST6WYYrFnQVlOvbNMC4rIenFG5B7tEOdgS5q_g1NXhyDxWPulWy0WkCqlL7hDdjt1klmHW7RfK2y0IxH0XqTY0_qUx0hGdng9PpF8IcS5qF2KaF2NQhdty3zqZb6f7Cb861du0ik2jM-IrKDkB4ky0pw7KEX8versByc1qYfOvcU9f_hMphq9GRoUHa8", wins: 17, losses: 1, draws: 0, nc: 0 },
     'vera': { id: 'vera', name: "Marlon Vera", nickname: "Chito", image_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuADYyB70cnUW8i9Pjx9MLu8vAuG8Jz51kqMdOLfuqDyufWvn_kX0ZtzXCyOqO77Jpmioo65PH4Vdbwd2OyZATgcYEW2TsY4WRQJS8voi1lEYcWf1K8cKHyyUxyuGSbBnwTzCE3FAJXkjmBvOtl_IX96Vv4ej-_P4coQfv-msxG9HdyJQjUvEJxt9U_9yLrWk2BVYJl5xsToT2awspqn0a3wzXBHrUUOttcK8fQoDgjfOtZja3O-cJCQBskQNWa9aTNJ7j5AgweyuTnZ", wins: 23, losses: 8, draws: 1, nc: 0 },
@@ -25,54 +27,54 @@ const initialFighters: Record<string, Fighter> = {
 
 const initialEvents: Event[] = [
     {
-        id: 'evt_ufc315',
-        title: 'UFC 315',
-        subtitle: 'Oliveira vs Gaethje 2',
-        date: '2025-06-15T19:00:00',
-        end_date: '2025-06-16T03:00:00',
-        location: 'São Paulo, Brasil',
-        banner_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD3frgPNFP4IJ06mcTS-uCpzSkETqvBkGGSKGVpOag4hr4JfgwkrbvzhtCrsuFjM_BpLaWGg0NmxmNTNdLOREbTDuTtOcM9A-h1aXbw-8r5PEV9Vyg6g68LvevlYzdbIZ0O6QVZdlCbEAaj1LU2CU2e5tp2fwgoaBmyyk3204MHt8bNJPiccia-0fiCjNEj4t3zIOXH1_KmQlh3iFc5-1ojBQ96Z_-WX_eY2jy9nq_EGOyLtztYYvJidlg2v1VY0a6uZL6xbdfaQFiT',
+        id: 'evt_jan03',
+        title: 'UFC Fight Night',
+        subtitle: 'Holloway vs Topuria',
+        date: '2026-01-03T18:00:00',
+        end_date: '2026-01-04T02:00:00',
+        location: 'Las Vegas, NV',
+        banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-10/102624-ufc-308-matchup-holloway-topuria-1920x1080-1.jpg?h=d1cb525d&itok=123',
         status: 'completed'
     },
     {
-        id: 'evt_ufc320',
-        title: 'UFC 320',
-        subtitle: 'Makhachev vs Volkanovski 3',
-        date: '2025-11-20T18:00:00',
-        end_date: '2025-11-21T02:00:00',
+        id: 'evt_jan10',
+        title: 'UFC Fight Night',
+        subtitle: 'Whittaker vs Chimaev',
+        date: '2026-01-10T20:00:00',
+        end_date: '2026-01-11T04:00:00',
         location: 'Abu Dhabi, UAE',
-        banner_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDfucuAO00sbi3ih6JvIl869557kzBYOJAzDX50t47vJGJJsLQs9nGZG7ihrlNEJbvlmNHhPe9yZJhmFNMbMR0pblHUkAFLAkj40nBZ_BYOcN6HrQJ2cKPiVZI-Jx1u6EKjNAfRFi_wwRz4av6M48CoV0p21kRkh590rT4BaB8dR6rlJN12m26r-XDqbBqd6EqIrOc6ZhOfQezDRaVIh0hDcH7k6JAQ5CQzCDWdWdALMzf9Ci7Tnj4pQba49kKGzU2sf78XtzF-_7om',
+        banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-10/102624-ufc-308-matchup-whittaker-chimaev-1920x1080-1.jpg?h=d1cb525d&itok=123',
         status: 'completed'
     },
     {
-        id: 'evt_ufc330',
-        title: 'UFC 330',
+        id: 'evt_jan17',
+        title: 'UFC 312',
+        subtitle: 'Du Plessis vs Adesanya 2',
+        date: '2026-01-17T22:00:00',
+        end_date: '2026-01-18T06:00:00',
+        location: 'Perth, Australia',
+        banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-08/081724-ufc-305-matchup-du-plessis-adesanya-1920x1080-1.jpg?h=d1cb525d&itok=123',
+        status: 'completed'
+    },
+    {
+        id: 'evt_jan24',
+        title: 'UFC Fight Night',
+        subtitle: 'Sandhagen vs Nurmagomedov',
+        date: '2026-01-24T17:00:00',
+        end_date: '2026-01-25T01:00:00',
+        location: 'Abu Dhabi, UAE',
+        banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-08/080324-ufc-fight-night-abu-dhabi-matchup-sandhagen-nurmagomedov-1920x1080-1.jpg?h=d1cb525d&itok=123',
+        status: 'completed'
+    },
+    {
+        id: 'evt_jan31',
+        title: 'UFC 313',
         subtitle: 'Pereira vs Ankalaev',
-        date: '2026-01-31T19:00:00',
-        end_date: '2026-02-01T03:00:00',
-        location: 'Las Vegas, EUA',
-        banner_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDfucuAO00sbi3ih6JvIl869557kzBYOJAzDX50t47vJGJJsLQs9nGZG7ihrlNEJbvlmNHhPe9yZJhmFNMbMR0pblHUkAFLAkj40nBZ_BYOcN6HrQJ2cKPiVZI-Jx1u6EKjNAfRFi_wwRz4av6M48CoV0p21kRkh590rT4BaB8dR6rlJN12m26r-XDqbBqd6EqIrOc6ZhOfQezDRaVIh0hDcH7k6JAQ5CQzCDWdWdALMzf9Ci7Tnj4pQba49kKGzU2sf78XtzF-_7om',
-        status: 'upcoming'
-    },
-    {
-        id: 'evt_ufc331',
-        title: 'UFC 331',
-        subtitle: 'Jones vs Aspinall',
-        date: '2026-02-07T18:00:00',
-        end_date: '2026-02-08T02:00:00',
-        location: 'Londres, Reino Unido',
-        banner_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDfucuAO00sbi3ih6JvIl869557kzBYOJAzDX50t47vJGJJsLQs9nGZG7ihrlNEJbvlmNHhPe9yZJhmFNMbMR0pblHUkAFLAkj40nBZ_BYOcN6HrQJ2cKPiVZI-Jx1u6EKjNAfRFi_wwRz4av6M48CoV0p21kRkh590rT4BaB8dR6rlJN12m26r-XDqbBqd6EqIrOc6ZhOfQezDRaVIh0hDcH7k6JAQ5CQzCDWdWdALMzf9Ci7Tnj4pQba49kKGzU2sf78XtzF-_7om',
-        status: 'upcoming'
-    },
-    {
-        id: 'evt_ufc332',
-        title: 'UFC 332',
-        subtitle: 'Pantoja vs Royval 3',
-        date: '2026-02-08T20:00:00',
-        end_date: '2026-02-09T04:00:00',
-        location: 'Rio de Janeiro, Brasil',
-        banner_url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDfucuAO00sbi3ih6JvIl869557kzBYOJAzDX50t47vJGJJsLQs9nGZG7ihrlNEJbvlmNHhPe9yZJhmFNMbMR0pblHUkAFLAkj40nBZ_BYOcN6HrQJ2cKPiVZI-Jx1u6EKjNAfRFi_wwRz4av6M48CoV0p21kRkh590rT4BaB8dR6rlJN12m26r-XDqbBqd6EqIrOc6ZhOfQezDRaVIh0hDcH7k6JAQ5CQzCDWdWdALMzf9Ci7Tnj4pQba49kKGzU2sf78XtzF-_7om',
-        status: 'upcoming'
+        date: '2026-01-31T22:00:00',
+        end_date: '2026-02-01T06:00:00',
+        location: 'Las Vegas, NV',
+        banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-10/100524-ufc-307-matchup-pereira-rountree-jr-1920x1080-1.jpg?h=d1cb525d&itok=123',
+        status: 'live'
     }
 ];
 
@@ -80,14 +82,13 @@ const generateFightersAndFights = () => {
     let fighters: Record<string, Fighter> = { ...initialFighters };
     let fights: Fight[] = [];
 
-    // Helper to get or create fighter
     const getFighter = (name: string): Fighter => {
         const id = name.toLowerCase().replace(/\s/g, '');
         if (!fighters[id]) {
             fighters[id] = {
                 id,
                 name,
-                nickname: 'The ' + name.split(' ')[0], // Simple mock nickname
+                nickname: 'The ' + name.split(' ')[0],
                 image_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuDdv6fnH2aUkUnStYycJnEKhaBICr74VmX4NnJNWQeAiTlNYjfRaYYdIaoUwqoIEjja3cV-obJrnb8Gr2KiHkzQz-DeJP1i1-21wlLJCmCXKcRBgb6F2m-uUznPWRZzMhZNCqAZa6eSt2I623-0Z_DFPK5NPmKdViNtogczjn5ZtJ-ArZKYBj2bztA5emkHyNyEy2LqUPyIDFtazLxIRtXY1YTN904jPv1NkVDpSRAx_bnPSnUrqaadV4tkE7fo8AizW2OjfaNetD1y",
                 wins: Math.floor(Math.random() * 30),
                 losses: Math.floor(Math.random() * 10),
@@ -100,7 +101,6 @@ const generateFightersAndFights = () => {
 
     initialEvents.forEach(event => {
         for (let i = 0; i < 15; i++) {
-            // Pick 2 random fighters from list (ensure unique pair per fight)
             const idx1 = Math.floor(Math.random() * MOCK_NAMES.length);
             let idx2 = Math.floor(Math.random() * MOCK_NAMES.length);
             while (idx1 === idx2) idx2 = Math.floor(Math.random() * MOCK_NAMES.length);
@@ -108,7 +108,6 @@ const generateFightersAndFights = () => {
             const f1 = getFighter(MOCK_NAMES[idx1]);
             const f2 = getFighter(MOCK_NAMES[idx2]);
 
-            // Determine category
             let category: Fight['category'] = 'Prelim';
             if (i === 0) category = 'Main Event';
             else if (i === 1) category = 'Co-Main';
@@ -116,7 +115,6 @@ const generateFightersAndFights = () => {
             else if (i < 10) category = 'Prelim';
             else category = 'Early';
 
-            // Determine winner randomly for completed events
             const isCompleted = event.status === 'completed';
             let winner: Fighter | undefined;
             let result: Fight['result'] | undefined;
@@ -134,7 +132,6 @@ const generateFightersAndFights = () => {
                 } else if (rand > 0.95) {
                     result = 'draw';
                     method = 'Draw (Majority)';
-                    rounds: 3; // usually decisions go full rounds
                     round_end = `R${category === 'Main Event' ? 5 : 3}`;
                     time = '5:00';
                 } else {
@@ -142,7 +139,8 @@ const generateFightersAndFights = () => {
                     winner = Math.random() > 0.5 ? f1 : f2;
                     const methodRand = Math.random();
                     if (methodRand > 0.6) {
-                        method = 'DEC (Unanimous)';
+                        const decType = DECISION_TYPES[Math.floor(Math.random() * DECISION_TYPES.length)];
+                        method = `DEC (${decType})`;
                         round_end = `R${category === 'Main Event' ? 5 : 3}`;
                         time = '5:00';
                     } else if (methodRand > 0.3) {
@@ -167,12 +165,13 @@ const generateFightersAndFights = () => {
                 category,
                 weight_class: WEIGHT_CLASSES[Math.floor(Math.random() * WEIGHT_CLASSES.length)] as any,
                 rounds: category === 'Main Event' ? 5 : 3,
+                is_title: category === 'Main Event' && Math.random() > 0.6,
                 winner_id: winner?.id,
                 result,
                 method,
                 round_end,
                 time,
-                points: category === 'Main Event' ? 50 : 25
+                points: 0
             });
         }
     });
@@ -184,39 +183,34 @@ const generateUsersAndPicks = (fights: Fight[]) => {
     const users: User[] = [];
     const picks: Pick[] = [];
 
-    // Create Admin User (André)
     const adminUser: User = {
         id: 'user_andre',
         name: 'André',
-        email: 'andre@arena.com', // Mock email
+        email: 'andre@arena.com',
         password: 'a',
         avatar_url: 'https://ui-avatars.com/api/?name=Andre&background=random',
         points: 0
     };
     users.push(adminUser);
 
-    // Create 30 random participants
     for (let i = 0; i < 30; i++) {
-        const name = MOCK_NAMES[i % MOCK_NAMES.length]; // Reuse names for simplicity
+        const name = MOCK_NAMES[i % MOCK_NAMES.length];
+        const sanitizedId = name.toLowerCase().replace(/\./g, '').replace(/\s/g, '_');
+
         users.push({
-            id: `user_${i}`,
+            id: sanitizedId,
             name: name,
-            email: `${name.toLowerCase().replace(/\s/g, '.')}@example.com`,
+            email: `${sanitizedId}@example.com`,
             password: 'password',
             avatar_url: `https://ui-avatars.com/api/?name=${name.replace(/\s/g, '+')}&background=random`,
             points: 0
         });
     }
 
-    // Generate Picks for ALL users for ALL fights
     users.forEach(user => {
-        let userTotalPoints = 0;
-
         fights.forEach(fight => {
-            // Find the event status
             const event = initialEvents.find(e => e.id === fight.event_id);
-            if (event && event.status === 'completed') {
-                // Determine pick
+            if (event) {
                 let selectedFighterId: string;
                 const randomWin = Math.random();
                 if (randomWin > 0.5) {
@@ -225,13 +219,12 @@ const generateUsersAndPicks = (fights: Fight[]) => {
                     selectedFighterId = fight.fighter_b_id;
                 }
 
-                // Randomize Method and Round pick
                 const methods: ('KO/TKO' | 'SUB' | 'DEC')[] = ['KO/TKO', 'SUB', 'DEC'];
                 const randomMethod = methods[Math.floor(Math.random() * methods.length)];
 
                 let randomRound = '';
                 if (randomMethod === 'DEC') {
-                    randomRound = Math.random() > 0.5 ? 'Unanimous' : 'Split';
+                    randomRound = DECISION_TYPES[Math.floor(Math.random() * DECISION_TYPES.length)];
                 } else {
                     const maxRounds = fight.rounds;
                     randomRound = `R${Math.floor(Math.random() * maxRounds) + 1}`;
@@ -248,37 +241,9 @@ const generateUsersAndPicks = (fights: Fight[]) => {
                     points_earned: 0
                 };
 
-                // Calculate points
-                if (fight.winner_id && fight.winner_id === selectedFighterId) {
-                    pick.points_earned! += 3; // Level 1: Winner
-
-                    // Normalize method strings for comparison (mock data uses verbose strings like "KO/TKO (Punch)")
-                    const fightMethodBase = fight.method?.split(' ')[0]; // "KO/TKO", "SUB", "DEC"
-
-                    if (fightMethodBase && fightMethodBase.includes(randomMethod)) {
-                        pick.points_earned! += 2; // Level 2: Method
-
-                        // Level 3: Round or Decision Type
-                        if (randomMethod === 'DEC') {
-                            // Check "Unanimous" or "Split" inside parentheses of fight.method, e.g., "DEC (Unanimous)"
-                            if (fight.method?.includes(randomRound)) {
-                                pick.points_earned! += 1;
-                            }
-                        } else {
-                            // Check Exact Round
-                            if (fight.round_end === randomRound) {
-                                pick.points_earned! += 1;
-                            }
-                        }
-                    }
-                    userTotalPoints += pick.points_earned!;
-                }
-
                 picks.push(pick);
             }
         });
-
-        user.points = userTotalPoints;
     });
 
     return { users, picks };
@@ -293,7 +258,122 @@ export class MockDataService implements IDataService {
     private fighters: Record<string, Fighter> = { ...generatedFighters };
     private users: User[] = [...generatedUsers];
     private picks: Pick[] = [...generatedPicks];
-    private currentUser: User | null = generatedUsers[0]; // Default to André for validation
+    private currentUser: User | null = generatedUsers[0];
+
+    constructor() {
+        this.recalculateAllPoints();
+    }
+
+    private recalculateAllPoints() {
+        const fightIds = Array.from(new Set(this.picks.map(p => p.fight_id)));
+        fightIds.forEach(fightId => {
+            const fight = this.fights.find(f => f.id === fightId);
+            if (fight && fight.winner_id) {
+                this.recalculatePointsForFightInternal(fight);
+            }
+        });
+
+        this.users.forEach(u => this.recalculateUserPoints(u.id));
+        this.recalculateRanks();
+    }
+
+    private recalculateRanks() {
+        // Find Last Event
+        const completedEvents = this.events
+            .filter(e => this.calculateStatus(e) === 'completed')
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        if (completedEvents.length === 0) return;
+        const lastEventId = completedEvents[0].id;
+
+        // 1. Calculate Monthly Delta
+        this.calculatePeriodDelta('monthly_points', 'monthly_rank_delta', lastEventId);
+
+        // 2. Calculate Yearly Delta
+        this.calculatePeriodDelta('yearly_points', 'yearly_rank_delta', lastEventId);
+    }
+
+    private calculatePeriodDelta(pointsField: 'monthly_points' | 'yearly_points', deltaField: 'monthly_rank_delta' | 'yearly_rank_delta', lastEventId: string) {
+        // Points including last event
+        const currentPoints = this.users.map(u => ({ id: u.id, points: u[pointsField] || 0 }));
+        const currentRankMap = this.getRankMap(currentPoints);
+
+        // Points excluding last event
+        const previousPoints = this.users.map(u => {
+            const userPicksInLastEvent = this.picks.filter(p => p.user_id === u.id && p.event_id === lastEventId);
+            const lastEventPoints = userPicksInLastEvent.reduce((sum, p) => sum + (p.points_earned || 0), 0);
+            return { id: u.id, points: (u[pointsField] || 0) - lastEventPoints };
+        });
+        const previousRankMap = this.getRankMap(previousPoints);
+
+        this.users.forEach(u => {
+            const curRank = currentRankMap[u.id];
+            const prevRank = previousRankMap[u.id];
+            // Delta = Previous position - Current position (e.g., 5th to 3rd = 5 - 3 = +2 positions climbed)
+            u[deltaField] = prevRank - curRank;
+        });
+    }
+
+    private getRankMap(userPoints: { id: string, points: number }[]) {
+        const sorted = [...userPoints].sort((a, b) => b.points - a.points);
+        const map: Record<string, number> = {};
+        sorted.forEach((u, index) => {
+            // Handle ties: if same points, same rank
+            if (index > 0 && u.points === sorted[index - 1].points) {
+                map[u.id] = map[sorted[index - 1].id];
+            } else {
+                map[u.id] = index + 1;
+            }
+        });
+        return map;
+    }
+
+    private recalculatePointsForFightInternal(fight: Fight) {
+        const fightPicks = this.picks.filter(p => p.fight_id === fight.id);
+        if (fightPicks.length === 0) return;
+
+        const correctWinnerPicks = fightPicks.filter(p => p.fighter_id === fight.winner_id);
+        const isMitada = correctWinnerPicks.length === 1;
+
+        const isNonTitleMainEvent = fight.category === 'Main Event' && !fight.is_title;
+
+        fightPicks.forEach(pick => {
+            let points = 0;
+
+            if (fight.winner_id && pick.fighter_id === fight.winner_id) {
+                points += 3;
+                if (fight.is_title) points += 6;
+                else if (isNonTitleMainEvent) points += 3;
+
+                if (isMitada) points += 9;
+
+                let methodCorrect = false;
+                if (fight.method && pick.method && fight.method.includes(pick.method)) {
+                    methodCorrect = true;
+                    points += 2;
+                }
+
+                if (methodCorrect) {
+                    let roundCorrect = false;
+                    if (pick.method === 'DEC') {
+                        if (fight.method?.includes(pick.round || '')) {
+                            roundCorrect = true;
+                        }
+                    } else {
+                        if (fight.round_end === pick.round) {
+                            roundCorrect = true;
+                        }
+                    }
+
+                    if (roundCorrect) points += 1;
+                }
+            } else {
+                points = 0;
+            }
+
+            pick.points_earned = points;
+        });
+    }
 
     private async delay(ms: number = 300) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -302,16 +382,11 @@ export class MockDataService implements IDataService {
     private calculateStatus(event: Event): Event['status'] {
         const now = new Date();
         const start = new Date(event.date);
-        // Fallback to start + 8h if end_date is missing (though our UI enforces it now)
         const end = event.end_date ? new Date(event.end_date) : new Date(start.getTime() + 8 * 60 * 60 * 1000);
 
-        if (now > end) {
-            return 'completed';
-        } else if (now >= start && now <= end) {
-            return 'live';
-        } else {
-            return 'upcoming';
-        }
+        if (now > end) return 'completed';
+        else if (now >= start && now <= end) return 'live';
+        else return 'upcoming';
     }
 
     async getEvents(): Promise<Event[]> {
@@ -328,10 +403,8 @@ export class MockDataService implements IDataService {
 
     async createEvent(event: Omit<Event, 'id'>): Promise<Event> {
         await this.delay();
-        // Create with temporary status, but calculateStatus will override strictly based on dates
         const newEventVal: Event = { ...event, id: `evt_${Date.now()}`, status: 'upcoming' };
         newEventVal.status = this.calculateStatus(newEventVal);
-
         this.events.push(newEventVal);
         return newEventVal;
     }
@@ -350,7 +423,6 @@ export class MockDataService implements IDataService {
     async deleteEvent(id: string): Promise<void> {
         await this.delay();
         this.events = this.events.filter(e => e.id !== id);
-        // Cascade delete fights
         this.fights = this.fights.filter(f => f.event_id !== id);
     }
 
@@ -371,6 +443,15 @@ export class MockDataService implements IDataService {
         const index = this.fights.findIndex(f => f.id === fight.id);
         if (index !== -1) {
             this.fights[index] = fight;
+            if (fight.winner_id) {
+                this.recalculatePointsForFightInternal(fight);
+                const affectedUserIds = this.picks.filter(p => p.fight_id === fight.id).map(p => p.user_id);
+                const uniqueUserIds = Array.from(new Set(affectedUserIds));
+                for (const userId of uniqueUserIds) {
+                    await this.recalculateUserPoints(userId);
+                }
+                this.recalculateRanks();
+            }
         }
         return fight;
     }
@@ -392,19 +473,113 @@ export class MockDataService implements IDataService {
         return newFighter;
     }
 
-    async getPicks(eventId: string): Promise<Record<string, Pick>> {
+    async getLeaderboard(period: 'week' | 'month' | 'year' | 'all' = 'all'): Promise<User[]> {
         await this.delay();
+        // Since we are now using real consolidated data, we return the users with their calculated points
+        // The UI will handle displaying the specific column based on filter if needed, 
+        // but the request is for a table showing EVERYTHING.
 
-        // For now, return picks for the default user (André) to populate the UI
+        let sortedUsers = [...this.users];
+
+        if (period === 'month') {
+            sortedUsers.sort((a, b) => (b.monthly_points || 0) - (a.monthly_points || 0));
+        } else if (period === 'year' || period === 'all') {
+            sortedUsers.sort((a, b) => (b.yearly_points || 0) - (a.yearly_points || 0));
+        } else if (period === 'week') {
+            sortedUsers.sort((a, b) => (b.last_event_points || 0) - (a.last_event_points || 0));
+        }
+
+        return sortedUsers.slice(0, 50);
+    }
+
+    async getPicksForEvent(eventId: string): Promise<Record<string, Pick>> {
+        await this.delay();
         const userId = this.currentUser?.id || 'user_andre';
-
         const userPicks = this.picks.filter(p => p.event_id === eventId && p.user_id === userId);
         const picksMap: Record<string, Pick> = {};
+        userPicks.forEach(p => picksMap[p.fight_id] = p);
+        return picksMap;
+    }
 
-        userPicks.forEach(p => {
-            picksMap[p.fight_id] = p;
+    async login(email: string, password: string): Promise<User | null> {
+        await this.delay(500);
+        const user = this.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+        if (user) {
+            this.currentUser = user;
+            return user;
+        }
+        return null;
+    }
+
+    async getAllPicksForEvent(eventId: string): Promise<Pick[]> {
+        await this.delay();
+        return this.picks.filter(p => p.event_id === eventId);
+    }
+
+    async updatePick(updatedPick: Pick): Promise<void> {
+        await this.delay();
+        const index = this.picks.findIndex(p => p.id === updatedPick.id);
+        if (index !== -1) {
+            this.picks[index] = updatedPick;
+            await this.recalculateUserPoints(updatedPick.user_id);
+            this.recalculateRanks();
+        }
+    }
+
+    private async recalculateUserPoints(userId: string): Promise<void> {
+        const userPicks = this.picks.filter(p => p.user_id === userId);
+
+        // Find Last Event (completed)
+        const completedEvents = this.events
+            .filter(e => this.calculateStatus(e) === 'completed')
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        const lastEventId = completedEvents.length > 0 ? completedEvents[0].id : null;
+
+        // Month / Year for current context (today)
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        let totalPoints = 0;
+        let lastEventPoints = 0;
+        let monthlyPoints = 0;
+        let yearlyPoints = 0;
+
+        userPicks.forEach(pick => {
+            const pts = pick.points_earned || 0;
+            totalPoints += pts;
+
+            const event = this.events.find(e => e.id === pick.event_id);
+            if (event) {
+                const eventDate = new Date(event.date);
+
+                // Last Event
+                if (lastEventId && pick.event_id === lastEventId) {
+                    lastEventPoints += pts;
+                }
+
+                // Monthly
+                if (eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear) {
+                    monthlyPoints += pts;
+                }
+
+                // Yearly
+                if (eventDate.getFullYear() === currentYear) {
+                    yearlyPoints += pts;
+                }
+            }
         });
 
-        return picksMap;
+        const userIndex = this.users.findIndex(u => u.id === userId);
+        if (userIndex !== -1) {
+            this.users[userIndex] = {
+                ...this.users[userIndex],
+                points: totalPoints,
+                last_event_points: lastEventPoints,
+                monthly_points: monthlyPoints,
+                yearly_points: yearlyPoints
+            };
+        }
     }
 }

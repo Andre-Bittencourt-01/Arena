@@ -8,7 +8,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  const { events } = useData();
+  const { events, leaderboard, user } = useData();
   const [nextEvent, setNextEvent] = useState(events.find(e => e.status === 'upcoming') || null);
 
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
@@ -316,78 +316,75 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             subtitle="Top Jogadores & Sequências"
             className="h-full"
             headerAction={
-              <button className="text-primary hover:text-white transition-colors">
+              <button
+                onClick={() => onNavigate('ranking')}
+                className="text-primary hover:text-white transition-colors"
+              >
                 <span className="material-symbols-outlined">filter_list</span>
               </button>
             }
           >
             <div className="space-y-2">
-              <div className="group flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-yellow-500/10 to-transparent border border-yellow-500/20 hover:border-yellow-500/50 transition-all cursor-pointer">
-                <div className="relative shrink-0">
-                  <div className="h-12 w-12 rounded-full p-0.5 bg-gradient-to-b from-yellow-400 to-yellow-600 shadow-[0_0_10px_rgba(234,179,8,0.4)]">
-                    <img alt="Rank 1 Avatar" className="h-full w-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCCSWKLXpjLsO2Wfg9q5313WXv7Igi-QnTXD0a40AxS_KgPKN9oBkucOy90RVIcmXJYvJL_haE9X-Cv-Zds_YY1DV2w9jZZ4YqYGvTfDUknUcdCPruxvJdy87diiEWMlUkXzN0iOEGNMVLQgKwXVmabnQTzn9HnI9NBfCSdLrzq9WCDq1c9gFatiPNKM9b3dbbc0vlOp86fTre8ayX0u7hjSe07frxLZ1H6K3K6bEYzrArTmCq1_14xVRioOyfz2EIui1orIENogJhW" />
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-black text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border border-black">1</div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-0.5">
-                    <p className="text-sm font-bold text-white truncate group-hover:text-yellow-400 transition-colors">Pedro_MMA</p>
-                    <span className="text-xs font-bold text-yellow-500">1,450 pts</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/30 px-1.5 py-0.5 rounded">
-                      <span className="material-symbols-outlined text-xs text-orange-500">local_fire_department</span>
-                      <span className="text-orange-400 font-bold">8 Win Streak</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="group flex items-center gap-3 p-3 rounded-xl bg-surface-lighter border border-white/5 hover:border-primary/50 hover:shadow-neon-sm transition-all cursor-pointer">
-                <div className="relative shrink-0">
-                  <div className="h-10 w-10 rounded-full p-0.5 bg-gray-600">
-                    <img alt="Rank 2 Avatar" className="h-full w-full rounded-full object-cover grayscale group-hover:grayscale-0 transition-all" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfRpuY07jrjI2ZgpAd6wEVhhpbF5jv6QpOVz_6-BGMCcXDOXmO4LWIfBZlrvlQ5N3HdhbNAl1fdIlcGqAkfuFHDlqhQWQqQLMD42Fc2U6EpiuQkk8ncHrbjjrdHbyI8CS4lXNlWgta2uot8PBPOBKo7VvpqBHXSJoIDvnfONNdF2doq_IdF5EVALMu6LD5jYeHMdcr4nkm13bwbhMv-Y7l6-finGLRBoNeWz0CzeTwWWrZ7CEzaKZ6jfJJTBqoMyC-BEzAfaBMiedO" />
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 bg-gray-400 text-black text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-black">2</div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-0.5">
-                    <p className="text-sm font-bold text-gray-300 truncate group-hover:text-white transition-colors">SilvaSpider</p>
-                    <span className="text-xs font-bold text-gray-400 group-hover:text-white">1,320 pts</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-black/30 px-1.5 py-0.5 rounded">
-                      <span className="material-symbols-outlined text-xs text-orange-500/50">local_fire_department</span>
-                      <span>3 Win Streak</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <div
-                  onClick={() => onNavigate('profile')}
-                  className="group flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/30 shadow-neon-sm cursor-pointer hover:bg-primary/20 transition-colors"
-                >
+              {/* Dynamic Top 2 from Leaderboard */}
+              {leaderboard.slice(0, 2).map((u, index) => (
+                <div key={u.id} className={`group flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${index === 0 ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/20 hover:border-yellow-500/50' : 'bg-surface-lighter border-white/5 hover:border-primary/50 hover:shadow-neon-sm'}`}>
                   <div className="relative shrink-0">
-                    <div className="h-10 w-10 rounded-full p-0.5 bg-primary">
-                      <img alt="User Avatar" className="h-full w-full rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdv6fnH2aUkUnStYycJnEKhaBICr74VmX4NnJNWQeAiTlNYjfRaYYdIaoUwqoIEjja3cV-obJrnb8Gr2KiHkzQz-DeJP1i1-21wlLJCmCXKcRBgb6F2m-uUznPWRZzMhZNCqAZa6eSt2I623-0Z_DFPK5NPmKdViNtogczjn5ZtJ-ArZKYBj2bztA5emkHyNyEy2LqUPyIDFtazLxIRtXY1YTN904jPv1NkVDpSRAx_bnPSnUrqaadV4tkE7fo8AizW2OjfaNetD1y" />
+                    <div className={`h-12 w-12 rounded-full p-0.5 ${index === 0 ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 shadow-[0_0_10px_rgba(234,179,8,0.4)]' : 'bg-gray-600'}`}>
+                      <img alt={`Rank ${index + 1} Avatar`} className={`h-full w-full rounded-full object-cover ${index !== 0 ? 'grayscale group-hover:grayscale-0 transition-all' : ''}`} src={u.avatar_url} />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 bg-white text-black text-[10px] font-bold w-6 h-4 flex items-center justify-center rounded-full border border-primary">42</div>
+                    <div className={`absolute -bottom-1 -right-1 text-black text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border border-black ${index === 0 ? 'bg-yellow-500' : 'bg-gray-400'}`}>{index + 1}</div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center mb-0.5">
-                      <p className="text-sm font-bold text-white truncate">Você</p>
-                      <span className="text-xs font-bold text-primary">980 pts</span>
+                      <p className={`text-sm font-bold truncate transition-colors ${index === 0 ? 'text-white group-hover:text-yellow-400' : 'text-gray-300 group-hover:text-white'}`}>{u.name}</p>
+                      <span className={`text-xs font-bold ${index === 0 ? 'text-yellow-500' : 'text-gray-400 group-hover:text-white'}`}>{u.points} pts</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/30 px-1.5 py-0.5 rounded">
                         <span className="material-symbols-outlined text-xs text-orange-500">local_fire_department</span>
-                        <span className="text-orange-400">4 Win Streak</span>
+                        <span className="text-orange-400 font-bold">{Math.floor(Math.random() * 10)} Win Streak</span>
                       </div>
                     </div>
                   </div>
                 </div>
+              ))}
+
+              <div className="mt-4 pt-4 border-t border-white/10">
+                {user ? (
+                  <div
+                    onClick={() => onNavigate('profile')}
+                    className="group flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/30 shadow-neon-sm cursor-pointer hover:bg-primary/20 transition-colors"
+                  >
+                    <div className="relative shrink-0">
+                      <div className="h-10 w-10 rounded-full p-0.5 bg-primary">
+                        <img alt="User Avatar" className="h-full w-full rounded-full object-cover" src={user.avatar_url} />
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 bg-white text-black text-[10px] font-bold w-6 h-4 flex items-center justify-center rounded-full border border-primary">
+                        {leaderboard.findIndex(u => u.id === user.id) + 1}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-0.5">
+                        <p className="text-sm font-bold text-white truncate">Você</p>
+                        <span className="text-xs font-bold text-primary">{user.points} pts</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/30 px-1.5 py-0.5 rounded">
+                          <span className="material-symbols-outlined text-xs text-orange-500">local_fire_department</span>
+                          <span className="text-orange-400">4 Win Streak</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => onNavigate('login')}
+                    className="group flex items-center justify-center gap-2 p-3 rounded-xl bg-surface-lighter border border-white/10 hover:border-primary/50 cursor-pointer transition-all"
+                  >
+                    <span className="material-symbols-outlined text-primary">login</span>
+                    <span className="text-sm font-bold text-white group-hover:text-primary transition-colors">Fazer Login</span>
+                  </div>
+                )}
               </div>
             </div>
           </Panel>

@@ -1,4 +1,6 @@
-import { Event, Fight, Fighter } from '../types';
+import { Event, Fight, Fighter, User, Pick } from '../types';
+
+export type RankingPeriod = 'week' | 'month' | 'year' | 'all';
 
 export interface IDataService {
     // Events
@@ -17,5 +19,15 @@ export interface IDataService {
     // Fighters
     getFighters(): Promise<Fighter[]>;
     createFighter(fighter: Omit<Fighter, 'id'>): Promise<Fighter>;
-    getPicks(eventId: string): Promise<Record<string, Pick>>;
+    getPicksForEvent: (eventId: string) => Promise<Record<string, Pick>>;
+
+    // Picks Management (Admin)
+    getAllPicksForEvent: (eventId: string) => Promise<Pick[]>;
+    updatePick: (pick: Pick) => Promise<void>;
+
+    // Leaderboard
+    getLeaderboard: (period?: 'week' | 'month' | 'year' | 'all') => Promise<User[]>;
+
+    // Auth
+    login(email: string, password: string): Promise<User | null>;
 }

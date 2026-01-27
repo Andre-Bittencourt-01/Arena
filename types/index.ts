@@ -26,6 +26,7 @@ export interface Fight {
     category: FightCategory;
     weight_class: WeightClass;
     rounds: number;
+    is_title?: boolean; // New property for custom scoring
 
     // Results
     result?: 'win' | 'draw' | 'nc'; // Status of the result
@@ -53,6 +54,11 @@ export interface User {
     password?: string; // In a real app, hash this. Mocking "a" for now.
     avatar_url: string;
     points: number;
+    last_event_points?: number;
+    monthly_points?: number;
+    yearly_points?: number;
+    monthly_rank_delta?: number; // Positive = climbed, Negative = dropped
+    yearly_rank_delta?: number;
 }
 
 export interface Pick {
@@ -64,4 +70,5 @@ export interface Pick {
     method?: 'KO/TKO' | 'SUB' | 'DEC';
     round?: string; // "R1", "R2", "R3"... or "Unanimous", "Split"
     points_earned?: number;
+    admin_note?: string; // Reason for manual point adjustment
 }

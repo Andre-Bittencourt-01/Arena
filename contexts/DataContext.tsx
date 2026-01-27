@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Event, Fight, Fighter } from '../types';
-import { IDataService } from '../services/types';
+import { Event, Fight, Fighter, User, Pick } from '../types';
+import { IDataService, RankingPeriod } from '../services/types';
 import { MockDataService } from '../services/MockDataService';
 
 interface DataContextType {
@@ -26,6 +26,20 @@ interface DataContextType {
     fighters: Fighter[];
     createFighter: (fighter: Omit<Fighter, 'id'>) => Promise<void>;
     getPicksForEvent: (eventId: string) => Promise<Record<string, Pick>>;
+
+    // Picks Management
+    getAllPicksForEvent: (eventId: string) => Promise<Pick[]>;
+    updatePick: (pick: Pick) => Promise<void>;
+
+    // Leaderboard
+    leaderboard: User[];
+    rankingFilter: RankingPeriod;
+    setRankingFilter: (period: RankingPeriod) => void;
+
+    // Auth
+    user: User | null;
+    login: (email: string, password: string) => Promise<boolean>;
+    logout: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -38,15 +52,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
     const [currentFights, setCurrentFights] = useState<Fight[]>([]);
     const [fighters, setFighters] = useState<Fighter[]>([]);
+    const [leaderboard, setLeaderboard] = useState<User[]>([]);
+    const [rankingFilter, setRankingFilter] = useState<RankingPeriod>('all');
     const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
 
     const refreshData = async () => {
         setLoading(true);
         try {
             const fetchedEvents = await dataService.getEvents();
             const fetchedFighters = await dataService.getFighters();
+            const fetchedLeaderboard = await dataService.getLeaderboard(rankingFilter);
             setEvents(fetchedEvents);
             setFighters(fetchedFighters);
+            setLeaderboard(fetchedLeaderboard);
 
             // Default to first event if none selected
             if (!currentEvent && fetchedEvents.length > 0) {
@@ -68,7 +87,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         refreshData();
-    }, []);
+    }, [rankingFilter]); // Refresh when filter changes
+
+    // Auth
+    const login = async (email: string, password: string) => {
+        const loggedUser = await dataService.login(email, password);
+        if (loggedUser) {
+            setUser(loggedUser);
+            return true;
+        }
+        return false;
+    };
+
+    const logout = () => {
+        setUser(null);
+    };
 
     // Events
     const createEvent = async (event: Omit<Event, 'id'>) => {
@@ -139,7 +172,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             deleteFight,
             fighters,
             createFighter,
-            getPicksForEvent: (eventId: string) => dataService.getPicks(eventId)
+            getPicksForEvent: (eventId: string) => dataService.getPicksForEvent(eventId),
+            getAllPicksForEvent: (eventId: string) => dataService.getAllPicksForEvent(eventId),
+            updatePick: async (pick: Pick) => {
+                await dataService.updatePick(pick);
+                await refreshData(); // Refresh leaderboard and other data
+            },
+            leaderboard,
+            rankingFilter,
+            setRankingFilter,
+            user,
+            login,
+            logout
         }}>
             {children}
         </DataContext.Provider>

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Screen } from '../App';
+import { useData } from '../contexts/DataContext';
 
 interface LoginProps {
   onLogin: () => void;
@@ -7,6 +8,29 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin, onNavigate }) => {
+  const { login } = useData();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const success = await login(email, password);
+      if (success) {
+        onLogin();
+      } else {
+        setError('Credenciais inválidas. Tente admin@arenamma.com / admin123');
+      }
+    } catch (err) {
+      setError('Ocorreu um erro ao tentar fazer login.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="relative flex min-h-screen w-full flex-col justify-center items-center font-display bg-[#221010] text-white">
       {/* Background Layer */}
@@ -38,6 +62,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigate }) => {
           </div>
 
           <div className="p-8 flex flex-col gap-5">
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/50 text-red-200 text-sm p-3 rounded-lg flex items-center gap-2">
+                <span className="material-symbols-outlined text-base">error</span>
+                {error}
+              </div>
+            )}
+
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-gray-300 ml-1" htmlFor="email">E-mail</label>
               <div className="relative group">
@@ -49,6 +80,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigate }) => {
                   id="email"
                   placeholder="seu@email.com"
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                 />
               </div>
             </div>
@@ -64,6 +98,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigate }) => {
                   id="password"
                   placeholder="••••••••"
                   type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                 />
                 <button className="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer text-gray-500 hover:text-white transition-colors">
                   <span className="material-symbols-outlined text-[20px]">visibility_off</span>
@@ -85,11 +122,18 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigate }) => {
             </div>
 
             <button
-              onClick={onLogin}
-              className="w-full h-14 mt-2 bg-primary hover:bg-primary-hover text-white font-bold text-lg rounded-lg shadow-[0_0_20px_rgba(236,19,19,0.3)] hover:shadow-[0_0_30px_rgba(236,19,19,0.5)] transition-all duration-300 transform hover:-translate-y-0.5 uppercase tracking-wider flex items-center justify-center gap-2 group"
+              onClick={handleLogin}
+              disabled={loading}
+              className="w-full h-14 mt-2 bg-primary hover:bg-primary-hover text-white font-bold text-lg rounded-lg shadow-[0_0_20px_rgba(236,19,19,0.3)] hover:shadow-[0_0_30px_rgba(236,19,19,0.5)] transition-all duration-300 transform hover:-translate-y-0.5 uppercase tracking-wider flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>ENTRAR</span>
-              <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+              {loading ? (
+                <span>ENTRANDO...</span>
+              ) : (
+                <>
+                  <span>ENTRAR</span>
+                  <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </>
+              )}
             </button>
 
             {/* Divider */}
@@ -101,7 +145,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onNavigate }) => {
 
             {/* Google Login Button */}
             <button
-              onClick={onLogin} // Mock login for now
+              onClick={() => onLogin()} // Mock simple login for now or implement google later
               className="w-full h-14 bg-white hover:bg-gray-100 text-black font-bold text-base rounded-lg transition-all duration-300 flex items-center justify-center gap-3 group relative overflow-hidden"
             >
               <div className="w-6 h-6 flex items-center justify-center">

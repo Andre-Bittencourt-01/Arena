@@ -33,31 +33,27 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  // Auth Layout (No sidebar/topbar)
-  if (currentScreen === 'login') {
-    return <Login onLogin={() => handleNavigate('dashboard')} onNavigate={handleNavigate} />;
-  }
-  if (currentScreen === 'register') {
-    return <Register onRegister={() => handleNavigate('dashboard')} onNavigate={handleNavigate} />;
-  }
-  if (currentScreen === 'forgot-password') {
-    return <ForgotPassword onNavigate={handleNavigate} />;
-  }
-
-  // Main App Layout
   return (
     <DataProvider>
-      <Layout currentScreen={currentScreen} onNavigate={handleNavigate}>
-        {currentScreen === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
-        {currentScreen === 'events' && <Events onNavigate={handleNavigate} onNavigateToResult={handleNavigateToResult} />}
-        {currentScreen === 'event-results' && selectedEventId && <EventResults onNavigate={handleNavigate} eventId={selectedEventId} />}
-        {currentScreen === 'picks' && <Picks onNavigate={handleNavigate} />}
-        {currentScreen === 'ranking' && <Ranking />}
-        {currentScreen === 'profile' && <Profile onNavigate={handleNavigate} />}
-        {currentScreen === 'story' && <StoryCreator />}
-        {currentScreen === 'summary' && <CardSummary onNavigate={handleNavigate} />}
-        {currentScreen === 'admin' && <Admin />}
-      </Layout>
+      {currentScreen === 'login' ? (
+        <Login onLogin={() => handleNavigate('dashboard')} onNavigate={handleNavigate} />
+      ) : currentScreen === 'register' ? (
+        <Register onRegister={() => handleNavigate('dashboard')} onNavigate={handleNavigate} />
+      ) : currentScreen === 'forgot-password' ? (
+        <ForgotPassword onNavigate={handleNavigate} />
+      ) : (
+        <Layout currentScreen={currentScreen} onNavigate={handleNavigate}>
+          {currentScreen === 'dashboard' && <Dashboard onNavigate={handleNavigate} />}
+          {currentScreen === 'events' && <Events onNavigate={handleNavigate} onNavigateToResult={handleNavigateToResult} />}
+          {currentScreen === 'event-results' && selectedEventId && <EventResults onNavigate={handleNavigate} eventId={selectedEventId} />}
+          {currentScreen === 'picks' && <Picks onNavigate={handleNavigate} />}
+          {currentScreen === 'ranking' && <Ranking />}
+          {currentScreen === 'profile' && <Profile onNavigate={handleNavigate} />}
+          {currentScreen === 'story' && <StoryCreator />}
+          {currentScreen === 'summary' && <CardSummary onNavigate={handleNavigate} />}
+          {currentScreen === 'admin' && <Admin />}
+        </Layout>
+      )}
     </DataProvider>
   );
 };

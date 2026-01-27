@@ -35,6 +35,8 @@ interface DataContextType {
     leaderboard: User[];
     rankingFilter: RankingPeriod;
     setRankingFilter: (period: RankingPeriod) => void;
+    selectedPeriodId: string | null;
+    setSelectedPeriodId: (id: string | null) => void;
 
     // Auth
     user: User | null;
@@ -53,27 +55,36 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [currentFights, setCurrentFights] = useState<Fight[]>([]);
     const [fighters, setFighters] = useState<Fighter[]>([]);
     const [leaderboard, setLeaderboard] = useState<User[]>([]);
-    const [rankingFilter, setRankingFilter] = useState<RankingPeriod>('all');
+    const [rankingFilter, setRankingFilter] = useState<RankingPeriod>('week');
+    const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
 
     const refreshData = async () => {
         setLoading(true);
         try {
-            const fetchedEvents = await dataService.getEvents();
-            const fetchedFighters = await dataService.getFighters();
-            const fetchedLeaderboard = await dataService.getLeaderboard(rankingFilter);
-            setEvents(fetchedEvents);
-            setFighters(fetchedFighters);
+            // Se já temos eventos e lutadores, não precisamos buscar de novo na troca de filtro de ranking
+            if (events.length === 0 || fighters.length === 0) {
+                const [fetchedEvents, fetchedFighters] = await Promise.all([
+                    dataService.getEvents(),
+                    dataService.getFighters()
+                ]);
+                setEvents(fetchedEvents);
+                setFighters(fetchedFighters);
+
+                // Default to first event if none selected
+                if (!currentEvent && fetchedEvents.length > 0) {
+                    const firstEvent = fetchedEvents[0];
+                    setCurrentEvent(firstEvent);
+                    const fights = await dataService.getFights(firstEvent.id);
+                    setCurrentFights(fights);
+                }
+            }
+
+            const fetchedLeaderboard = await dataService.getLeaderboard(rankingFilter, selectedPeriodId || undefined);
             setLeaderboard(fetchedLeaderboard);
 
-            // Default to first event if none selected
-            if (!currentEvent && fetchedEvents.length > 0) {
-                const firstEvent = fetchedEvents[0];
-                setCurrentEvent(firstEvent);
-                const fights = await dataService.getFights(firstEvent.id);
-                setCurrentFights(fights);
-            } else if (currentEvent) {
+            if (currentEvent) {
                 // Refresh current event fights
                 const fights = await dataService.getFights(currentEvent.id);
                 setCurrentFights(fights);
@@ -86,8 +97,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     useEffect(() => {
+        setSelectedPeriodId(null); // Reset specific period when switching filters
         refreshData();
     }, [rankingFilter]); // Refresh when filter changes
+
+    useEffect(() => {
+        refreshData();
+    }, [selectedPeriodId]);
 
     // Auth
     const login = async (email: string, password: string) => {
@@ -181,6 +197,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             leaderboard,
             rankingFilter,
             setRankingFilter,
+            selectedPeriodId,
+            setSelectedPeriodId,
             user,
             login,
             logout

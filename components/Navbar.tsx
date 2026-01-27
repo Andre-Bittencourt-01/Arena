@@ -9,69 +9,80 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ currentScreen, onNavigate }) => {
   const isActive = (screen: Screen) => currentScreen === screen;
 
+  const navItems: { screen: Screen; label: string; icon: string }[] = [
+    { screen: 'dashboard', label: 'Home', icon: 'home' },
+    { screen: 'events', label: 'Lutas', icon: 'sports_mma' },
+    { screen: 'summary', label: 'Picks', icon: 'list_alt' },
+    { screen: 'ranking', label: 'Rank', icon: 'leaderboard' },
+    { screen: 'profile', label: 'Perfil', icon: 'person' },
+  ];
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0f0f11]/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div
-          className="flex items-center gap-3 cursor-pointer"
-          onClick={() => onNavigate('dashboard')}
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-white">
-            <span className="material-symbols-outlined text-[20px]">sports_mma</span>
-          </div>
-          <h2 className="text-white text-xl font-condensed font-bold tracking-tight uppercase">ARENA MMA</h2>
-        </div>
-
-        <nav className="hidden md:flex items-center gap-8 h-full">
-          <button
-            onClick={() => onNavigate('dashboard')}
-            className={`text-sm font-bold uppercase tracking-wide transition-colors h-full border-b-2 ${isActive('dashboard') ? 'text-white border-primary' : 'text-gray-400 border-transparent hover:text-white'}`}
-          >
-            Home
-          </button>
-          <button
-            onClick={() => onNavigate('events')}
-            className={`text-sm font-bold uppercase tracking-wide transition-colors h-full border-b-2 ${isActive('events') ? 'text-white border-primary' : 'text-gray-400 border-transparent hover:text-white'}`}
-          >
-            Eventos
-          </button>
-          <button
-            onClick={() => onNavigate('summary')}
-            className={`text-sm font-bold uppercase tracking-wide transition-colors h-full border-b-2 ${isActive('summary') ? 'text-white border-primary' : 'text-gray-400 border-transparent hover:text-white'}`}
-          >
-            Meus Torneios
-          </button>
-          <button
-            onClick={() => onNavigate('ranking')}
-            className={`text-sm font-bold uppercase tracking-wide transition-colors h-full border-b-2 ${isActive('ranking') ? 'text-white border-primary' : 'text-gray-400 border-transparent hover:text-white'}`}
-          >
-            Ranking
-          </button>
-          <button
-            onClick={() => onNavigate('profile')}
-            className={`text-sm font-bold uppercase tracking-wide transition-colors h-full border-b-2 ${isActive('profile') ? 'text-white border-primary' : 'text-gray-400 border-transparent hover:text-white'}`}
-          >
-            Perfil
-          </button>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <button className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-dark hover:bg-white/10 text-white transition-colors">
-            <span className="material-symbols-outlined text-[20px]">notifications</span>
-          </button>
+    <>
+      {/* Top Navbar - Compact on Mobile */}
+      <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0f0f11]/95 backdrop-blur-md">
+        <div className="mx-auto flex h-14 md:h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div
-            className="h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-white/5 hover:border-primary/50 transition-colors cursor-pointer"
-            onClick={() => onNavigate('profile')}
+            className="flex items-center gap-2 md:gap-3 cursor-pointer"
+            onClick={() => onNavigate('dashboard')}
           >
-            <img
-              alt="User Avatar"
-              className="h-full w-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdv6fnH2aUkUnStYycJnEKhaBICr74VmX4NnJNWQeAiTlNYjfRaYYdIaoUwqoIEjja3cV-obJrnb8Gr2KiHkzQz-DeJP1i1-21wlLJCmCXKcRBgb6F2m-uUznPWRZzMhZNCqAZa6eSt2I623-0Z_DFPK5NPmKdViNtogczjn5ZtJ-ArZKYBj2bztA5emkHyNyEy2LqUPyIDFtazLxIRtXY1YTN904jPv1NkVDpSRAx_bnPSnUrqaadV4tkE7fo8AizW2OjfaNetD1y"
-            />
+            <div className="flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded bg-primary text-white shadow-neon-sm">
+              <span className="material-symbols-outlined text-[18px] md:text-[20px]">sports_mma</span>
+            </div>
+            <h2 className="text-white text-lg md:text-xl font-condensed font-bold tracking-tight uppercase">ARENA MMA</h2>
+          </div>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-8 h-full">
+            {navItems.map((item) => (
+              <button
+                key={item.screen}
+                onClick={() => onNavigate(item.screen)}
+                className={`text-sm font-bold uppercase tracking-wide transition-colors h-full border-b-2 flex items-center px-1 ${isActive(item.screen) ? 'text-white border-primary' : 'text-gray-400 border-transparent hover:text-white'}`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-2 md:gap-3">
+            <button className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-surface-dark hover:bg-white/10 text-white transition-colors">
+              <span className="material-symbols-outlined text-[18px] md:text-[20px]">notifications</span>
+            </button>
+            <div
+              className={`h-8 w-8 md:h-9 md:w-9 overflow-hidden rounded-full border bg-white/5 hover:border-primary/50 transition-colors cursor-pointer ${isActive('profile') ? 'border-primary' : 'border-white/10'}`}
+              onClick={() => onNavigate('profile')}
+            >
+              <img
+                alt="User Avatar"
+                className="h-full w-full object-cover"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdv6fnH2aUkUnStYycJnEKhaBICr74VmX4NnJNWQeAiTlNYjfRaYYdIaoUwqoIEjja3cV-obJrnb8Gr2KiHkzQz-DeJP1i1-21wlLJCmCXKcRBgb6F2m-uUznPWRZzMhZNCqAZa6eSt2I623-0Z_DFPK5NPmKdViNtogczjn5ZtJ-ArZKYBj2bztA5emkHyNyEy2LqUPyIDFtazLxIRtXY1YTN904jPv1NkVDpSRAx_bnPSnUrqaadV4tkE7fo8AizW2OjfaNetD1y"
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Mobile Bottom Navigation - Portrait Focus */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f0f11]/95 backdrop-blur-lg border-t border-white/5 px-2 pb-safe-offset-2">
+        <div className="flex items-center justify-around h-16">
+          {navItems.map((item) => (
+            <button
+              key={item.screen}
+              onClick={() => onNavigate(item.screen)}
+              className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-all ${isActive(item.screen) ? 'text-primary' : 'text-gray-500'}`}
+            >
+              <div className={`flex items-center justify-center rounded-xl transition-all duration-300 ${isActive(item.screen) ? 'bg-primary/10 w-12 h-8' : 'w-10 h-8'}`}>
+                <span className={`material-symbols-outlined text-[24px] ${isActive(item.screen) ? 'font-bold' : ''}`}>
+                  {item.icon}
+                </span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+    </>
   );
 };
 

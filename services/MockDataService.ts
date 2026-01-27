@@ -1,4 +1,4 @@
-import { IDataService } from './types';
+import { IDataService, RankingPeriod } from './types';
 import { Event, Fight, Fighter, User, Pick } from '../types';
 
 // --- Constants & Helpers ---
@@ -375,7 +375,7 @@ export class MockDataService implements IDataService {
         });
     }
 
-    private async delay(ms: number = 300) {
+    private async delay(ms: number = 50) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
@@ -473,13 +473,50 @@ export class MockDataService implements IDataService {
         return newFighter;
     }
 
-    async getLeaderboard(period: 'week' | 'month' | 'year' | 'all' = 'all'): Promise<User[]> {
+    async getLeaderboard(period: RankingPeriod = 'all', periodId?: string): Promise<User[]> {
         await this.delay();
-        // Since we are now using real consolidated data, we return the users with their calculated points
-        // The UI will handle displaying the specific column based on filter if needed, 
-        // but the request is for a table showing EVERYTHING.
 
         let sortedUsers = [...this.users];
+
+        if (periodId) {
+            // For specifically requested periods (past events, specific months/years)
+            // we calculate the score on the fly for those users based on picks
+            const usersWithSpecificScore = this.users.map(u => {
+                const userPicks = this.picks.filter(p => p.user_id === u.id);
+                let score = 0;
+
+                userPicks.forEach(pick => {
+                    const pts = pick.points_earned || 0;
+                    const event = this.events.find(e => e.id === pick.event_id);
+                    if (!event) return;
+
+                    if (period === 'week' && pick.event_id === periodId) {
+                        score += pts;
+                    } else if (period === 'month' && periodId) {
+                        const eventDate = new Date(event.date);
+                        const [y, m] = periodId.split('-').map(Number);
+                        if (eventDate.getFullYear() === y && eventDate.getMonth() === (m - 1)) {
+                            score += pts;
+                        }
+                    } else if (period === 'year' && periodId) {
+                        const eventDate = new Date(event.date);
+                        if (eventDate.getFullYear() === Number(periodId)) {
+                            score += pts;
+                        }
+                    }
+                });
+
+                return {
+                    ...u,
+                    // Temporarily override the relevant points field for sorting
+                    last_event_points: period === 'week' ? score : u.last_event_points,
+                    monthly_points: period === 'month' ? score : u.monthly_points,
+                    yearly_points: period === 'year' ? score : u.yearly_points,
+                    points: period === 'all' ? score : u.points
+                };
+            });
+            sortedUsers = usersWithSpecificScore;
+        }
 
         if (period === 'month') {
             sortedUsers.sort((a, b) => (b.monthly_points || 0) - (a.monthly_points || 0));

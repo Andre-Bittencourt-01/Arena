@@ -67,8 +67,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const getEventTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 font-grotesk">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-8 font-grotesk pb-24 md:pb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
 
         {/* Main Hero Section */}
         <div className="lg:col-span-8 flex flex-col gap-8">
@@ -83,10 +83,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 />
               </div>
               <div className="relative z-20 p-6 md:p-10 h-full flex flex-col justify-end">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                  <div className="space-y-4 max-w-lg">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8">
+                  <div className="space-y-3 md:space-y-4 max-w-lg">
                     {nextEvent.status === 'live' ? (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-red-600/20 border border-red-500/50 text-red-500 text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.4)] backdrop-blur-md animate-pulse">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-red-600/20 border border-red-500/50 text-red-500 text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.4)] backdrop-blur-md animate-pulse">
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -94,7 +94,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         AO VIVO
                       </div>
                     ) : (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-green-500/20 border border-green-500/50 text-green-400 text-xs font-bold uppercase tracking-widest shadow-neon-sm backdrop-blur-md">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-green-500/20 border border-green-500/50 text-green-400 text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-neon-sm backdrop-blur-md">
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -105,42 +105,45 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <h2 className="font-condensed text-5xl md:text-7xl font-bold uppercase italic leading-none tracking-tighter text-white">
                       {nextEvent.title.split(' ')[0]} <span className="text-primary drop-shadow-[0_0_10px_rgba(255,31,31,0.5)]">{nextEvent.title.split(' ')[1]}</span>
                     </h2>
-                    <p className="font-condensed text-3xl md:text-4xl font-medium uppercase text-gray-300">
+                    <p className="font-condensed text-2xl md:text-4xl font-medium uppercase text-gray-300">
                       {nextEvent.subtitle.split(' vs ')[0]} <span className="text-primary font-bold">VS</span> {nextEvent.subtitle.split(' vs ')[1]}
                     </p>
-                    <div className="flex items-center gap-3 text-gray-400 text-sm font-mono border-t border-white/10 pt-4 mt-2">
-                      <span className="material-symbols-outlined text-primary text-base">calendar_month</span>
-                      <span>{getEventDay(nextEvent.date)} {getEventMonth(nextEvent.date)}</span>
-                      <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
-                      <span>{getEventTime(nextEvent.date)}</span>
-                      <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
-                      <span>{nextEvent.location.split(',')[0].toUpperCase()}</span>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-400 text-[11px] md:text-sm font-mono border-t border-white/10 pt-4 mt-2">
+                      <div className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-primary text-base">calendar_month</span>
+                        <span>{getEventDay(nextEvent.date)} {getEventMonth(nextEvent.date)}</span>
+                      </div>
+                      <span className="hidden md:block w-1 h-1 bg-gray-600 rounded-full"></span>
+                      <div className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-primary text-base">schedule</span>
+                        <span>{getEventTime(nextEvent.date)}</span>
+                      </div>
+                      <span className="hidden md:block w-1 h-1 bg-gray-600 rounded-full"></span>
+                      <div className="flex items-center gap-1">
+                        <span className="material-symbols-outlined text-primary text-base">location_on</span>
+                        <span>{nextEvent.location.split(',')[0].toUpperCase()}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-center md:items-end gap-2">
+                  <div className="flex flex-col items-center md:items-end gap-3 md:gap-2">
                     <div className="flex flex-col items-center gap-2">
                       <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Tempo para Palpitar</p>
                       {timeLeft ? (
-                        <div className="flex gap-2 font-condensed">
-                          <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-3 rounded-lg w-16 shadow-lg">
-                            <span className="text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.days)}</span>
-                            <span className="text-[9px] uppercase text-gray-500 font-bold mt-1">Dias</span>
+                        <div className="flex gap-1.5 md:gap-2 font-condensed">
+                          <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg">
+                            <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.days)}</span>
+                            <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Dias</span>
                           </div>
-                          <div className="text-xl font-bold text-primary self-start mt-2">:</div>
-                          <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-3 rounded-lg w-16 shadow-lg">
-                            <span className="text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.hours)}</span>
-                            <span className="text-[9px] uppercase text-gray-500 font-bold mt-1">Hrs</span>
+                          <div className="text-xl font-bold text-primary self-start mt-1 md:mt-2">:</div>
+                          <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg">
+                            <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.hours)}</span>
+                            <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Hrs</span>
                           </div>
-                          <div className="text-xl font-bold text-primary self-start mt-2">:</div>
-                          <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-3 rounded-lg w-16 shadow-lg">
-                            <span className="text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.minutes)}</span>
-                            <span className="text-[9px] uppercase text-gray-500 font-bold mt-1">Min</span>
-                          </div>
-                          <div className="text-xl font-bold text-primary self-start mt-2">:</div>
-                          <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-3 rounded-lg w-16 shadow-lg border-primary/30">
-                            <span className="text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.seconds)}</span>
-                            <span className="text-[9px] uppercase text-gray-500 font-bold mt-1">Seg</span>
+                          <div className="text-xl font-bold text-primary self-start mt-1 md:mt-2">:</div>
+                          <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg border-primary/30">
+                            <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.minutes)}</span>
+                            <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Min</span>
                           </div>
                         </div>
                       ) : (
@@ -312,38 +315,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         {/* Sidebar */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           <Panel
-            title="Ranking Semanal"
-            subtitle="Top Jogadores & Sequências"
+            title="Ranking do último evento"
+            subtitle="Top 5 Jogadores da Elite"
             className="h-full"
             headerAction={
               <button
                 onClick={() => onNavigate('ranking')}
-                className="text-primary hover:text-white transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:text-white transition-all text-[10px] font-condensed font-bold uppercase tracking-widest"
               >
-                <span className="material-symbols-outlined">filter_list</span>
+                <span className="material-symbols-outlined text-sm">leaderboard</span>
+                <span>Ver Todos os Rankings</span>
               </button>
             }
           >
             <div className="space-y-2">
-              {/* Dynamic Top 2 from Leaderboard */}
-              {leaderboard.slice(0, 2).map((u, index) => (
-                <div key={u.id} className={`group flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${index === 0 ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/20 hover:border-yellow-500/50' : 'bg-surface-lighter border-white/5 hover:border-primary/50 hover:shadow-neon-sm'}`}>
+              {/* Dynamic Top 5 from Leaderboard */}
+              {leaderboard.slice(0, 5).map((u, index) => (
+                <div key={u.id} className={`group flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer ${index === 0 ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/20 hover:border-yellow-500/50' : 'bg-surface-lighter border-white/5 hover:border-primary/50'}`}>
                   <div className="relative shrink-0">
-                    <div className={`h-12 w-12 rounded-full p-0.5 ${index === 0 ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 shadow-[0_0_10px_rgba(234,179,8,0.4)]' : 'bg-gray-600'}`}>
-                      <img alt={`Rank ${index + 1} Avatar`} className={`h-full w-full rounded-full object-cover ${index !== 0 ? 'grayscale group-hover:grayscale-0 transition-all' : ''}`} src={u.avatar_url} />
+                    <div className={`h-10 w-10 rounded-full p-0.5 ${index === 0 ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 shadow-[0_0_10px_rgba(234,179,8,0.4)]' : index === 1 ? 'bg-silver' : index === 2 ? 'bg-bronze' : 'bg-gray-600'}`}>
+                      <img alt={`Rank ${index + 1} Avatar`} className={`h-full w-full rounded-full object-cover ${index > 0 ? 'grayscale group-hover:grayscale-0 transition-all' : ''}`} src={u.avatar_url} />
                     </div>
-                    <div className={`absolute -bottom-1 -right-1 text-black text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border border-black ${index === 0 ? 'bg-yellow-500' : 'bg-gray-400'}`}>{index + 1}</div>
+                    <div className={`absolute -bottom-1 -right-1 text-black text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-black ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-silver' : index === 2 ? 'bg-bronze' : 'bg-gray-400'}`}>{index + 1}</div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-0.5">
-                      <p className={`text-sm font-bold truncate transition-colors ${index === 0 ? 'text-white group-hover:text-yellow-400' : 'text-gray-300 group-hover:text-white'}`}>{u.name}</p>
-                      <span className={`text-xs font-bold ${index === 0 ? 'text-yellow-500' : 'text-gray-400 group-hover:text-white'}`}>{u.points} pts</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-black/30 px-1.5 py-0.5 rounded">
-                        <span className="material-symbols-outlined text-xs text-orange-500">local_fire_department</span>
-                        <span className="text-orange-400 font-bold">{Math.floor(Math.random() * 10)} Win Streak</span>
-                      </div>
+                    <div className="flex justify-between items-center mb-0">
+                      <p className={`text-xs font-bold truncate transition-colors ${index === 0 ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>{u.name}</p>
+                      <span className={`text-xs font-bold ${index === 0 ? 'text-yellow-500' : 'text-gray-400 group-hover:text-white'}`}>{u.last_event_points || u.points} pts</span>
                     </div>
                   </div>
                 </div>

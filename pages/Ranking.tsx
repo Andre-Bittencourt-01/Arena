@@ -2,16 +2,23 @@ import React from 'react';
 import { useData } from '../contexts/DataContext';
 
 const Ranking: React.FC = () => {
-  const { leaderboard, user: currentUser, rankingFilter, setRankingFilter } = useData();
+  const {
+    leaderboard,
+    user: currentUser,
+    rankingFilter,
+    setRankingFilter,
+    events,
+    selectedPeriodId,
+    setSelectedPeriodId
+  } = useData();
+
+  const [showSelector, setShowSelector] = React.useState(false);
 
   // Top 3 for Podium
   const top3 = leaderboard.slice(0, 3);
   const first = top3[0];
   const second = top3[1];
   const third = top3[2];
-
-  // Rest of the list (excluding top 3)
-  const rankingList = leaderboard.slice(3);
 
   // Current user's rank and data
   const currentUserIndex = leaderboard.findIndex(u => u.id === currentUser?.id);
@@ -47,7 +54,6 @@ const Ranking: React.FC = () => {
       </div>
     );
 
-    // 03 - Aumento de 80% nos dados de progresso
     if (delta > 0) {
       return (
         <div className="flex items-center gap-3 text-green-400 group-hover:text-green-300 transition-colors">
@@ -95,45 +101,50 @@ const Ranking: React.FC = () => {
     return (
       <div
         key={`${isHighlight ? 'highlight-' : ''}${user.id}`}
-        className={`group grid grid-cols-12 gap-0 px-8 py-8 items-center transition-all duration-300 relative overflow-hidden ${isHighlight ? 'bg-zinc-900 border-2 border-primary/40 rounded-xl mb-12 shadow-[0_0_40px_rgba(236,19,19,0.15)] ring-1 ring-white/5' : (isCurrentUser ? 'bg-primary/5' : 'hover:bg-white/[0.04]')}`}
+        className={`group flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-0 px-4 sm:px-8 py-4 sm:py-3 transition-all duration-300 relative overflow-hidden ${isHighlight ? 'bg-zinc-900 border-2 border-primary/40 rounded-xl mb-4 shadow-[0_0_40px_rgba(236,19,19,0.15)] ring-1 ring-white/5 mx-2 sm:mx-0' : (isCurrentUser ? 'bg-primary/5' : 'hover:bg-white/[0.04]')}`}
       >
         {isCurrentUser && !isHighlight && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_20px_rgba(236,19,19,0.5)]"></div>}
 
-        {/* Rank - Mesma cor da pontuação */}
-        <div className={`col-span-1 text-center font-display text-4xl sm:text-5xl font-black italic tracking-tighter transition-all ${isHighlight || isCurrentUser ? 'text-primary scale-110 drop-shadow-[0_0_10px_rgba(236,19,19,0.2)]' : 'text-white/90 group-hover:text-primary group-hover:scale-105'}`}>
-          {rank.toString().padStart(2, '0')}
+        <div className="flex items-center justify-between sm:contents w-full">
+          {/* Rank */}
+          <div className={`sm:col-span-1 font-display text-2xl sm:text-3xl font-black italic tracking-tighter transition-all ${isHighlight || isCurrentUser ? 'text-primary scale-110 drop-shadow-[0_0_10px_rgba(236,19,19,0.2)]' : 'text-white/90 group-hover:text-primary group-hover:scale-105'}`}>
+            {rank.toString().padStart(2, '0')}
+          </div>
+
+          {/* Points (Mobile Top Right) */}
+          <div className="sm:hidden text-right">
+            <div className={`font-display text-3xl font-black tracking-tighter leading-none ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white'}`}>
+              {displayPoints}
+            </div>
+          </div>
         </div>
 
-        {/* Progresso - Em Português com tamanho aumentado */}
-        <div className="col-span-3 flex justify-center border-l border-white/5 h-20 items-center">
-          {renderPerformance(user)}
-        </div>
+        {/* Progresso - Somente se não for semanal */}
+        {rankingFilter !== 'week' && (
+          <div className="sm:col-span-3 flex sm:justify-center sm:border-l border-white/5 sm:h-11 items-center">
+            {renderPerformance(user)}
+          </div>
+        )}
 
         {/* Competidor */}
-        <div className="col-span-5 flex items-center gap-6 pl-10 border-l border-white/5 h-20">
-          <div className={`size-16 bg-zinc-800 flex-shrink-0 transition-all duration-500 group-hover:rotate-3 group-hover:scale-110 ${isHighlight || isCurrentUser ? 'ring-2 ring-primary ring-offset-4 ring-offset-zinc-900 shadow-2xl shadow-primary/30' : 'border border-white/10 shadow-xl'}`} style={{ clipPath: 'polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%)' }}>
-            <img alt={user.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-opacity" src={user.avatar_url} />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-3">
-              <span className={`font-condensed font-bold uppercase tracking-tight text-2xl sm:text-3xl truncate ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white/90 group-hover:text-white'}`}>{user.name}</span>
-              {(isHighlight || isCurrentUser) && (
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] bg-primary text-white px-2.5 py-1 rounded-[2px] font-black tracking-[0.2em] flex-shrink-0 uppercase animate-pulse">ELITE_ARENA</span>
-                </div>
-              )}
+        <div className={`${rankingFilter === 'week' ? 'sm:col-span-8' : 'sm:col-span-5'} flex items-center sm:justify-center sm:border-l border-white/5 sm:h-11 py-2 sm:py-0`}>
+          <div className="flex items-center gap-3 sm:gap-4 w-full max-w-[280px]">
+            <div className={`size-10 sm:size-10 bg-zinc-800 flex-shrink-0 transition-all duration-500 group-hover:rotate-3 group-hover:scale-110 ${isHighlight || isCurrentUser ? 'ring-2 ring-primary ring-offset-2 ring-offset-zinc-900 shadow-2xl shadow-primary/30' : 'border border-white/10 shadow-xl'}`} style={{ clipPath: 'polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%)' }}>
+              <img alt={user.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-opacity" src={user.avatar_url} />
             </div>
-            <span className={`text-[11px] font-mono opacity-20 group-hover:opacity-40 transition-opacity hidden md:block uppercase tracking-widest font-bold ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white'}`}>Token_Verificação // #{user.id.substring(0, 8).toUpperCase()}</span>
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={`font-condensed font-bold uppercase tracking-tight text-xl sm:text-2xl truncate ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white/90 group-hover:text-white'}`}>{user.name}</span>
+              </div>
+              <span className={`text-[9px] font-mono opacity-20 group-hover:opacity-40 transition-opacity uppercase tracking-widest font-bold ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white'}`}>Token // {user.id.substring(0, 6).toUpperCase()}</span>
+            </div>
           </div>
         </div>
 
-        {/* Pontuação */}
-        <div className="col-span-3 text-right pr-10 border-l border-white/5 h-20 flex flex-col justify-center">
-          <div className={`font-display text-5xl sm:text-6xl font-black tracking-tighter leading-none ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white group-hover:text-primary transition-colors'}`}>
+        {/* Pontuação (Desktop only column) */}
+        <div className="hidden sm:flex col-span-3 text-right pr-10 border-l border-white/5 h-11 flex-col justify-center">
+          <div className={`font-display text-4xl font-black tracking-tighter leading-none ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white group-hover:text-primary transition-colors'}`}>
             {displayPoints}
-          </div>
-          <div className={`text-[10px] font-mono uppercase tracking-[0.4em] opacity-30 mt-1 font-black ${isHighlight || isCurrentUser ? 'text-primary' : ''}`}>
-            {rankingFilter === 'week' ? 'Pts Evento' : 'Acumulado'}
           </div>
         </div>
       </div>
@@ -141,71 +152,176 @@ const Ranking: React.FC = () => {
   };
 
   return (
-    <div className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-6 py-10 font-display scroll-smooth">
-      {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-14 border-b border-white/10 pb-8">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <div className="flex gap-0.5">
-              <span className="w-1.5 h-6 bg-primary"></span>
-              <span className="w-1.5 h-4 bg-primary/40 mt-1"></span>
-              <span className="w-1.5 h-2 bg-primary/20 mt-2"></span>
+    <div className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 pt-0 font-display scroll-smooth pb-20 sm:pb-8">
+      {/* Sticky Header & Banner Section */}
+      <div className="sticky top-14 md:top-16 z-40 bg-background-dark/95 backdrop-blur-md -mx-4 sm:-mx-6 px-4 sm:px-6 pt-5 sm:pt-6 pb-2 mb-4 md:mb-6 border-b border-white/5">
+        {/* Header section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-3 sm:mb-4 border-b border-white/5 pb-2">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-0.5">
+                <span className="w-1 h-3.5 sm:h-4 bg-primary"></span>
+                <span className="w-1 h-2.5 sm:h-3 bg-primary/40 mt-0.5"></span>
+                <span className="w-1 h-1.5 sm:h-2 bg-primary/20 mt-1"></span>
+              </div>
+              <span className="font-mono text-[8px] sm:text-[9px] text-primary tracking-[0.4em] uppercase font-black">ANÁLISE // SISTEMA_GLADIADOR</span>
             </div>
-            <span className="font-mono text-[10px] text-primary tracking-[0.4em] uppercase font-black">ANÁLISE_PERFORMANCE // SISTEMA_GLADIADOR</span>
+            <h2 className="font-condensed text-3xl sm:text-5xl font-black uppercase tracking-tighter leading-none text-white italic">
+              Elite <span className="text-primary drop-shadow-[0_0_15px_rgba(236,19,19,0.3)]">Gladiador</span>
+            </h2>
           </div>
-          <h2 className="font-condensed text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none text-white italic">
-            Elite <span className="text-primary drop-shadow-[0_0_15px_rgba(236,19,19,0.3)]">Gladiador</span>
-          </h2>
+
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            {/* Filter Buttons */}
+            <div className="flex bg-zinc-900 border border-white/10 p-1.5 sm:p-2 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-x-auto no-scrollbar max-w-full">
+              {[
+                { id: 'week', label: 'Evento' },
+                { id: 'month', label: 'Mensal' },
+                { id: 'year', label: 'Anual' }
+              ].map((btn, i) => (
+                <React.Fragment key={btn.id}>
+                  {i > 0 && <div className="w-px bg-white/5 my-2 mx-1 shrink-0"></div>}
+                  <button
+                    onClick={() => setRankingFilter(btn.id as any)}
+                    className={`px-4 sm:px-8 py-2 sm:py-3 font-condensed text-[10px] sm:text-sm uppercase font-black tracking-widest transition-all rounded-lg shrink-0 ${rankingFilter === btn.id ? 'bg-primary text-white scale-105 shadow-2xl shadow-primary/40' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
+                  >
+                    {btn.label}
+                  </button>
+                </React.Fragment>
+              ))}
+            </div>
+
+            {/* Period Selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowSelector(!showSelector)}
+                className={`flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 rounded-xl border transition-all duration-300 ${showSelector ? 'bg-primary border-primary text-white' : 'bg-zinc-900 border-white/10 text-white/60 hover:text-white hover:border-white/30'}`}
+              >
+                <span className="material-symbols-outlined text-lg sm:text-xl">history</span>
+                <span className="font-condensed font-bold uppercase tracking-widest text-xs sm:text-sm">Outros</span>
+              </button>
+
+              {showSelector && (
+                <div className="absolute right-0 mt-4 w-72 bg-zinc-900 border border-white/10 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-50 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="mb-4 pb-2 border-b border-white/5">
+                    <span className="font-mono text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold">Arquivo // Historico</span>
+                  </div>
+                  <div className="space-y-1 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                    {rankingFilter === 'week' ? (
+                      events.filter(e => e.status === 'completed').map(event => (
+                        <button
+                          key={event.id}
+                          onClick={() => { setSelectedPeriodId(event.id); setShowSelector(false); }}
+                          className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === event.id ? 'bg-primary/20 text-primary' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                        >
+                          {event.title} - {event.subtitle}
+                        </button>
+                      ))
+                    ) : rankingFilter === 'month' ? (
+                      [...Array(12)].map((_, i) => {
+                        const monthId = `2026-${(i + 1).toString().padStart(2, '0')}`;
+                        const monthName = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"][i];
+                        return (
+                          <button
+                            key={monthId}
+                            onClick={() => { setSelectedPeriodId(monthId); setShowSelector(false); }}
+                            className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === monthId ? 'bg-primary/20 text-primary' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                          >
+                            Performance {monthName} 2026
+                          </button>
+                        );
+                      })
+                    ) : (
+                      ['2026', '2025'].map(year => (
+                        <button
+                          key={year}
+                          onClick={() => { setSelectedPeriodId(year); setShowSelector(false); }}
+                          className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === year ? 'bg-primary/20 text-primary' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                        >
+                          Performance Anual {year}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { setSelectedPeriodId(null); setShowSelector(false); }}
+                    className="w-full mt-4 py-2 text-[10px] font-mono uppercase tracking-[0.3em] text-white/20 hover:text-primary transition-colors border-t border-white/5 pt-4"
+                  >
+                    Resetar para Atual
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Filter Buttons */}
-        <div className="flex bg-zinc-900 border border-white/10 p-2 rounded-xl scale-90 sm:scale-100 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-          {[
-            { id: 'week', label: 'Evento' },
-            { id: 'month', label: 'Mensal' },
-            { id: 'year', label: 'Anual' }
-          ].map((btn, i) => (
-            <React.Fragment key={btn.id}>
-              {i > 0 && <div className="w-px bg-white/5 my-2 mx-1"></div>}
-              <button
-                onClick={() => setRankingFilter(btn.id as any)}
-                className={`px-6 sm:px-8 py-3 font-condensed text-xs sm:text-sm uppercase font-black tracking-[0.2em] transition-all rounded-lg ${rankingFilter === btn.id ? 'bg-primary text-white scale-105 shadow-2xl shadow-primary/40' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
-              >
-                {btn.label}
-              </button>
-            </React.Fragment>
-          ))}
+        {/* Period Banner Section */}
+        <div className="mb-2 relative h-14 rounded-xl overflow-hidden border border-white/10 shadow-2xl group">
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent z-10"></div>
+          {rankingFilter === 'week' ? (
+            (() => {
+              const lastCompletedEvent = events.filter(e => e.status === 'completed').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+              const event = selectedPeriodId
+                ? events.find(e => e.id === selectedPeriodId)
+                : lastCompletedEvent;
+
+              return event ? (
+                <>
+                  <img src={event.banner_url} className="absolute inset-0 w-full h-full object-cover grayscale opacity-30 group-hover:scale-110 transition-transform duration-700" alt="Event Banner" />
+                  <div className="absolute inset-0 z-20 flex items-center justify-between px-8">
+                    <div className="flex flex-col">
+                      <span className="font-mono text-[7px] text-primary tracking-[0.5em] font-black uppercase">Evento_Atual</span>
+                      <h4 className="font-condensed text-xl font-black text-white italic uppercase leading-none">{event.title}</h4>
+                    </div>
+                    <p className="font-condensed text-sm text-white/40 uppercase font-bold tracking-tight">{event.subtitle}</p>
+                  </div>
+                </>
+              ) : null;
+            })()
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-[#1a0c0c] flex items-center justify-center -z-10 overflow-hidden">
+                <span className="material-symbols-outlined text-[80px] text-white/[0.02] absolute rotate-12 -right-10">history_edu</span>
+              </div>
+              <div className="absolute inset-0 z-20 flex items-center justify-between px-8">
+                <div className="flex flex-col">
+                  <span className="font-mono text-[7px] text-primary tracking-[0.5em] font-black uppercase">Filtro_Periodo</span>
+                  <h4 className="font-condensed text-xl font-black text-white italic uppercase leading-none">
+                    {rankingFilter === 'month' ? (selectedPeriodId ? `Performance ${selectedPeriodId}` : 'Mês Corrente') : (selectedPeriodId ? `Ranking Anual ${selectedPeriodId}` : 'Ano Corrente')}
+                  </h4>
+                </div>
+                <p className="font-condensed text-sm text-white/40 uppercase font-bold tracking-tight">Análise Consolidada</p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      <div className="mb-20 mt-4 relative z-20">
-        <h3 className="font-condensed text-xl text-white uppercase tracking-[0.3em] font-black flex items-center gap-4 border-l-4 border-primary pl-6">
-          <span className="material-symbols-outlined text-primary text-2xl animate-pulse">military_tech</span> Pódio de Elite: {periodLabel}
+      <div className="mb-2 mt-2 relative z-20">
+        <h3 className="font-condensed text-base text-white uppercase tracking-[0.3em] font-black flex items-center gap-3 border-l-2 border-primary pl-4">
+          <span className="material-symbols-outlined text-primary text-lg">military_tech</span> Pódio de Elite: {periodLabel}
         </h3>
       </div>
 
-      {/* Podium */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20 items-end px-4 mt-12 relative z-10">
+      {/* Podium - Vertical Trophy Stack on Mobile */}
+      <div className="flex flex-col md:grid md:grid-cols-3 gap-3 mb-6 items-end px-2 sm:px-4 mt-4 relative z-10">
         {/* Silver */}
-        <div className="order-2 md:order-1 bg-card-dark border border-white/10 relative group hover:border-silver/50 transition-all duration-300 clip-corner">
-          <div className="absolute top-0 left-0 w-full h-1 bg-silver"></div>
-          <div className="p-8 flex flex-col items-center">
-            <div className="text-silver font-condensed text-8xl font-black opacity-10 absolute top-4 right-4 z-0 italic leading-none">02</div>
+        <div className="order-2 md:order-1 w-full bg-card-dark border border-white/10 relative group hover:border-silver/50 transition-all duration-300 clip-corner">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-silver"></div>
+          <div className="pt-2 pb-4 px-4 flex flex-row md:flex-col items-center justify-between md:justify-center gap-4">
+            <div className="text-silver font-condensed text-3xl font-black opacity-10 absolute top-2 right-2 z-0 italic leading-none hidden md:block">02</div>
             {second && (
               <>
-                <div className="relative z-10 mb-6">
-                  <div className="size-52 overflow-hidden border-2 border-silver/30 rotate-1 group-hover:rotate-0 transition-transform" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="size-20 sm:size-24 overflow-hidden border border-silver/30 rotate-1 group-hover:rotate-0 transition-transform" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
                     <img alt="2nd" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" src={second.avatar_url} />
                   </div>
-                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-silver text-black font-condensed text-xs font-black px-4 py-1.5 uppercase tracking-[0.3em]">PRATA</div>
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-silver text-black font-condensed text-[8px] font-black px-3 py-0.5 uppercase tracking-[0.2em] whitespace-nowrap">PRATA</div>
                 </div>
-                <div className="text-center z-10 w-full">
-                  <h4 className="font-condensed text-3xl uppercase tracking-tighter text-white font-black">{second.name}</h4>
-                  <div className="flex items-center justify-center gap-6 border-t border-white/5 pt-5 mt-4">
-                    <div className="text-center">
-                      <div className="text-[11px] text-white/30 uppercase tracking-widest font-black mb-1">Pontos</div>
-                      <div className="font-display text-5xl text-silver font-black leading-none tracking-tighter">{getFilteredPoints(second)}</div>
-                    </div>
+                <div className="text-right md:text-center z-10 flex-1 md:w-full">
+                  <h4 className="font-condensed text-lg uppercase tracking-tighter text-white font-black leading-none mb-1 truncate">{second.name}</h4>
+                  <div className="border-t border-white/5 pt-2 mt-1 md:mt-4">
+                    <div className="font-display font-black text-xl text-silver leading-none tracking-tight">{getFilteredPoints(second)}</div>
                   </div>
                 </div>
               </>
@@ -213,26 +329,26 @@ const Ranking: React.FC = () => {
           </div>
         </div>
 
-        {/* Gold */}
-        <div className="order-1 md:order-2 bg-zinc-900 border border-gold/40 relative group hover:border-gold transition-all duration-500 transform md:-translate-y-10 shadow-[0_30px_90px_rgba(255,215,0,0.15)] clip-corner scale-105">
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-gold/50 via-gold to-gold/50"></div>
-          <div className="p-10 flex flex-col items-center">
-            <div className="text-gold font-condensed text-9xl font-black opacity-10 absolute top-6 right-8 z-0 italic leading-none">01</div>
-            <span className="material-symbols-outlined text-gold text-5xl absolute top-6 left-8 animate-bounce drop-shadow-[0_0_15px_rgba(255,215,0,0.6)]">workspace_premium</span>
+        {/* Gold - Peak Trophy */}
+        <div className="order-1 md:order-2 w-full bg-zinc-900 border border-gold/40 relative group hover:border-gold transition-all duration-500 transform md:-translate-y-4 shadow-[0_20px_50px_rgba(255,215,0,0.1)] clip-corner md:scale-105">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gold"></div>
+          <div className="p-4 flex flex-row md:flex-col items-center justify-around md:justify-center gap-4">
+            <div className="text-gold font-condensed text-4xl font-black opacity-10 absolute top-2 right-4 z-0 italic leading-none hidden md:block">01</div>
+            <span className="material-symbols-outlined text-gold text-2xl absolute top-2 left-4 hidden md:block">workspace_premium</span>
             {first && (
               <>
-                <div className="relative z-10 mb-8">
-                  <div className="size-72 overflow-hidden border-2 border-gold/50 -rotate-1 group-hover:rotate-0 transition-transform shadow-[0_0_40px_rgba(255,215,0,0.2)]" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="size-24 sm:size-28 overflow-hidden border border-gold/50 -rotate-1 group-hover:rotate-0 transition-transform shadow-[0_0_20px_rgba(255,215,0,0.1)]" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
                     <img alt="1st" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" src={first.avatar_url} />
                   </div>
-                  <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 bg-gold text-black font-condensed text-sm font-black px-8 py-2 uppercase tracking-[0.4em] italic shadow-2xl">CAMPEÃO</div>
+                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-gold text-black font-condensed text-[10px] font-black px-4 py-1 uppercase tracking-[0.3em] italic shadow-2xl whitespace-nowrap">CAMPEÃO</div>
                 </div>
-                <div className="text-center z-10 w-full mb-4">
-                  <h4 className="font-condensed text-4xl uppercase tracking-tighter text-white font-black leading-none mb-2">{first.name}</h4>
-                  <div className="font-mono text-[11px] text-gold/60 uppercase tracking-[0.4em] font-black underline decoration-gold/30 underline-offset-8">PODER_MÁXIMO</div>
-                  <div className="border-t border-white/10 pt-8 mt-10">
-                    <div className="text-[12px] text-white/30 uppercase tracking-[0.5em] font-black mb-3">Ranking_Oficial</div>
-                    <div className="font-display font-black text-8xl text-gold leading-none tracking-[calc(-0.05em)] drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]">{getFilteredPoints(first)}</div>
+                <div className="text-right md:text-center z-10 flex-1 md:w-full">
+                  <h4 className="font-condensed text-xl uppercase tracking-tighter text-white font-black leading-none mb-1 truncate">{first.name}</h4>
+                  <div className="font-mono text-[7px] text-gold/60 uppercase tracking-[0.4em] font-black mt-1">PODER_MÁXIMO</div>
+                  <div className="border-t border-white/10 pt-3 mt-1 md:mt-4">
+                    <div className="text-[9px] text-white/30 uppercase tracking-[0.5em] font-black hidden md:block">Ranking_Oficial</div>
+                    <div className="font-display font-black text-3xl md:text-4xl text-gold leading-none tracking-tight">{getFilteredPoints(first)}</div>
                   </div>
                 </div>
               </>
@@ -241,25 +357,22 @@ const Ranking: React.FC = () => {
         </div>
 
         {/* Bronze */}
-        <div className="order-3 md:order-3 bg-card-dark border border-white/10 relative group hover:border-bronze/50 transition-all duration-300 clip-corner">
-          <div className="absolute top-0 left-0 w-full h-1 bg-bronze"></div>
-          <div className="p-8 flex flex-col items-center">
-            <div className="text-bronze font-condensed text-8xl font-black opacity-10 absolute top-4 right-4 z-0 italic leading-none">03</div>
+        <div className="order-3 md:order-3 w-full bg-card-dark border border-white/10 relative group hover:border-bronze/50 transition-all duration-300 clip-corner">
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-bronze"></div>
+          <div className="pt-2 pb-4 px-4 flex flex-row md:flex-col items-center justify-between md:justify-center gap-4">
+            <div className="text-bronze font-condensed text-3xl font-black opacity-10 absolute top-2 right-2 z-0 italic leading-none hidden md:block">03</div>
             {third && (
               <>
-                <div className="relative z-10 mb-6">
-                  <div className="size-52 overflow-hidden border-2 border-bronze/30 -rotate-1 group-hover:rotate-0 transition-transform" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="size-20 sm:size-24 overflow-hidden border border-bronze/30 -rotate-1 group-hover:rotate-0 transition-transform" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
                     <img alt="3rd" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" src={third.avatar_url} />
                   </div>
-                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-bronze text-white font-condensed text-xs font-black px-4 py-1.5 uppercase tracking-[0.3em]">BRONZE</div>
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-bronze text-white font-condensed text-[8px] font-black px-3 py-0.5 uppercase tracking-[0.2em] whitespace-nowrap">BRONZE</div>
                 </div>
-                <div className="text-center z-10 w-full">
-                  <h4 className="font-condensed text-3xl uppercase tracking-tighter text-white font-black">{third.name}</h4>
-                  <div className="flex items-center justify-center gap-6 border-t border-white/5 pt-5 mt-4">
-                    <div className="text-center">
-                      <div className="text-[11px] text-white/30 uppercase tracking-widest font-black mb-1">Pontos</div>
-                      <div className="font-display font-black text-5xl text-bronze font-black leading-none tracking-tighter">{getFilteredPoints(third)}</div>
-                    </div>
+                <div className="text-right md:text-center z-10 flex-1 md:w-full">
+                  <h4 className="font-condensed text-lg uppercase tracking-tighter text-white font-black leading-none mb-1 truncate">{third.name}</h4>
+                  <div className="border-t border-white/5 pt-2 mt-1 md:mt-4">
+                    <div className="font-display font-black text-xl text-bronze leading-none tracking-tight">{getFilteredPoints(third)}</div>
                   </div>
                 </div>
               </>
@@ -268,42 +381,40 @@ const Ranking: React.FC = () => {
         </div>
       </div>
 
-      {/* 01 - Highlight Box for Current User - AGORA ABAIXO DO PODIUM */}
+      {/* User Status Highlight */}
       {currentUserData && (
-        <div className="animate-in fade-in slide-in-from-left duration-1000 relative mb-16 px-4">
-          <div className="absolute -left-4 top-0 bottom-12 w-1 bg-primary/40 rounded-full blur-sm"></div>
-          <div className="flex items-center gap-4 mb-6 px-2">
-            <div className="size-10 bg-primary/20 border border-primary/40 rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-2xl">person_search</span>
+        <div className="animate-in fade-in slide-in-from-left duration-1000 relative mb-4 px-4">
+          <div className="absolute -left-4 top-0 bottom-2 w-1 bg-primary/40 rounded-full blur-sm"></div>
+          <div className="flex items-center gap-2 mb-2 px-2">
+            <div className="size-6 bg-primary/20 border border-primary/40 rounded flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-sm">person_search</span>
             </div>
-            <div>
-              <h3 className="font-condensed text-2xl text-white uppercase tracking-widest font-black italic">Sua <span className="text-primary">Posição</span></h3>
-              <p className="font-mono text-[9px] text-white/30 uppercase tracking-[0.2em] font-bold">Consulte sua métrica atual sem navegar na tabela principal</p>
-            </div>
+            <h3 className="font-condensed text-lg text-white uppercase tracking-widest font-black italic">Sua <span className="text-primary">Posição</span></h3>
           </div>
           {renderUserRow(currentUserData, currentUserIndex, true)}
         </div>
       )}
 
-      {/* Tabela de Performance */}
-      <div className="mb-8 flex items-center justify-between px-2">
-        <h3 className="font-condensed text-2xl text-white uppercase tracking-[0.3em] font-black flex items-center gap-4 italic border-l-4 border-primary pl-6">
-          <span className="material-symbols-outlined text-primary text-3xl">list_alt</span> TABELA DE PERFORMANCE
+
+      {/* Execution Table UI */}
+      <div className="mb-2 flex items-center justify-between px-2">
+        <h3 className="font-condensed text-xl text-white uppercase tracking-[0.3em] font-black flex items-center gap-3 italic border-l-2 border-primary pl-4">
+          <span className="material-symbols-outlined text-primary text-2xl">list_alt</span> TABELA DE PERFORMANCE
         </h3>
       </div>
 
       <div className="flex flex-col border border-white/10 bg-zinc-900/40 backdrop-blur-3xl overflow-hidden relative shadow-[0_40px_100px_rgba(0,0,0,0.6)] rounded-2xl">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none opacity-40"></div>
 
-        {/* 02 - Cabeçalhos Ajustados para Harmonia Estética */}
-        <div className="grid grid-cols-12 gap-0 px-8 py-12 bg-black/80 border-b-2 border-primary/20 text-xl font-condensed text-white/40 uppercase tracking-[0.4em] font-black z-30 sticky top-0 backdrop-blur-xl">
+        {/* Header Grid */}
+        <div className="hidden sm:grid grid-cols-12 gap-0 px-8 py-3 bg-black/80 border-b border-primary/20 text-sm font-condensed text-white/40 uppercase tracking-[0.4em] font-black z-30 sticky top-0 backdrop-blur-xl">
           <div className="col-span-1 text-center border-r border-white/5">Ranking</div>
-          <div className="col-span-3 text-center border-r border-white/5 text-primary/60">Progresso</div>
-          <div className="col-span-5 flex items-center pl-10 border-r border-white/5 uppercase">Competidor</div>
-          <div className="col-span-3 text-right pr-10 uppercase tracking-[0.5em] font-black text-white/70">Pontuação</div>
+          {rankingFilter !== 'week' && <div className="col-span-3 text-center border-r border-white/5 text-primary/60">Progresso</div>}
+          <div className={`${rankingFilter === 'week' ? 'col-span-8' : 'col-span-5'} flex items-center justify-center border-r border-white/5 uppercase`}>Competidor</div>
+          <div className="col-span-3 text-right pr-6 uppercase tracking-[0.5em] font-black text-white/70">Pontuação</div>
         </div>
 
-        {/* Rows */}
+        {/* Leaderboard Lines */}
         <div className="divide-y divide-white/10 relative z-10 border-t border-white/5">
           {leaderboard.length > 0 ? (
             leaderboard.map((user, index) => renderUserRow(user, index))
@@ -316,7 +427,7 @@ const Ranking: React.FC = () => {
         </div>
 
         <div className="p-12 text-center text-white/5 text-[11px] font-mono border-t border-white/5 uppercase tracking-[0.7em] bg-black/60 font-black">
-          STATUS_MOTOR: ONLINE // CONEXÃO_SEGURA // v1.0.4.7_ELITE
+          STATUS_MOTOR: ONLINE // CONEXÃO_SEGURA // v1.0.4.8_ELITE
         </div>
       </div>
       <div className="h-40"></div>

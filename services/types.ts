@@ -26,7 +26,7 @@ export interface IDataService {
     updatePick: (pick: Pick) => Promise<void>;
 
     // Leaderboard
-    getLeaderboard: (period?: 'week' | 'month' | 'year' | 'all') => Promise<User[]>;
+    getLeaderboard: (period?: RankingPeriod, periodId?: string) => Promise<User[]>;
 
     // Auth
     login(email: string, password: string): Promise<User | null>;

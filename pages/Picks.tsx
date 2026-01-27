@@ -45,28 +45,27 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
               <p className="text-text-muted text-xs uppercase tracking-[0.2em] mt-1">Disputa de Cinturão</p>
             </div>
 
-            {/* Fighters Visual */}
-            <div className="grid grid-cols-2 gap-0 relative">
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black border-2 border-primary text-white font-black italic shadow-lg text-lg">
+            {/* Fighters Visual - Vertical Stack on Mobile */}
+            <div className="flex flex-col md:grid md:grid-cols-2 gap-0 relative">
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 md:-translate-y-1/2 -translate-y-[10%] z-20">
+                <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full bg-black border-2 border-primary text-white font-black italic shadow-lg text-sm md:text-lg">
                   VS
                 </div>
               </div>
 
               {/* Fighter 1 */}
               <div
-                className={`relative group cursor-pointer border-r border-border-dark/50 ${selectedWinner === 'marcus' ? 'border-r-0' : ''}`}
+                className={`relative group cursor-pointer border-b md:border-b-0 md:border-r border-border-dark/50 ${selectedWinner === 'marcus' ? 'border-r-0' : ''}`}
                 onClick={() => setSelectedWinner('marcus')}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-0"></div>
                 <div
-                  className={`aspect-[4/5] w-full bg-cover bg-center bg-no-repeat transition-transform duration-500 ${selectedWinner === 'marcus' ? 'scale-105' : 'grayscale group-hover:grayscale-0'}`}
+                  className={`aspect-[16/9] md:aspect-[4/5] w-full bg-cover bg-center bg-no-repeat transition-all duration-500 ${selectedWinner === 'marcus' ? 'scale-105' : 'grayscale group-hover:grayscale-0'}`}
                   style={{ backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuAeuogyAzv8sjHHnfp2woQXzdD4mbc4hnB7VQikhwK0tvmyvQSE4hUoS0-ad4317ESO6yGWRxUGcaImvbymT-J-SLnkGNwX9GaZk9K8Mwo83ZHoG0dt7hjjtscOMFpeiAI1L4r8m-rAGf8SYRVY5HY9sOAi8OCJ_Ec_esDZ1-rsFbHmj25w2L4gLUY095GoQOQ-mQ6CButJFscHWnXuGGVBuETJ53hXhj9wxY4-HE4BSTMPnV1NpfbtH3LSEBcEVfAiLKRTdjrr_UBN')` }}
                 ></div>
                 <div className="absolute bottom-0 left-0 w-full p-4 z-10 flex flex-col items-center">
-                  <span className="text-xs font-bold text-primary bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm mb-2">#1 RANKING</span>
-                  <h3 className="text-xl md:text-2xl font-bold text-white text-center leading-none uppercase">Marcus <br />"The Tank"</h3>
-                  <p className="text-text-muted text-sm mt-1 font-mono">22-1-0</p>
+                  <span className="text-[10px] md:text-xs font-bold text-primary bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm mb-1 sm:mb-2">#1 RANKING</span>
+                  <h3 className="text-xl md:text-2xl font-bold text-white text-center leading-none uppercase">Marcus <br className="hidden sm:block" /> "The Tank"</h3>
                 </div>
                 {selectedWinner === 'marcus' && (
                   <>
@@ -80,18 +79,17 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
 
               {/* Fighter 2 */}
               <div
-                className={`relative group cursor-pointer ${selectedWinner === 'diego' ? '' : ''}`}
+                className={`relative group cursor-pointer`}
                 onClick={() => setSelectedWinner('diego')}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-0"></div>
                 <div
-                  className={`aspect-[4/5] w-full bg-cover bg-center bg-no-repeat transition-transform duration-500 ${selectedWinner === 'diego' ? 'scale-105' : 'grayscale group-hover:grayscale-0'}`}
+                  className={`aspect-[16/9] md:aspect-[4/5] w-full bg-cover bg-center bg-no-repeat transition-all duration-500 ${selectedWinner === 'diego' ? 'scale-105' : 'grayscale group-hover:grayscale-0'}`}
                   style={{ backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuDXz43rglkDVCBukFJJAKRCMJEJVeBf4O23hqBF3Wt7qs4UQ9XKxG0Qh60vAzeT2Yk3fHuMLMBm_96c3k0z-gyX6G61y9Bh07cQzywCtfeZ850xj1FVOmg770Jbncu1x81wNe26ourvYQMEPdUCHzkAKAUT9vbY3h-YSLDv0zwnW52rnNdV8xXV2FxXAQ65NVI46I3zRS1Q727I1x2UInk5N705Pkld7HtQk93BrUguWhbsfFS9foH56xc27YxYaGAGqe7vGDwHFUEa')` }}
                 ></div>
                 <div className="absolute bottom-0 left-0 w-full p-4 z-10 flex flex-col items-center">
-                  <span className="text-xs font-bold text-white bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm mb-2">CHAMPION</span>
-                  <h3 className="text-xl md:text-2xl font-bold text-white text-center leading-none uppercase">Diego <br />Silva</h3>
-                  <p className="text-text-muted text-sm mt-1 font-mono">18-3-0</p>
+                  <span className="text-[10px] md:text-xs font-bold text-white bg-black/50 px-2 py-0.5 rounded backdrop-blur-sm mb-1 sm:mb-2">CHAMPION</span>
+                  <h3 className="text-xl md:text-2xl font-bold text-white text-center leading-none uppercase">Diego <br className="hidden sm:block" /> Silva</h3>
                 </div>
                 {selectedWinner === 'diego' && (
                   <>
@@ -112,30 +110,30 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
               {/* Step 1: Winner (Confirmed Visual) */}
               <div className="flex flex-col gap-4 relative md:pl-8">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-white text-lg font-bold uppercase flex items-center gap-2">
-                    <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs text-white ${selectedWinner ? 'bg-primary' : 'bg-surface-highlight border border-border-dark text-text-muted'}`}>1</span>
+                  <h4 className="text-white text-base md:text-lg font-bold uppercase flex items-center gap-2">
+                    <span className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] text-white ${selectedWinner ? 'bg-primary' : 'bg-surface-highlight border border-border-dark text-text-muted'}`}>1</span>
                     Quem vence?
                   </h4>
-                  {selectedWinner && <span className="text-primary text-xs font-bold uppercase tracking-wider">Selecionado</span>}
+                  {selectedWinner && <span className="text-primary text-[10px] font-bold uppercase tracking-wider">Selecionado</span>}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   <button
                     onClick={() => setSelectedWinner('marcus')}
-                    className={`relative overflow-hidden rounded-xl p-4 border-2 transition-all shadow-lg group ${selectedWinner === 'marcus' ? 'bg-primary border-primary' : 'bg-surface-highlight border-transparent hover:border-border-dark'}`}
+                    className={`relative overflow-hidden rounded-xl p-3 sm:p-4 border-2 transition-all shadow-lg group ${selectedWinner === 'marcus' ? 'bg-primary border-primary' : 'bg-surface-highlight border-transparent hover:border-border-dark'}`}
                   >
                     <div className="relative z-10 flex flex-col items-center gap-1">
-                      <span className={`font-black uppercase text-lg leading-none tracking-wide ${selectedWinner === 'marcus' ? 'text-white' : 'text-text-muted group-hover:text-white'}`}>Marcus</span>
-                      <span className={`${selectedWinner === 'marcus' ? 'text-white/80' : 'text-text-muted/60'} text-xs font-medium uppercase`}>"The Tank"</span>
+                      <span className={`font-black uppercase text-sm sm:text-lg leading-none tracking-wide ${selectedWinner === 'marcus' ? 'text-white' : 'text-text-muted group-hover:text-white'}`}>Marcus</span>
+                      <span className={`${selectedWinner === 'marcus' ? 'text-white/80' : 'text-text-muted/60'} text-[9px] sm:text-xs font-medium uppercase truncate`}>"The Tank"</span>
                     </div>
                   </button>
                   <button
                     onClick={() => setSelectedWinner('diego')}
-                    className={`relative overflow-hidden rounded-xl p-4 border-2 transition-all shadow-lg group ${selectedWinner === 'diego' ? 'bg-primary border-primary' : 'bg-surface-highlight border-transparent hover:border-border-dark'}`}
+                    className={`relative overflow-hidden rounded-xl p-3 sm:p-4 border-2 transition-all shadow-lg group ${selectedWinner === 'diego' ? 'bg-primary border-primary' : 'bg-surface-highlight border-transparent hover:border-border-dark'}`}
                   >
                     <div className="relative z-10 flex flex-col items-center gap-1">
-                      <span className={`font-black uppercase text-lg leading-none tracking-wide ${selectedWinner === 'diego' ? 'text-white' : 'text-text-muted group-hover:text-white'}`}>Diego</span>
-                      <span className={`${selectedWinner === 'diego' ? 'text-white/80' : 'text-text-muted/60'} text-xs font-medium uppercase`}>Silva</span>
+                      <span className={`font-black uppercase text-sm sm:text-lg leading-none tracking-wide ${selectedWinner === 'diego' ? 'text-white' : 'text-text-muted group-hover:text-white'}`}>Diego</span>
+                      <span className={`${selectedWinner === 'diego' ? 'text-white/80' : 'text-text-muted/60'} text-[9px] sm:text-xs font-medium uppercase truncate`}>Silva</span>
                     </div>
                   </button>
                 </div>
@@ -177,18 +175,18 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
               {/* Step 3: Round */}
               <div className={`flex flex-col gap-4 relative md:pl-8 transition-opacity duration-300 ${!selectedMethod ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex items-center justify-between">
-                  <h4 className="text-white text-lg font-bold uppercase flex items-center gap-2">
-                    <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs text-white ${selectedRound ? 'bg-primary' : 'bg-surface-highlight border border-border-dark text-text-muted'}`}>3</span>
+                  <h4 className="text-white text-base md:text-lg font-bold uppercase flex items-center gap-2">
+                    <span className={`flex items-center justify-center w-6 h-6 rounded-full text-[10px] text-white ${selectedRound ? 'bg-primary' : 'bg-surface-highlight border border-border-dark text-text-muted'}`}>3</span>
                     Em qual round?
                   </h4>
-                  <span className="text-text-muted text-xs uppercase tracking-wider">Opcional</span>
+                  <span className="text-text-muted text-[10px] uppercase tracking-wider">Opcional</span>
                 </div>
                 <div className="grid grid-cols-5 gap-2">
                   {[1, 2, 3, 4, 5].map((round) => (
                     <button
                       key={round}
                       onClick={() => setSelectedRound(round)}
-                      className={`aspect-square flex items-center justify-center rounded-lg border font-bold text-lg transition-all ${selectedRound === round ? 'bg-primary border-primary text-white shadow-[0_0_10px_rgba(236,19,19,0.4)] transform scale-105' : 'bg-surface-highlight border-border-dark text-text-muted hover:border-primary hover:text-white'}`}
+                      className={`h-12 flex items-center justify-center rounded-xl border font-bold text-lg transition-all ${selectedRound === round ? 'bg-primary border-primary text-white shadow-[0_0_10px_rgba(236,19,19,0.4)] transform scale-105' : 'bg-surface-highlight border-border-dark text-text-muted hover:border-primary hover:text-white'}`}
                     >
                       {round}
                     </button>
@@ -196,16 +194,16 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
                 </div>
               </div>
 
-              <div className="mt-4 pt-6 border-t border-border-dark flex flex-col gap-3">
+              <div className="mt-4 pt-6 md:border-t border-border-dark flex flex-col gap-3">
                 <button
                   onClick={handleConfirm}
                   disabled={!selectedWinner}
-                  className={`w-full rounded-xl py-4 text-white font-bold text-lg uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${selectedWinner ? 'bg-primary shadow-[0_4px_20px_rgba(236,19,19,0.3)] hover:bg-primary-hover hover:shadow-[0_4px_25px_rgba(236,19,19,0.5)] active:scale-[0.99]' : 'bg-surface-highlight text-text-muted cursor-not-allowed'}`}
+                  className={`w-full rounded-2xl py-5 text-white font-bold text-lg uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-neon ${selectedWinner ? 'bg-primary hover:bg-primary-hover active:scale-[0.98]' : 'bg-surface-highlight text-text-muted cursor-not-allowed grayscale'}`}
                 >
                   <span>Confirmar Palpite</span>
-                  <span className="material-symbols-outlined">arrow_forward</span>
+                  <span className="material-symbols-outlined font-bold">arrow_forward</span>
                 </button>
-                <p className="text-center text-xs text-text-muted">Ao confirmar, você concorda com as regras de pontuação.</p>
+                <p className="text-center text-[10px] text-text-muted uppercase tracking-tight">Ao confirmar, você concorda com as regras de pontuação.</p>
               </div>
             </div>
           </div>

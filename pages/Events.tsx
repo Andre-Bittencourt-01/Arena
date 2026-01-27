@@ -44,16 +44,16 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
           <h2 className="font-condensed text-4xl md:text-5xl text-white tracking-wide uppercase mb-2">Calendário de Lutas</h2>
           <p className="text-gray-400 text-sm md:text-base">Selecione os eventos para realizar seus palpites ou ver resultados.</p>
         </div>
-        <div className="flex items-center gap-8 border-b border-white/10">
+        <div className="flex items-center gap-4 border-b border-white/10 overflow-x-auto no-scrollbar pb-0.5">
           <button
             onClick={() => setActiveTab('upcoming')}
-            className={`pb-4 text-sm font-bold uppercase tracking-widest transition-colors border-b-2 ${activeTab === 'upcoming' ? 'text-white border-primary' : 'text-gray-500 border-transparent hover:text-white'}`}
+            className={`pb-4 px-4 text-xs md:text-sm font-bold uppercase tracking-widest transition-colors border-b-2 shrink-0 ${activeTab === 'upcoming' ? 'text-white border-primary' : 'text-gray-500 border-transparent hover:text-white'}`}
           >
             Próximos Eventos
           </button>
           <button
             onClick={() => setActiveTab('past')}
-            className={`pb-4 text-sm font-bold uppercase tracking-widest transition-colors border-b-2 ${activeTab === 'past' ? 'text-white border-primary' : 'text-gray-500 border-transparent hover:text-white'}`}
+            className={`pb-4 px-4 text-xs md:text-sm font-bold uppercase tracking-widest transition-colors border-b-2 shrink-0 ${activeTab === 'past' ? 'text-white border-primary' : 'text-gray-500 border-transparent hover:text-white'}`}
           >
             Eventos Passados
           </button>
@@ -85,48 +85,42 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
                   }`}></div>
               </div>
 
-              <div className="relative z-10 p-6 md:p-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="flex-1 space-y-3">
+              <div className="relative z-10 p-5 md:p-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="flex-1 space-y-2 md:space-y-3">
                   {/* Status Badge */}
                   {event.status === 'live' && (
                     <div className="flex items-center gap-3">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded bg-yellow-500/10 border border-yellow-500/40 text-yellow-500 text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/40 text-yellow-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">
                         <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mr-2 animate-pulse"></span>
                         Em Andamento
                       </span>
                     </div>
                   )}
                   {event.status === 'upcoming' && (
-                    <span className="inline-block px-2.5 py-1 rounded bg-primary/10 border border-primary/40 text-primary text-[10px] font-bold uppercase tracking-widest backdrop-blur-md shadow-neon-sm">
+                    <span className="inline-block px-2 py-0.5 rounded bg-primary/10 border border-primary/40 text-primary text-[9px] md:text-[10px] font-bold uppercase tracking-widest backdrop-blur-md shadow-neon-sm">
                       Palpites Abertos
                     </span>
                   )}
                   {event.status === 'completed' && (
-                    <span className="inline-block px-2.5 py-1 rounded bg-white/5 border border-white/10 text-gray-400 text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">
+                    <span className="inline-block px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 text-[9px] md:text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">
                       Finalizado
                     </span>
                   )}
 
-                  <h3 className={`font-condensed text-4xl md:text-6xl leading-none tracking-wide ${event.status === 'completed' ? 'text-gray-300' : 'text-white'}`}>
+                  <h3 className={`font-condensed text-3xl md:text-6xl leading-none tracking-tight ${event.status === 'completed' ? 'text-gray-300' : 'text-white'}`}>
                     {event.title}
                   </h3>
-                  <p className="font-condensed text-2xl md:text-3xl text-gray-300 uppercase">
+                  <p className="font-condensed text-lg md:text-3xl text-gray-300 uppercase leading-none truncate max-w-[240px] md:max-w-none">
                     {event.subtitle.split(' vs ')[0]} <span className={`${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'} font-bold`}>VS</span> {event.subtitle.split(' vs ')[1]}
                   </p>
 
-                  <div className={`flex flex-wrap items-center gap-4 text-sm font-medium mt-2 ${event.status === 'completed' ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] md:text-sm font-medium mt-2 ${event.status === 'completed' ? 'text-gray-500' : 'text-gray-400'}`}>
                     <span className="flex items-center gap-1.5">
-                      <span className={`material-symbols-outlined text-lg ${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'}`}>calendar_today</span>
+                      <span className={`material-symbols-outlined text-base md:text-lg ${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'}`}>calendar_today</span>
                       {getEventDay(event.date)} {getEventMonth(event.date)}
                     </span>
-                    <span className={`w-1 h-1 rounded-full ${event.status === 'completed' ? 'bg-gray-700' : 'bg-gray-600'}`}></span>
                     <span className="flex items-center gap-1.5">
-                      <span className={`material-symbols-outlined text-lg ${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'}`}>schedule</span>
-                      {event.status === 'live' ? 'AO VIVO' : `${getEventTime(event.date)}`}
-                    </span>
-                    <span className={`w-1 h-1 rounded-full ${event.status === 'completed' ? 'bg-gray-700' : 'bg-gray-600'}`}></span>
-                    <span className="flex items-center gap-1.5">
-                      <span className={`material-symbols-outlined text-lg ${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'}`}>location_on</span>
+                      <span className={`material-symbols-outlined text-base md:text-lg ${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'}`}>location_on</span>
                       {getLocationCity(event.location)}
                     </span>
                   </div>
@@ -134,13 +128,13 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
 
                 <button
                   onClick={() => event.status === 'completed' ? onNavigateToResult(event.id) : onNavigate('picks')}
-                  className={`w-full md:w-auto min-w-[160px] font-condensed font-bold uppercase tracking-wider py-3.5 px-6 rounded transition-all flex items-center justify-center gap-2 ${event.status === 'live' ? 'bg-yellow-600 hover:bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.3)] hover:scale-105 active:scale-95' :
-                    event.status === 'upcoming' ? 'bg-primary hover:bg-primary-dark text-white shadow-neon hover:scale-105 active:scale-95' :
-                      'bg-transparent border-2 border-white/20 hover:bg-white/5 text-white hover:border-white/40'
+                  className={`w-full md:w-auto min-w-[140px] font-condensed font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 ${event.status === 'live' ? 'bg-yellow-600 hover:bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.3)]' :
+                    event.status === 'upcoming' ? 'bg-primary hover:bg-primary-dark text-white shadow-neon' :
+                      'bg-transparent border border-white/20 hover:bg-white/5 text-white'
                     }`}
                 >
-                  {event.status === 'completed' ? 'Ver Resultados' : event.status === 'live' ? 'Acompanhar' : 'Palpitar'}
-                  <span className="material-symbols-outlined text-xl">
+                  <span className="text-sm md:text-base">{event.status === 'completed' ? 'Resultados' : event.status === 'live' ? 'Acompanhar' : 'Palpitar'}</span>
+                  <span className="material-symbols-outlined text-lg md:text-xl">
                     {event.status === 'completed' ? 'visibility' : event.status === 'live' ? 'live_tv' : 'arrow_forward'}
                   </span>
                 </button>

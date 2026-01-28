@@ -308,21 +308,21 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
                 </div>
               </div>
 
-              {/* Step 3: Round */}
+              {/* Step 3: Round or Decision Type */}
               <div className={`flex flex-col gap-1.5 md:gap-2 relative md:pl-8 transition-all duration-500 ${!selectedMethod ? 'opacity-30 pointer-events-none' : ''}`}>
                 <div className="flex items-center justify-between">
                   <h4 className="text-white text-[10px] md:text-sm font-condensed font-black uppercase flex items-center gap-2 italic">
                     <span className={`flex items-center justify-center w-4 h-4 md:w-6 md:h-6 rounded-full text-[8px] text-white transition-colors ${selectedRound ? 'bg-primary' : 'bg-surface-highlight border border-border-dark text-text-muted'}`}>3</span>
-                    Round?
+                    {selectedMethod === 'DEC' ? 'Qual tipo?' : 'Round?'}
                   </h4>
                 </div>
-                <div className={`grid gap-2 ${activeFight.rounds === 5 ? 'grid-cols-5' : 'grid-cols-3'}`}>
+                <div className={`grid gap-2 ${selectedMethod === 'DEC' ? 'grid-cols-3' : activeFight.rounds === 5 ? 'grid-cols-5' : 'grid-cols-3'}`}>
                   {selectedMethod === 'DEC' ? (
                     ['UNÂNIME', 'DIVIDIDA', 'MAJORIT.'].map((dec) => (
                       <button
                         key={dec}
                         onClick={() => setSelectedRound(dec)}
-                        className={`col-span-1.5 first:col-span-2 last:col-span-2 min-h-[36px] md:min-h-[44px] flex items-center justify-center rounded-xl border font-black text-[9px] tracking-tight transition-all active:scale-95 px-1 ${selectedRound === dec ? 'bg-primary border-primary text-white shadow-neon' : 'bg-[#1a0f0f] border-transparent text-text-muted hover:border-primary/20 hover:text-white'}`}
+                        className={`min-h-[36px] md:min-h-[44px] flex items-center justify-center rounded-xl border font-black text-[9px] tracking-tight transition-all active:scale-95 px-1 ${selectedRound === dec ? 'bg-primary border-primary text-white shadow-neon' : 'bg-[#1a0f0f] border-transparent text-text-muted hover:border-primary/20 hover:text-white'}`}
                       >
                         {dec}
                       </button>

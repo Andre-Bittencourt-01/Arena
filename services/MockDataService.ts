@@ -256,7 +256,7 @@ const generateUsersAndPicks = (fights: Fight[]) => {
 
     users.forEach(user => {
         // Pula a geração automática para o usuário principal para que ele possa palpitar manualmente
-        if (user.id === 'user_andre') return;
+        // if (user.id === 'user_andre') return; // TEMPORARY: Commented out to generate data for Andre for UI verification
 
         fights.forEach(fight => {
             const event = initialEvents.find(e => e.id === fight.event_id);
@@ -596,6 +596,12 @@ export class MockDataService implements IDataService {
             return user;
         }
         return null;
+    }
+
+    async getUser(id: string): Promise<User | null> {
+        await this.delay(50);
+        const user = this.users.find(u => u.id === id);
+        return user || null;
     }
 
     async getAllPicksForEvent(eventId: string): Promise<Pick[]> {

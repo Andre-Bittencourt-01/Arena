@@ -13,6 +13,39 @@ const Ranking: React.FC = () => {
   } = useData();
 
   const [showSelector, setShowSelector] = React.useState(false);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const [dropdownTop, setDropdownTop] = React.useState(0);
+
+
+
+  // Handle click outside to close dropdown
+  React.useEffect(() => {
+    if (!showSelector) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setShowSelector(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSelector]);
+
+  // Calculate dropdown top position when button is clicked
+  React.useEffect(() => {
+    if (showSelector && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownTop(rect.bottom + 8);
+    }
+  }, [showSelector]);
+
 
   // Top 3 for Podium
   const top3 = leaderboard.slice(0, 3);
@@ -22,7 +55,8 @@ const Ranking: React.FC = () => {
 
   // Current user's rank and data
   const currentUserIndex = leaderboard.findIndex(u => u.id === currentUser?.id);
-  const currentUserData = currentUserIndex !== -1 ? leaderboard[currentUserIndex] : null;
+  // Use fallback to currentUser if not in leaderboard, ensuring the row always renders
+  const currentUserData = currentUserIndex !== -1 ? leaderboard[currentUserIndex] : currentUser;
 
   // Get the points based on current filter for display in podium
   const getFilteredPoints = (user: any) => {
@@ -94,56 +128,50 @@ const Ranking: React.FC = () => {
   };
 
   const renderUserRow = (user: any, index: number, isHighlight: boolean = false) => {
-    const rank = index + 1;
-    const isCurrentUser = currentUser && user.id === currentUser.id;
+    // If index is -1 (not in leaderboard), show "-" or special rank
+    const rank = index === -1 ? '---' : (index + 1).toString().padStart(2, '0');
+    const isCurrentUser = currentUser && user?.id === currentUser.id;
     const displayPoints = getFilteredPoints(user);
+
+    if (!user) return null;
 
     return (
       <div
         key={`${isHighlight ? 'highlight-' : ''}${user.id}`}
-        className={`group flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-0 px-4 sm:px-8 py-4 sm:py-3 transition-all duration-300 relative overflow-hidden ${isHighlight ? 'bg-zinc-900 border-2 border-primary/40 rounded-xl mb-4 shadow-[0_0_40px_rgba(236,19,19,0.15)] ring-1 ring-white/5 mx-2 sm:mx-0' : (isCurrentUser ? 'bg-primary/5' : 'hover:bg-white/[0.04]')}`}
+        className={`group grid grid-cols-12 gap-0 px-2 sm:px-8 py-0 h-[50px] sm:h-16 transition-all duration-300 relative overflow-hidden items-center ${isHighlight ? 'bg-zinc-900 border-2 border-primary/40 rounded-xl mb-2 sm:mb-4 shadow-[0_0_40px_rgba(236,19,19,0.15)] ring-1 ring-white/5 mx-0 sm:mx-0' : (isCurrentUser ? 'bg-primary/5' : 'hover:bg-white/[0.04]')}`}
       >
-        {isCurrentUser && !isHighlight && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_20px_rgba(236,19,19,0.5)]"></div>}
+        {isCurrentUser && !isHighlight && <div className="absolute left-0 top-0 bottom-0 w-0.5 sm:w-1 bg-primary shadow-[0_0_20px_rgba(236,19,19,0.5)]"></div>}
 
-        <div className="flex items-center justify-between sm:contents w-full">
-          {/* Rank */}
-          <div className={`sm:col-span-1 font-display text-2xl sm:text-3xl font-black italic tracking-tighter transition-all ${isHighlight || isCurrentUser ? 'text-primary scale-110 drop-shadow-[0_0_10px_rgba(236,19,19,0.2)]' : 'text-white/90 group-hover:text-primary group-hover:scale-105'}`}>
-            {rank.toString().padStart(2, '0')}
-          </div>
-
-          {/* Points (Mobile Top Right) */}
-          <div className="sm:hidden text-right">
-            <div className={`font-display text-3xl font-black tracking-tighter leading-none ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white'}`}>
-              {displayPoints}
-            </div>
+        {/* Rank Column */}
+        <div className="col-span-2 sm:col-span-1 flex justify-center">
+          <div className={`font-display text-xl sm:text-3xl font-black italic tracking-tighter transition-all ${isHighlight || isCurrentUser ? 'text-primary scale-110 drop-shadow-[0_0_10px_rgba(236,19,19,0.2)]' : 'text-white/90 group-hover:text-primary group-hover:scale-105'}`}>
+            {rank}
           </div>
         </div>
 
-        {/* Progresso - Somente se não for semanal */}
-        {rankingFilter !== 'week' && (
-          <div className="sm:col-span-3 flex sm:justify-center sm:border-l border-white/5 sm:h-11 items-center">
-            {renderPerformance(user)}
-          </div>
-        )}
+        {/* Progress - Always render container to maintain grid alignment, but hide content if week */}
+        <div className="flex col-span-2 sm:col-span-3 justify-center sm:border-l border-white/5 sm:h-12 items-center shrink-0">
+          {rankingFilter !== 'week' && <div className="scale-75 sm:scale-100 origin-center">{renderPerformance(user)}</div>}
+        </div>
 
-        {/* Competidor */}
-        <div className={`${rankingFilter === 'week' ? 'sm:col-span-8' : 'sm:col-span-5'} flex items-center sm:justify-center sm:border-l border-white/5 sm:h-11 py-2 sm:py-0`}>
-          <div className="flex items-center gap-3 sm:gap-4 w-full max-w-[280px]">
-            <div className={`size-10 sm:size-10 bg-zinc-800 flex-shrink-0 transition-all duration-500 group-hover:rotate-3 group-hover:scale-110 ${isHighlight || isCurrentUser ? 'ring-2 ring-primary ring-offset-2 ring-offset-zinc-900 shadow-2xl shadow-primary/30' : 'border border-white/10 shadow-xl'}`} style={{ clipPath: 'polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%)' }}>
+        {/* Competitor Column - Fixed Span 6/5 regardless of filter */}
+        <div className="col-span-6 sm:col-span-5 flex items-center justify-start pl-4 sm:pl-8 sm:border-l border-white/5 sm:h-12 px-2 overflow-hidden">
+          <div className="flex items-center justify-start gap-2 sm:gap-4 w-full max-w-[280px]">
+            {/* Avatar visible? Yes, keeping it. */}
+            <div className={`size-8 sm:size-10 bg-zinc-800 flex-shrink-0 transition-all duration-500 group-hover:rotate-3 group-hover:scale-110 ${isHighlight || isCurrentUser ? 'ring-1 sm:ring-2 ring-primary ring-offset-1 sm:ring-offset-2 ring-offset-zinc-900 shadow-xl shadow-primary/30' : 'border border-white/10 shadow-lg'}`} style={{ clipPath: 'polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%)' }}>
               <img alt={user.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-opacity" src={user.avatar_url} />
             </div>
-            <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-2">
-                <span className={`font-condensed font-bold uppercase tracking-tight text-xl sm:text-2xl truncate ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white/90 group-hover:text-white'}`}>{user.name}</span>
+            <div className="flex flex-col min-w-0 items-start text-left">
+              <div className="flex items-center gap-2 justify-start">
+                <span className={`font-condensed font-bold uppercase tracking-tight text-sm sm:text-2xl truncate ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white/90 group-hover:text-white'}`}>{user.name}</span>
               </div>
-              <span className={`text-[9px] font-mono opacity-20 group-hover:opacity-40 transition-opacity uppercase tracking-widest font-bold ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white'}`}>Token // {user.id.substring(0, 6).toUpperCase()}</span>
             </div>
           </div>
         </div>
 
-        {/* Pontuação (Desktop only column) */}
-        <div className="hidden sm:flex col-span-3 text-right pr-10 border-l border-white/5 h-11 flex-col justify-center">
-          <div className={`font-display text-4xl font-black tracking-tighter leading-none ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white group-hover:text-primary transition-colors'}`}>
+        {/* Points Column */}
+        <div className="col-span-2 sm:col-span-3 text-center sm:text-right sm:pr-10 sm:border-l border-white/5 sm:h-12 flex flex-col justify-center items-center sm:items-end">
+          <div className={`font-display text-xl sm:text-4xl font-black tracking-tighter leading-none ${isHighlight || isCurrentUser ? 'text-primary' : 'text-white group-hover:text-primary transition-colors'}`}>
             {displayPoints}
           </div>
         </div>
@@ -154,9 +182,9 @@ const Ranking: React.FC = () => {
   return (
     <div className="relative z-10 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 pt-0 font-display scroll-smooth pb-20 sm:pb-8">
       {/* Sticky Header & Banner Section */}
-      <div className="sticky top-14 md:top-16 z-40 bg-background-dark/95 backdrop-blur-md -mx-4 sm:-mx-6 px-4 sm:px-6 pt-5 sm:pt-6 pb-2 mb-4 md:mb-6 border-b border-white/5">
+      <div className="sticky top-0 md:top-0 z-40 bg-background-dark/95 backdrop-blur-md -mx-4 sm:-mx-6 px-4 sm:px-6 pt-0 sm:pt-0 pb-0 sm:pb-0 mb-0 md:mb-0 border-b border-white/5">
         {/* Header section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-3 sm:mb-4 border-b border-white/5 pb-2">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-2 md:gap-4 mb-1 sm:mb-1 border-b border-white/5 pb-1 sm:pb-1">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
               <div className="flex gap-0.5">
@@ -171,92 +199,110 @@ const Ranking: React.FC = () => {
             </h2>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            {/* Filter Buttons */}
-            <div className="flex bg-zinc-900 border border-white/10 p-1.5 sm:p-2 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] overflow-x-auto no-scrollbar max-w-full">
-              {[
-                { id: 'week', label: 'Evento' },
-                { id: 'month', label: 'Mensal' },
-                { id: 'year', label: 'Anual' }
-              ].map((btn, i) => (
-                <React.Fragment key={btn.id}>
-                  {i > 0 && <div className="w-px bg-white/5 my-2 mx-1 shrink-0"></div>}
-                  <button
-                    onClick={() => setRankingFilter(btn.id as any)}
-                    className={`px-4 sm:px-8 py-2 sm:py-3 font-condensed text-[10px] sm:text-sm uppercase font-black tracking-widest transition-all rounded-lg shrink-0 ${rankingFilter === btn.id ? 'bg-primary text-white scale-105 shadow-2xl shadow-primary/40' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
-                  >
-                    {btn.label}
-                  </button>
-                </React.Fragment>
-              ))}
-            </div>
+          <div className="w-full overflow-x-auto no-scrollbar pb-1">
+            <div className="flex flex-nowrap items-center gap-2 sm:gap-4 min-w-max">
+              {/* Filter Buttons */}
+              <div className="flex bg-zinc-900 border border-white/10 p-1.5 sm:p-2 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] shrink-0">
+                {[
+                  { id: 'week', label: 'Último Evento' },
+                  { id: 'month', label: 'Mensal' },
+                  { id: 'year', label: 'Anual' }
+                ].map((btn, i) => (
+                  <React.Fragment key={btn.id}>
+                    {i > 0 && <div className="w-px bg-white/5 my-2 mx-1 shrink-0"></div>}
+                    <button
+                      onClick={() => setRankingFilter(btn.id as any)}
+                      className={`px-4 sm:px-8 py-2 sm:py-3 font-condensed text-[10px] sm:text-sm uppercase font-black tracking-widest transition-all rounded-lg shrink-0 ${rankingFilter === btn.id ? 'bg-primary text-white scale-105 shadow-2xl shadow-primary/40' : 'text-white/30 hover:text-white hover:bg-white/5'}`}
+                    >
+                      {btn.label}
+                    </button>
+                  </React.Fragment>
+                ))}
+              </div>
 
-            {/* Period Selector */}
-            <div className="relative">
-              <button
-                onClick={() => setShowSelector(!showSelector)}
-                className={`flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 rounded-xl border transition-all duration-300 ${showSelector ? 'bg-primary border-primary text-white' : 'bg-zinc-900 border-white/10 text-white/60 hover:text-white hover:border-white/30'}`}
-              >
-                <span className="material-symbols-outlined text-lg sm:text-xl">history</span>
-                <span className="font-condensed font-bold uppercase tracking-widest text-xs sm:text-sm">Outros</span>
-              </button>
+              {/* Period Selector */}
+              <div className="relative shrink-0">
+                <button
+                  ref={buttonRef}
+                  onClick={() => setShowSelector(!showSelector)}
+                  className={`flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 rounded-xl border transition-all duration-300 ${showSelector ? 'bg-primary border-primary text-white shadow-lg shadow-primary/40' : 'bg-zinc-900 border-white/10 text-white/60 hover:text-white hover:border-white/30'}`}
+                >
+                  <span className="material-symbols-outlined text-lg sm:text-xl">history</span>
+                  <span className="font-condensed font-bold uppercase tracking-widest text-xs sm:text-sm">
+                    {rankingFilter === 'week' ? 'Outros Eventos' : rankingFilter === 'month' ? 'Outros Meses' : rankingFilter === 'year' ? 'Outros Anos' : 'Outros'}
+                  </span>
+                  <span className={`material-symbols-outlined text-sm transition-transform ${showSelector ? 'rotate-180' : ''}`}>expand_more</span>
+                </button>
 
-              {showSelector && (
-                <div className="absolute right-0 mt-4 w-72 bg-zinc-900 border border-white/10 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-50 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="mb-4 pb-2 border-b border-white/5">
-                    <span className="font-mono text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold">Arquivo // Historico</span>
-                  </div>
-                  <div className="space-y-1 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-                    {rankingFilter === 'week' ? (
-                      events.filter(e => e.status === 'completed').map(event => (
-                        <button
-                          key={event.id}
-                          onClick={() => { setSelectedPeriodId(event.id); setShowSelector(false); }}
-                          className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === event.id ? 'bg-primary/20 text-primary' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
-                        >
-                          {event.title} - {event.subtitle}
-                        </button>
-                      ))
-                    ) : rankingFilter === 'month' ? (
-                      [...Array(12)].map((_, i) => {
-                        const monthId = `2026-${(i + 1).toString().padStart(2, '0')}`;
-                        const monthName = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"][i];
-                        return (
-                          <button
-                            key={monthId}
-                            onClick={() => { setSelectedPeriodId(monthId); setShowSelector(false); }}
-                            className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === monthId ? 'bg-primary/20 text-primary' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
-                          >
-                            Performance {monthName} 2026
-                          </button>
-                        );
-                      })
-                    ) : (
-                      ['2026', '2025'].map(year => (
-                        <button
-                          key={year}
-                          onClick={() => { setSelectedPeriodId(year); setShowSelector(false); }}
-                          className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === year ? 'bg-primary/20 text-primary' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
-                        >
-                          Performance Anual {year}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                  <button
-                    onClick={() => { setSelectedPeriodId(null); setShowSelector(false); }}
-                    className="w-full mt-4 py-2 text-[10px] font-mono uppercase tracking-[0.3em] text-white/20 hover:text-primary transition-colors border-t border-white/5 pt-4"
-                  >
-                    Resetar para Atual
-                  </button>
-                </div>
-              )}
+                {showSelector && (
+                  <>
+                    {/* Backdrop overlay on mobile */}
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 sm:hidden" onClick={() => setShowSelector(false)} />
+
+                    <div
+                      ref={dropdownRef}
+                      className="fixed left-4 right-4 sm:left-auto sm:right-4 sm:w-72 bg-zinc-900 border border-white/10 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-50 animate-in fade-in zoom-in-95 duration-200"
+                      style={{
+                        top: `${dropdownTop}px`,
+                        maxHeight: 'calc(100vh - 100px)'
+                      }}
+                    >
+                      <div className="mb-4 pb-2 border-b border-white/5">
+                        <span className="font-mono text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold">Arquivo // Historico</span>
+                      </div>
+                      <div className="space-y-1 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                        {rankingFilter === 'week' ? (
+                          events.filter(e => e.status === 'completed').map(event => (
+                            <button
+                              key={event.id}
+                              onClick={() => { setSelectedPeriodId(event.id); setShowSelector(false); }}
+                              className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === event.id ? 'bg-primary/20 text-primary' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                            >
+                              {event.title} - {event.subtitle}
+                            </button>
+                          ))
+                        ) : rankingFilter === 'month' ? (
+                          [...Array(12)].map((_, i) => {
+                            const monthId = `2026-${(i + 1).toString().padStart(2, '0')}`;
+                            const monthName = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"][i];
+                            return (
+                              <button
+                                key={monthId}
+                                onClick={() => { setSelectedPeriodId(monthId); setShowSelector(false); }}
+                                className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === monthId ? 'bg-primary/20 text-primary' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                              >
+                                Performance {monthName} 2026
+                              </button>
+                            );
+                          })
+                        ) : (
+                          ['2026', '2025'].map(year => (
+                            <button
+                              key={year}
+                              onClick={() => { setSelectedPeriodId(year); setShowSelector(false); }}
+                              className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === year ? 'bg-primary/20 text-primary' : 'text-white/40 hover:bg-white/5 hover:text-white'}`}
+                            >
+                              Performance Anual {year}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                      <button
+                        onClick={() => { setSelectedPeriodId(null); setShowSelector(false); }}
+                        className="w-full mt-4 py-2 text-[10px] font-mono uppercase tracking-[0.3em] text-white/20 hover:text-primary transition-colors border-t border-white/5 pt-4"
+                      >
+                        Resetar para Atual
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Period Banner Section */}
-        <div className="mb-2 relative h-14 rounded-xl overflow-hidden border border-white/10 shadow-2xl group">
+        <div className="mb-1 sm:mb-2 relative h-10 sm:h-14 rounded-xl overflow-hidden border border-white/10 shadow-2xl group">
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent z-10"></div>
           {rankingFilter === 'week' ? (
             (() => {
@@ -268,12 +314,9 @@ const Ranking: React.FC = () => {
               return event ? (
                 <>
                   <img src={event.banner_url} className="absolute inset-0 w-full h-full object-cover grayscale opacity-30 group-hover:scale-110 transition-transform duration-700" alt="Event Banner" />
-                  <div className="absolute inset-0 z-20 flex items-center justify-between px-8">
-                    <div className="flex flex-col">
-                      <span className="font-mono text-[7px] text-primary tracking-[0.5em] font-black uppercase">Evento_Atual</span>
-                      <h4 className="font-condensed text-xl font-black text-white italic uppercase leading-none">{event.title}</h4>
-                    </div>
-                    <p className="font-condensed text-sm text-white/40 uppercase font-bold tracking-tight">{event.subtitle}</p>
+                  <div className="absolute inset-0 z-20 flex items-center justify-between px-4 sm:px-8">
+                    <h4 className="font-condensed text-base sm:text-xl font-black text-white italic uppercase leading-none">{event.title}</h4>
+                    <p className="font-condensed text-xs sm:text-sm text-white/40 uppercase font-bold tracking-tight text-right">{event.subtitle}</p>
                   </div>
                 </>
               ) : null;
@@ -283,45 +326,43 @@ const Ranking: React.FC = () => {
               <div className="absolute inset-0 bg-[#1a0c0c] flex items-center justify-center -z-10 overflow-hidden">
                 <span className="material-symbols-outlined text-[80px] text-white/[0.02] absolute rotate-12 -right-10">history_edu</span>
               </div>
-              <div className="absolute inset-0 z-20 flex items-center justify-between px-8">
-                <div className="flex flex-col">
-                  <span className="font-mono text-[7px] text-primary tracking-[0.5em] font-black uppercase">Filtro_Periodo</span>
-                  <h4 className="font-condensed text-xl font-black text-white italic uppercase leading-none">
-                    {rankingFilter === 'month' ? (selectedPeriodId ? `Performance ${selectedPeriodId}` : 'Mês Corrente') : (selectedPeriodId ? `Ranking Anual ${selectedPeriodId}` : 'Ano Corrente')}
-                  </h4>
-                </div>
-                <p className="font-condensed text-sm text-white/40 uppercase font-bold tracking-tight">Análise Consolidada</p>
+              <div className="absolute inset-0 z-20 flex items-center justify-between px-4 sm:px-8">
+                <h4 className="font-condensed text-base sm:text-xl font-black text-white italic uppercase leading-none">
+                  {rankingFilter === 'month' ? (selectedPeriodId ? `Performance ${selectedPeriodId}` : 'Mês Corrente') : (selectedPeriodId ? `Ranking Anual ${selectedPeriodId}` : 'Ano Corrente')}
+                </h4>
+                <p className="font-condensed text-xs sm:text-sm text-white/40 uppercase font-bold tracking-tight text-right">Análise Consolidada</p>
               </div>
             </>
           )}
         </div>
       </div>
 
-      <div className="mb-2 mt-2 relative z-20">
-        <h3 className="font-condensed text-base text-white uppercase tracking-[0.3em] font-black flex items-center gap-3 border-l-2 border-primary pl-4">
-          <span className="material-symbols-outlined text-primary text-lg">military_tech</span> Pódio de Elite: {periodLabel}
+      <div className="mb-0.5 mt-1 sm:mb-2 sm:mt-2 relative z-20">
+        <h3 className="font-condensed text-sm sm:text-base text-white uppercase tracking-[0.3em] font-black flex items-center gap-3 border-l-2 border-primary pl-4 truncate whitespace-nowrap overflow-hidden">
+          <span className="material-symbols-outlined text-primary text-base shrink-0">military_tech</span>
+          <span className="truncate">Pódio de Elite: {periodLabel}</span>
         </h3>
       </div>
 
-      {/* Podium - Vertical Trophy Stack on Mobile */}
-      <div className="flex flex-col md:grid md:grid-cols-3 gap-3 mb-6 items-end px-2 sm:px-4 mt-4 relative z-10">
+      {/* Podium - Horizontal Grid on Mobile & Desktop */}
+      <div className="grid grid-cols-3 gap-1 md:gap-3 mb-4 sm:mb-8 items-end px-1 sm:px-4 mt-6 sm:mt-6 relative z-10">
         {/* Silver */}
-        <div className="order-2 md:order-1 w-full bg-card-dark border border-white/10 relative group hover:border-silver/50 transition-all duration-300 clip-corner">
+        <div className="order-1 w-full bg-card-dark border border-white/10 relative group hover:border-silver/50 transition-all duration-300 clip-corner">
           <div className="absolute top-0 left-0 w-full h-0.5 bg-silver"></div>
-          <div className="pt-2 pb-4 px-4 flex flex-row md:flex-col items-center justify-between md:justify-center gap-4">
+          <div className="py-1 md:pt-2 md:pb-4 px-1 md:px-4 flex flex-col items-center justify-center gap-1 md:gap-4 min-h-[105px] md:min-h-auto">
             <div className="text-silver font-condensed text-3xl font-black opacity-10 absolute top-2 right-2 z-0 italic leading-none hidden md:block">02</div>
             {second && (
               <>
                 <div className="relative z-10 flex flex-col items-center">
-                  <div className="size-20 sm:size-24 overflow-hidden border border-silver/30 rotate-1 group-hover:rotate-0 transition-transform" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
+                  <div className="size-12 md:size-24 overflow-hidden border border-silver/30 rotate-1 group-hover:rotate-0 transition-transform" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
                     <img alt="2nd" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" src={second.avatar_url} />
                   </div>
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-silver text-black font-condensed text-[8px] font-black px-3 py-0.5 uppercase tracking-[0.2em] whitespace-nowrap">PRATA</div>
+                  <div className="absolute -bottom-2 lg:-bottom-2 -bottom-1 left-1/2 -translate-x-1/2 bg-silver text-black font-condensed text-[6px] md:text-[8px] font-black px-2 md:px-3 py-0.5 uppercase tracking-[0.2em] whitespace-nowrap z-20">PRATA</div>
                 </div>
-                <div className="text-right md:text-center z-10 flex-1 md:w-full">
-                  <h4 className="font-condensed text-lg uppercase tracking-tighter text-white font-black leading-none mb-1 truncate">{second.name}</h4>
-                  <div className="border-t border-white/5 pt-2 mt-1 md:mt-4">
-                    <div className="font-display font-black text-xl text-silver leading-none tracking-tight">{getFilteredPoints(second)}</div>
+                <div className="text-center z-10 w-full mt-2">
+                  <h4 className="font-condensed text-xs md:text-lg uppercase tracking-tighter text-white font-black leading-none mb-1 truncate px-1">{second.name}</h4>
+                  <div className="border-t border-white/5 pt-1 md:pt-2 mt-1 md:mt-4">
+                    <div className="font-display font-black text-sm md:text-xl text-silver leading-none tracking-tight">{getFilteredPoints(second)}</div>
                   </div>
                 </div>
               </>
@@ -330,25 +371,25 @@ const Ranking: React.FC = () => {
         </div>
 
         {/* Gold - Peak Trophy */}
-        <div className="order-1 md:order-2 w-full bg-zinc-900 border border-gold/40 relative group hover:border-gold transition-all duration-500 transform md:-translate-y-4 shadow-[0_20px_50px_rgba(255,215,0,0.1)] clip-corner md:scale-105">
+        <div className="order-2 w-full bg-zinc-900 border border-gold/40 relative group hover:border-gold transition-all duration-500 transform -translate-y-4 md:-translate-y-6 shadow-[0_20px_50px_rgba(255,215,0,0.1)] clip-corner z-20">
           <div className="absolute top-0 left-0 w-full h-1 bg-gold"></div>
-          <div className="p-4 flex flex-row md:flex-col items-center justify-around md:justify-center gap-4">
+          <div className="py-2 md:p-4 flex flex-col items-center justify-center gap-1 md:gap-4 min-h-[130px] md:min-h-auto">
             <div className="text-gold font-condensed text-4xl font-black opacity-10 absolute top-2 right-4 z-0 italic leading-none hidden md:block">01</div>
             <span className="material-symbols-outlined text-gold text-2xl absolute top-2 left-4 hidden md:block">workspace_premium</span>
             {first && (
               <>
                 <div className="relative z-10 flex flex-col items-center">
-                  <div className="size-24 sm:size-28 overflow-hidden border border-gold/50 -rotate-1 group-hover:rotate-0 transition-transform shadow-[0_0_20px_rgba(255,215,0,0.1)]" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
+                  <div className="size-16 md:size-28 overflow-hidden border border-gold/50 -rotate-1 group-hover:rotate-0 transition-transform shadow-[0_0_20px_rgba(255,215,0,0.1)]" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
                     <img alt="1st" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" src={first.avatar_url} />
                   </div>
-                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-gold text-black font-condensed text-[10px] font-black px-4 py-1 uppercase tracking-[0.3em] italic shadow-2xl whitespace-nowrap">CAMPEÃO</div>
+                  <div className="absolute -bottom-2 md:-bottom-3 left-1/2 -translate-x-1/2 bg-gold text-black font-condensed text-[7px] md:text-[10px] font-black px-2 md:px-4 py-0.5 md:py-1 uppercase tracking-[0.3em] italic shadow-2xl whitespace-nowrap z-20">CAMPEÃO</div>
                 </div>
-                <div className="text-right md:text-center z-10 flex-1 md:w-full">
-                  <h4 className="font-condensed text-xl uppercase tracking-tighter text-white font-black leading-none mb-1 truncate">{first.name}</h4>
-                  <div className="font-mono text-[7px] text-gold/60 uppercase tracking-[0.4em] font-black mt-1">PODER_MÁXIMO</div>
-                  <div className="border-t border-white/10 pt-3 mt-1 md:mt-4">
+                <div className="text-center z-10 w-full mt-2">
+                  <h4 className="font-condensed text-sm md:text-xl uppercase tracking-tighter text-white font-black leading-none mb-0.5 md:mb-1 truncate px-1">{first.name}</h4>
+                  <div className="font-mono text-[5px] md:text-[7px] text-gold/60 uppercase tracking-[0.4em] font-black mt-0.5 hidden sm:block">PODER_MÁXIMO</div>
+                  <div className="border-t border-white/10 pt-2 md:pt-3 mt-1 md:mt-4">
                     <div className="text-[9px] text-white/30 uppercase tracking-[0.5em] font-black hidden md:block">Ranking_Oficial</div>
-                    <div className="font-display font-black text-3xl md:text-4xl text-gold leading-none tracking-tight">{getFilteredPoints(first)}</div>
+                    <div className="font-display font-black text-xl md:text-4xl text-gold leading-none tracking-tight">{getFilteredPoints(first)}</div>
                   </div>
                 </div>
               </>
@@ -357,22 +398,22 @@ const Ranking: React.FC = () => {
         </div>
 
         {/* Bronze */}
-        <div className="order-3 md:order-3 w-full bg-card-dark border border-white/10 relative group hover:border-bronze/50 transition-all duration-300 clip-corner">
+        <div className="order-3 w-full bg-card-dark border border-white/10 relative group hover:border-bronze/50 transition-all duration-300 clip-corner">
           <div className="absolute top-0 left-0 w-full h-0.5 bg-bronze"></div>
-          <div className="pt-2 pb-4 px-4 flex flex-row md:flex-col items-center justify-between md:justify-center gap-4">
+          <div className="py-1 md:pt-2 md:pb-4 px-1 md:px-4 flex flex-col items-center justify-center gap-1 md:gap-4 min-h-[105px] md:min-h-auto">
             <div className="text-bronze font-condensed text-3xl font-black opacity-10 absolute top-2 right-2 z-0 italic leading-none hidden md:block">03</div>
             {third && (
               <>
                 <div className="relative z-10 flex flex-col items-center">
-                  <div className="size-20 sm:size-24 overflow-hidden border border-bronze/30 -rotate-1 group-hover:rotate-0 transition-transform" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
+                  <div className="size-12 md:size-24 overflow-hidden border border-bronze/30 -rotate-1 group-hover:rotate-0 transition-transform" style={{ clipPath: 'polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%)' }}>
                     <img alt="3rd" className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" src={third.avatar_url} />
                   </div>
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-bronze text-white font-condensed text-[8px] font-black px-3 py-0.5 uppercase tracking-[0.2em] whitespace-nowrap">BRONZE</div>
+                  <div className="absolute -bottom-2 lg:-bottom-2 -bottom-1 left-1/2 -translate-x-1/2 bg-bronze text-white font-condensed text-[6px] md:text-[8px] font-black px-2 md:px-3 py-0.5 uppercase tracking-[0.2em] whitespace-nowrap z-20">BRONZE</div>
                 </div>
-                <div className="text-right md:text-center z-10 flex-1 md:w-full">
-                  <h4 className="font-condensed text-lg uppercase tracking-tighter text-white font-black leading-none mb-1 truncate">{third.name}</h4>
-                  <div className="border-t border-white/5 pt-2 mt-1 md:mt-4">
-                    <div className="font-display font-black text-xl text-bronze leading-none tracking-tight">{getFilteredPoints(third)}</div>
+                <div className="text-center z-10 w-full mt-2">
+                  <h4 className="font-condensed text-xs md:text-lg uppercase tracking-tighter text-white font-black leading-none mb-1 truncate px-1">{third.name}</h4>
+                  <div className="border-t border-white/5 pt-1 md:pt-2 mt-1 md:mt-4">
+                    <div className="font-display font-black text-sm md:text-xl text-bronze leading-none tracking-tight">{getFilteredPoints(third)}</div>
                   </div>
                 </div>
               </>
@@ -381,25 +422,30 @@ const Ranking: React.FC = () => {
         </div>
       </div>
 
-      {/* User Status Highlight */}
+      {/* User Status Highlight - Compact Mobile Merged */}
       {currentUserData && (
-        <div className="animate-in fade-in slide-in-from-left duration-1000 relative mb-4 px-4">
-          <div className="absolute -left-4 top-0 bottom-2 w-1 bg-primary/40 rounded-full blur-sm"></div>
-          <div className="flex items-center gap-2 mb-2 px-2">
-            <div className="size-6 bg-primary/20 border border-primary/40 rounded flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-sm">person_search</span>
+        <div className="animate-in fade-in slide-in-from-left duration-1000 relative mb-3 sm:mb-6">
+          <div className="absolute -left-4 top-0 bottom-2 w-1 bg-primary/40 rounded-full blur-sm sm:block hidden"></div>
+
+          {/* Header visible only on desktop */}
+          {/* Header visible only on desktop */}
+          <div className="flex items-center gap-2 mb-1 px-2">
+            <div className="size-5 bg-primary/20 border border-primary/40 rounded flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-xs">person_search</span>
             </div>
-            <h3 className="font-condensed text-lg text-white uppercase tracking-widest font-black italic">Sua <span className="text-primary">Posição</span></h3>
+            <h3 className="font-condensed text-sm sm:text-base text-white uppercase tracking-widest font-black italic">Sua <span className="text-primary">Posição</span></h3>
           </div>
+
+          {/* Render User Row directly on mobile with no extra padding */}
           {renderUserRow(currentUserData, currentUserIndex, true)}
         </div>
       )}
 
 
       {/* Execution Table UI */}
-      <div className="mb-2 flex items-center justify-between px-2">
-        <h3 className="font-condensed text-xl text-white uppercase tracking-[0.3em] font-black flex items-center gap-3 italic border-l-2 border-primary pl-4">
-          <span className="material-symbols-outlined text-primary text-2xl">list_alt</span> TABELA DE PERFORMANCE
+      <div className="flex mb-1 sm:mb-2 items-center justify-between px-1 sm:px-2">
+        <h3 className="font-condensed text-sm sm:text-base text-white uppercase tracking-[0.3em] font-black flex items-center gap-3 italic border-l-2 border-primary pl-4">
+          <span className="material-symbols-outlined text-primary text-xl">list_alt</span> TABELA DE PERFORMANCE
         </h3>
       </div>
 
@@ -407,17 +453,17 @@ const Ranking: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none opacity-40"></div>
 
         {/* Header Grid */}
-        <div className="hidden sm:grid grid-cols-12 gap-0 px-8 py-3 bg-black/80 border-b border-primary/20 text-sm font-condensed text-white/40 uppercase tracking-[0.4em] font-black z-30 sticky top-0 backdrop-blur-xl">
-          <div className="col-span-1 text-center border-r border-white/5">Ranking</div>
-          {rankingFilter !== 'week' && <div className="col-span-3 text-center border-r border-white/5 text-primary/60">Progresso</div>}
-          <div className={`${rankingFilter === 'week' ? 'col-span-8' : 'col-span-5'} flex items-center justify-center border-r border-white/5 uppercase`}>Competidor</div>
-          <div className="col-span-3 text-right pr-6 uppercase tracking-[0.5em] font-black text-white/70">Pontuação</div>
+        <div className="grid grid-cols-12 gap-0 px-2 sm:px-8 py-2 sm:py-3 bg-black/80 border-b border-primary/20 text-[10px] sm:text-sm font-condensed text-white/40 uppercase tracking-[0.2em] sm:tracking-[0.4em] font-black z-30 sticky top-0 backdrop-blur-xl items-center">
+          <div className="col-span-2 sm:col-span-1 text-center sm:border-r border-white/5">Rank</div>
+          <div className="col-span-2 sm:col-span-3 text-center sm:border-r border-white/5 text-primary/60">{rankingFilter !== 'week' ? 'Prog' : ''}</div>
+          <div className="col-span-6 sm:col-span-5 flex items-center justify-start pl-4 sm:pl-8 border-r border-white/5 uppercase">Competidor</div>
+          <div className="col-span-2 sm:col-span-3 text-center sm:text-right pr-0 sm:pr-6 uppercase tracking-[0.2em] sm:tracking-[0.5em] font-black text-white/70">Pts</div>
         </div>
 
         {/* Leaderboard Lines */}
         <div className="divide-y divide-white/10 relative z-10 border-t border-white/5">
-          {leaderboard.length > 0 ? (
-            leaderboard.map((user, index) => renderUserRow(user, index))
+          {leaderboard.length > 3 ? (
+            leaderboard.slice(3).map((user, index) => renderUserRow(user, index + 3))
           ) : (
             <div className="py-40 text-center flex flex-col items-center justify-center">
               <span className="material-symbols-outlined text-white/5 text-9xl mb-8 animate-pulse">database_off</span>

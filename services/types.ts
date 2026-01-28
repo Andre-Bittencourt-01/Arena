@@ -30,4 +30,5 @@ export interface IDataService {
 
     // Auth
     login(email: string, password: string): Promise<User | null>;
+    getUser(id: string): Promise<User | null>;
 }

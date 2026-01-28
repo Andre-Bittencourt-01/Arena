@@ -87,6 +87,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const fights = await dataService.getFights(currentEvent.id);
                 setCurrentFights(fights);
             }
+
+            // Refresh Current User Data (to get updated points/rank info)
+            if (user) {
+                const updatedUser = await dataService.getUser(user.id);
+                if (updatedUser) {
+                    setUser(updatedUser);
+                }
+            }
         } catch (error) {
             console.error("Failed to fetch data", error);
         } finally {

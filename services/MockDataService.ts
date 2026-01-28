@@ -75,6 +75,16 @@ const initialEvents: Event[] = [
         location: 'Las Vegas, NV',
         banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-10/100524-ufc-307-matchup-pereira-rountree-jr-1920x1080-1.jpg?h=d1cb525d&itok=123',
         status: 'live'
+    },
+    {
+        id: 'evt_ufc325',
+        title: 'UFC 325',
+        subtitle: 'Volkanovski vs Lopes',
+        date: '2026-01-31T19:00:00',
+        end_date: '2026-02-01T03:00:00',
+        location: 'Sydney, AUS',
+        banner_url: 'https://thumbor.prod.vidiocdn.com/OZMdsauvnjLe0WlogFvKuRg3Sso=/960x576/filters:quality(70)/vidio-web-prod-headline/uploads/headline/mobile_image/35557/ufc-325-volkanovski-vs-lopes-2-86965e.jpg',
+        status: 'upcoming'
     }
 ];
 
@@ -83,12 +93,12 @@ const generateFightersAndFights = () => {
     let fights: Fight[] = [];
 
     const getFighter = (name: string): Fighter => {
-        const id = name.toLowerCase().replace(/\s/g, '');
+        const id = name.toLowerCase().replace(/\s/g, '').replace(/[\.'-]/g, '');
         if (!fighters[id]) {
             fighters[id] = {
                 id,
                 name,
-                nickname: 'The ' + name.split(' ')[0],
+                nickname: 'The ' + name.split(' ').pop(),
                 image_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuDdv6fnH2aUkUnStYycJnEKhaBICr74VmX4NnJNWQeAiTlNYjfRaYYdIaoUwqoIEjja3cV-obJrnb8Gr2KiHkzQz-DeJP1i1-21wlLJCmCXKcRBgb6F2m-uUznPWRZzMhZNCqAZa6eSt2I623-0Z_DFPK5NPmKdViNtogczjn5ZtJ-ArZKYBj2bztA5emkHyNyEy2LqUPyIDFtazLxIRtXY1YTN904jPv1NkVDpSRAx_bnPSnUrqaadV4tkE7fo8AizW2OjfaNetD1y",
                 wins: Math.floor(Math.random() * 30),
                 losses: Math.floor(Math.random() * 10),
@@ -99,7 +109,44 @@ const generateFightersAndFights = () => {
         return fighters[id];
     };
 
+    // --- UFC 325 Card ---
+    const ufc325Card = [
+        { f1: "Alexander Volkanovski", f2: "Diego Lopes", cat: "Main Event", weight: "Pena", title: true },
+        { f1: "Dan Hooker", f2: "Benoit Saint Denis", cat: "Co-Main", weight: "Leve", title: false },
+        { f1: "Rafael Fiziev", f2: "Mauricio Ruffy", cat: "Main Card", weight: "Leve", title: false },
+        { f1: "Tai Tuivasa", f2: "Tallison Teixeira", cat: "Main Card", weight: "Pesado", title: false },
+        { f1: "Quillan Salkilld", f2: "Jamie Mullarkey", cat: "Main Card", weight: "Leve", title: false },
+        { f1: "Junior Tafa", f2: "Billy Elekana", cat: "Prelim", weight: "M. Pesado", title: false },
+        { f1: "Cam Rowston", f2: "Cody Brundage", cat: "Prelim", weight: "Médio", title: false },
+        { f1: "Jacob Malkoun", f2: "Torrez Finney", cat: "Prelim", weight: "Médio", title: false },
+        { f1: "Jonathan Micallef", f2: "Oban Elliott", cat: "Prelim", weight: "Meio-Médio", title: false },
+        { f1: "Kaan Ofli", f2: "Yizha", cat: "Prelim", weight: "Pena", title: false },
+        { f1: "Dom Mar Fan", f2: "Sang Uk Kim", cat: "Early", weight: "Leve", title: false },
+        { f1: "Sebastian Szalay", f2: "Keiichiro Nakamura", cat: "Early", weight: "Pena", title: false },
+        { f1: "Sulangrangbo", f2: "Lawrence Lui", cat: "Early", weight: "Galo", title: false },
+        { f1: "Namsrai Batbayar", f2: "Aaron Tau", cat: "Early", weight: "Mosca", title: false }
+    ];
+
+    ufc325Card.forEach((f, i) => {
+        const fighterA = getFighter(f.f1);
+        const fighterB = getFighter(f.f2);
+        fights.push({
+            id: `fight_evt_ufc325_${i}`,
+            event_id: 'evt_ufc325',
+            fighter_a_id: fighterA.id,
+            fighter_b_id: fighterB.id,
+            fighter_a: fighterA,
+            fighter_b: fighterB,
+            category: f.cat as any,
+            weight_class: f.weight as any,
+            rounds: f.cat === 'Main Event' ? 5 : 3,
+            is_title: f.title,
+            points: 0
+        });
+    });
+
     initialEvents.forEach(event => {
+        if (event.id === 'evt_ufc325') return; // Skip UFC 325 as we manually defined its card
         for (let i = 0; i < 15; i++) {
             const idx1 = Math.floor(Math.random() * MOCK_NAMES.length);
             let idx2 = Math.floor(Math.random() * MOCK_NAMES.length);
@@ -208,6 +255,9 @@ const generateUsersAndPicks = (fights: Fight[]) => {
     }
 
     users.forEach(user => {
+        // Pula a geração automática para o usuário principal para que ele possa palpitar manualmente
+        if (user.id === 'user_andre') return;
+
         fights.forEach(fight => {
             const event = initialEvents.find(e => e.id === fight.event_id);
             if (event) {
@@ -558,9 +608,11 @@ export class MockDataService implements IDataService {
         const index = this.picks.findIndex(p => p.id === updatedPick.id);
         if (index !== -1) {
             this.picks[index] = updatedPick;
-            await this.recalculateUserPoints(updatedPick.user_id);
-            this.recalculateRanks();
+        } else {
+            this.picks.push(updatedPick);
         }
+        await this.recalculateUserPoints(updatedPick.user_id);
+        this.recalculateRanks();
     }
 
     private async recalculateUserPoints(userId: string): Promise<void> {

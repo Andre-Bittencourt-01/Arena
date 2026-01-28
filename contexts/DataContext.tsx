@@ -6,6 +6,7 @@ import { MockDataService } from '../services/MockDataService';
 interface DataContextType {
     events: Event[];
     currentEvent: Event | null;
+    setCurrentEvent: (event: Event | null) => void;
     currentFights: Fight[];
     loading: boolean;
     refreshData: () => Promise<void>;
@@ -63,22 +64,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const refreshData = async () => {
         setLoading(true);
         try {
-            // Se já temos eventos e lutadores, não precisamos buscar de novo na troca de filtro de ranking
-            if (events.length === 0 || fighters.length === 0) {
-                const [fetchedEvents, fetchedFighters] = await Promise.all([
-                    dataService.getEvents(),
-                    dataService.getFighters()
-                ]);
-                setEvents(fetchedEvents);
-                setFighters(fetchedFighters);
+            const [fetchedEvents, fetchedFighters] = await Promise.all([
+                dataService.getEvents(),
+                dataService.getFighters()
+            ]);
+            setEvents(fetchedEvents);
+            setFighters(fetchedFighters);
 
-                // Default to first event if none selected
-                if (!currentEvent && fetchedEvents.length > 0) {
-                    const firstEvent = fetchedEvents[0];
-                    setCurrentEvent(firstEvent);
-                    const fights = await dataService.getFights(firstEvent.id);
-                    setCurrentFights(fights);
-                }
+            // Default to first event if none selected
+            if (!currentEvent && fetchedEvents.length > 0) {
+                const firstEvent = fetchedEvents[0];
+                setCurrentEvent(firstEvent);
+                const fights = await dataService.getFights(firstEvent.id);
+                setCurrentFights(fights);
             }
 
             const fetchedLeaderboard = await dataService.getLeaderboard(rankingFilter, selectedPeriodId || undefined);
@@ -100,6 +98,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSelectedPeriodId(null); // Reset specific period when switching filters
         refreshData();
     }, [rankingFilter]); // Refresh when filter changes
+
+    useEffect(() => {
+        const fetchFights = async () => {
+            if (currentEvent) {
+                const fights = await dataService.getFights(currentEvent.id);
+                setCurrentFights(fights);
+            }
+        };
+        fetchFights();
+    }, [currentEvent]);
 
     useEffect(() => {
         refreshData();
@@ -175,6 +183,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         <DataContext.Provider value={{
             events,
             currentEvent,
+            setCurrentEvent,
             currentFights,
             loading,
             refreshData,

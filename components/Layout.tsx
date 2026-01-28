@@ -10,9 +10,9 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, currentScreen, onNavigate }) => {
     return (
-        <div className="flex flex-col min-h-screen font-display bg-background-dark text-white selection:bg-primary selection:text-white">
+        <div className="flex flex-col h-[100dvh] font-display bg-background-dark text-white selection:bg-primary selection:text-white overflow-hidden">
             <Navbar currentScreen={currentScreen} onNavigate={onNavigate} />
-            <main className="flex-grow">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
                 {children}
             </main>
         </div>

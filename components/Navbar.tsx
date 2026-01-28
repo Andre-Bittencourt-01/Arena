@@ -11,8 +11,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentScreen, onNavigate }) => {
 
   const navItems: { screen: Screen; label: string; icon: string }[] = [
     { screen: 'dashboard', label: 'Home', icon: 'home' },
-    { screen: 'events', label: 'Lutas', icon: 'sports_mma' },
-    { screen: 'summary', label: 'Picks', icon: 'list_alt' },
+    { screen: 'events', label: 'Eventos', icon: 'sports_mma' },
+    { screen: 'summary', label: 'Compartilhamento', icon: 'list_alt' },
     { screen: 'ranking', label: 'Rank', icon: 'leaderboard' },
     { screen: 'profile', label: 'Perfil', icon: 'person' },
   ];
@@ -64,8 +64,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentScreen, onNavigate }) => {
       </header>
 
       {/* Mobile Bottom Navigation - Portrait Focus */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f0f11]/95 backdrop-blur-lg border-t border-white/5 px-2 pb-safe-offset-2">
-        <div className="flex items-center justify-around h-16">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0f0f11]/95 backdrop-blur-lg border-t border-white/5 px-2 pb-safe-offset-1">
+        <div className="flex items-center justify-around h-14">
           {navItems.map((item) => (
             <button
               key={item.screen}

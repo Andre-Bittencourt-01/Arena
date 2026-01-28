@@ -8,19 +8,23 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  const { events, leaderboard, user } = useData();
+  const { events, leaderboard, user, setCurrentEvent } = useData();
   const [nextEvent, setNextEvent] = useState(events.find(e => e.status === 'upcoming') || null);
 
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
   useEffect(() => {
-    // Priority: Live > Upcoming
+    // Priority: Live > Upcoming (Chronologically nearest)
     const live = events.find(e => e.status === 'live');
     if (live) {
       setNextEvent(live);
     } else {
-      const upcoming = events.find(e => e.status === 'upcoming');
-      setNextEvent(upcoming || null);
+      // Filter for upcoming events and sort them by date (ascending)
+      const upcomingEvents = events
+        .filter(e => e.status === 'upcoming')
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      setNextEvent(upcomingEvents[0] || null);
     }
   }, [events]);
 
@@ -67,100 +71,150 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const getEventTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 md:py-8 font-grotesk pb-24 md:pb-8">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 md:py-8 font-grotesk pb-24 md:pb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-8">
 
         {/* Main Hero Section */}
-        <div className="lg:col-span-8 flex flex-col gap-8">
+        <div className="lg:col-span-8 flex flex-col gap-6 md:gap-8">
           {nextEvent ? (
-            <div className="relative overflow-hidden rounded-2xl bg-surface-dark border border-white/5 shadow-2xl group min-h-[400px]">
+            <div className="relative overflow-hidden rounded-2xl bg-surface-dark border border-white/5 shadow-2xl group min-h-[260px] md:min-h-[400px]">
+              <div className="absolute top-3 left-3 z-30">
+                {nextEvent.status === 'live' ? (
+                  <div className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-red-600/90 border border-red-500/50 text-red-100 text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.4)] backdrop-blur-md animate-pulse">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500"></span>
+                    </span>
+                    AO VIVO
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-green-500/90 border border-green-500/50 text-white text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-neon-sm backdrop-blur-md">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                    </span>
+                    PRÓXIMO EVENTO
+                  </div>
+                )}
+              </div>
               <div className="absolute inset-0 z-0">
-                <div className="absolute inset-0 bg-gradient-to-r from-background-dark via-background-dark/80 to-transparent z-10"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/60 to-transparent z-10"></div>
                 <img
                   alt={nextEvent.title}
                   className="h-full w-full object-cover object-top opacity-60 mix-blend-overlay group-hover:scale-105 transition-transform duration-700"
                   src={nextEvent.banner_url}
                 />
               </div>
-              <div className="relative z-20 p-6 md:p-10 h-full flex flex-col justify-end">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8">
-                  <div className="space-y-3 md:space-y-4 max-w-lg">
-                    {nextEvent.status === 'live' ? (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-red-600/20 border border-red-500/50 text-red-500 text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.4)] backdrop-blur-md animate-pulse">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                        </span>
-                        AO VIVO
+              <div className="relative z-20 p-5 md:p-10 h-full flex flex-col justify-end">
+                <div className="flex flex-col justify-end h-full gap-2 md:gap-8">
+
+                  {/* Event Info Row */}
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-1 md:gap-8">
+
+                    {/* Left Column: Title, Subtitle, Details */}
+                    <div className="w-full md:w-auto space-y-1 md:space-y-4 max-w-lg">
+                      {/* Status Badges - REMOVED (Moved to Top Left) */}
+
+                      {/* Title & Timer Row (Mobile) */}
+                      <div className="flex items-end justify-between gap-4">
+                        <h2 className="font-condensed text-4xl md:text-7xl font-bold uppercase italic leading-none tracking-tighter text-white">
+                          {nextEvent.title.split(' ')[0]} <span className="text-primary drop-shadow-[0_0_10px_rgba(255,31,31,0.5)]">{nextEvent.title.split(' ')[1]}</span>
+                        </h2>
+
+                        {/* Mobile Timer moved here */}
+                        <div className="md:hidden mb-2">
+                          <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1.5">Tempo para Palpitar</p>
+                          {timeLeft ? (
+                            <div className="flex gap-1.5 font-condensed">
+                              <div className="flex flex-col items-center bg-[#1e1e21]/90 backdrop-blur border border-white/10 p-2 rounded w-12">
+                                <span className="text-xl font-bold text-white leading-none">{formatNumber(timeLeft.days)}</span>
+                                <span className="text-[7px] uppercase text-gray-500 font-bold">Dias</span>
+                              </div>
+                              <div className="text-xl font-bold text-primary self-center pb-2">:</div>
+                              <div className="flex flex-col items-center bg-[#1e1e21]/90 backdrop-blur border border-white/10 p-2 rounded w-12">
+                                <span className="text-xl font-bold text-white leading-none">{formatNumber(timeLeft.hours)}</span>
+                                <span className="text-[7px] uppercase text-gray-500 font-bold">Hrs</span>
+                              </div>
+                              <div className="text-xl font-bold text-primary self-center pb-2">:</div>
+                              <div className="flex flex-col items-center bg-[#1e1e21]/90 backdrop-blur border border-white/10 p-2 rounded w-12 border-primary/30">
+                                <span className="text-xl font-bold text-white leading-none">{formatNumber(timeLeft.minutes)}</span>
+                                <span className="text-[7px] uppercase text-gray-500 font-bold">Min</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="px-2 py-1 bg-red-500/20 border border-red-500/30 rounded text-[10px] text-red-500 font-bold uppercase backdrop-blur">
+                              Encerrado
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded bg-green-500/20 border border-green-500/50 text-green-400 text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-neon-sm backdrop-blur-md">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                        </span>
-                        PRÓXIMO EVENTO
-                      </div>
-                    )}
-                    <h2 className="font-condensed text-5xl md:text-7xl font-bold uppercase italic leading-none tracking-tighter text-white">
-                      {nextEvent.title.split(' ')[0]} <span className="text-primary drop-shadow-[0_0_10px_rgba(255,31,31,0.5)]">{nextEvent.title.split(' ')[1]}</span>
-                    </h2>
-                    <p className="font-condensed text-2xl md:text-4xl font-medium uppercase text-gray-300">
-                      {nextEvent.subtitle.split(' vs ')[0]} <span className="text-primary font-bold">VS</span> {nextEvent.subtitle.split(' vs ')[1]}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-400 text-[11px] md:text-sm font-mono border-t border-white/10 pt-4 mt-2">
-                      <div className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-primary text-base">calendar_month</span>
-                        <span>{getEventDay(nextEvent.date)} {getEventMonth(nextEvent.date)}</span>
-                      </div>
-                      <span className="hidden md:block w-1 h-1 bg-gray-600 rounded-full"></span>
-                      <div className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-primary text-base">schedule</span>
-                        <span>{getEventTime(nextEvent.date)}</span>
-                      </div>
-                      <span className="hidden md:block w-1 h-1 bg-gray-600 rounded-full"></span>
-                      <div className="flex items-center gap-1">
-                        <span className="material-symbols-outlined text-primary text-base">location_on</span>
-                        <span>{nextEvent.location.split(',')[0].toUpperCase()}</span>
+
+                      <p className="font-condensed text-xl md:text-4xl font-medium uppercase text-gray-300 leading-none">
+                        {nextEvent.subtitle.split(' vs ')[0]} <span className="text-primary font-bold">VS</span> {nextEvent.subtitle.split(' vs ')[1]}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-400 text-[10px] md:text-sm font-mono border-t border-white/10 pt-2 md:pt-3 mt-1">
+                        <div className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-primary text-[14px] md:text-base">calendar_month</span>
+                          <span>{getEventDay(nextEvent.date)} {getEventMonth(nextEvent.date)}</span>
+                        </div>
+                        <span className="hidden md:block w-1 h-1 bg-gray-600 rounded-full"></span>
+                        <div className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-primary text-[14px] md:text-base">schedule</span>
+                          <span>{getEventTime(nextEvent.date)}</span>
+                        </div>
+                        <span className="hidden md:block w-1 h-1 bg-gray-600 rounded-full"></span>
+                        <div className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-primary text-[14px] md:text-base">location_on</span>
+                          <span>{nextEvent.location.split(',')[0].toUpperCase()}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-col items-center md:items-end gap-3 md:gap-2">
-                    <div className="flex flex-col items-center gap-2">
-                      <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Tempo para Palpitar</p>
-                      {timeLeft ? (
-                        <div className="flex gap-1.5 md:gap-2 font-condensed">
-                          <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg">
-                            <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.days)}</span>
-                            <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Dias</span>
+                    {/* Right Column: Timer (Desktop) + Button */}
+                    <div className="flex flex-row md:flex-col items-center md:items-end gap-3 md:gap-2 w-full md:w-auto mt-2 md:mt-0">
+
+                      {/* Desktop Timer - Hidden on Mobile */}
+                      <div className="hidden md:flex flex-col items-center gap-2">
+                        <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Tempo para Palpitar</p>
+                        {timeLeft ? (
+                          <div className="flex gap-1.5 md:gap-2 font-condensed">
+                            <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg">
+                              <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.days)}</span>
+                              <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Dias</span>
+                            </div>
+                            <div className="text-xl font-bold text-primary self-start mt-1 md:mt-2">:</div>
+                            <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg">
+                              <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.hours)}</span>
+                              <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Hrs</span>
+                            </div>
+                            <div className="text-xl font-bold text-primary self-start mt-1 md:mt-2">:</div>
+                            <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg border-primary/30">
+                              <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.minutes)}</span>
+                              <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Min</span>
+                            </div>
                           </div>
-                          <div className="text-xl font-bold text-primary self-start mt-1 md:mt-2">:</div>
-                          <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg">
-                            <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.hours)}</span>
-                            <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Hrs</span>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-red-500/10 border border-red-500/20 backdrop-blur-md shadow-[0_0_20px_rgba(220,38,38,0.1)] w-full max-w-[200px]">
+                            <span className="material-symbols-outlined text-red-500 text-3xl mb-1">lock</span>
+                            <p className="text-red-400 font-condensed font-bold uppercase text-lg leading-none tracking-wide text-center">Palpites<br />Encerrados</p>
+                            <p className="text-[10px] text-gray-500 mt-2 font-mono uppercase tracking-widest border-t border-red-500/20 pt-2 w-full text-center">Evento Iniciado</p>
                           </div>
-                          <div className="text-xl font-bold text-primary self-start mt-1 md:mt-2">:</div>
-                          <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg border-primary/30">
-                            <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.minutes)}</span>
-                            <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Min</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-red-500/10 border border-red-500/20 backdrop-blur-md shadow-[0_0_20px_rgba(220,38,38,0.1)] w-full max-w-[200px]">
-                          <span className="material-symbols-outlined text-red-500 text-3xl mb-1">lock</span>
-                          <p className="text-red-400 font-condensed font-bold uppercase text-lg leading-none tracking-wide text-center">Palpites<br />Encerrados</p>
-                          <p className="text-[10px] text-gray-500 mt-2 font-mono uppercase tracking-widest border-t border-red-500/20 pt-2 w-full text-center">Evento Iniciado</p>
-                        </div>
-                      )}
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (nextEvent) {
+                            setCurrentEvent(nextEvent);
+                            onNavigate('picks');
+                          }
+                        }}
+                        className="w-full md:w-auto bg-primary hover:bg-primary-hover text-white font-condensed font-bold uppercase tracking-wider py-3 px-6 rounded shadow-neon transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        Fazer Palpites <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => onNavigate('picks')}
-                      className="mt-4 w-full bg-primary hover:bg-primary-hover text-white font-condensed font-bold uppercase tracking-wider py-3 px-6 rounded shadow-neon transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      Fazer Palpites <span className="material-symbols-outlined text-lg">arrow_forward</span>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -175,85 +229,69 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
           {/* Stats Summary */}
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-condensed text-xl font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">analytics</span> Resumo da Semana
-              </h3>
-              <span className="text-xs font-mono text-gray-500">ATUALIZADO: HOJE 14:00</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
               {/* Precision Card */}
-              <div className="bg-surface-dark border border-white/5 rounded-xl p-5 relative overflow-hidden group hover:border-primary/30 transition-colors">
-                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <span className="material-symbols-outlined text-4xl text-primary">target</span>
+              <div className="bg-surface-dark border border-white/5 rounded-xl p-4 md:p-5 relative overflow-hidden group hover:border-primary/30 transition-colors">
+                <div className="absolute top-0 right-0 p-2 md:p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <span className="material-symbols-outlined text-3xl md:text-4xl text-primary">target</span>
                 </div>
-                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-4">Precisão Detalhada</p>
-                <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] md:text-xs text-gray-500 font-bold uppercase tracking-wider mb-2 md:mb-4">Precisão Detalhada do Mês</p>
+                <div className="flex items-center justify-between gap-1 md:gap-2">
                   <div className="flex flex-col items-center gap-1">
-                    <div className="relative h-14 w-14">
+                    <div className="relative h-16 w-16 md:h-20 md:w-20">
                       <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
                         <path className="text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
                         <path className="text-primary drop-shadow-[0_0_3px_rgba(255,31,31,0.8)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="82, 100" strokeWidth="3"></path>
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-white">82%</span>
+                        <span className="text-xs md:text-sm font-bold text-white">82%</span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Vencedor</span>
+                    <span className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-wide">Vencedor</span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <div className="relative h-14 w-14">
+                    <div className="relative h-16 w-16 md:h-20 md:w-20">
                       <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
                         <path className="text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
                         <path className="text-primary/70 drop-shadow-[0_0_3px_rgba(255,31,31,0.5)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="64, 100" strokeWidth="3"></path>
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-white">64%</span>
+                        <span className="text-xs md:text-sm font-bold text-white">64%</span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Método</span>
+                    <span className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-wide">Método</span>
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <div className="relative h-14 w-14">
+                    <div className="relative h-16 w-16 md:h-20 md:w-20">
                       <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
                         <path className="text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
                         <path className="text-primary/40 drop-shadow-[0_0_3px_rgba(255,31,31,0.3)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="45, 100" strokeWidth="3"></path>
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-white">45%</span>
+                        <span className="text-xs md:text-sm font-bold text-white">45%</span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Round</span>
+                    <span className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-wide">Round</span>
                   </div>
                 </div>
               </div>
 
-              {/* Streak Card */}
-              <div className="bg-surface-dark border border-white/5 rounded-xl p-5 relative overflow-hidden group hover:border-primary/30 transition-colors">
-                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <span className="material-symbols-outlined text-4xl text-yellow-500">local_fire_department</span>
-                </div>
-                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3">Sequência Atual</p>
-                <div className="flex items-end gap-1 h-12 mb-2">
-                  <div className="w-1/6 bg-white/10 rounded-t h-[40%]"></div>
-                  <div className="w-1/6 bg-white/10 rounded-t h-[60%]"></div>
-                  <div className="w-1/6 bg-green-500/50 rounded-t h-[80%] shadow-[0_0_5px_rgba(34,197,94,0.3)]"></div>
-                  <div className="w-1/6 bg-green-500 rounded-t h-[100%] shadow-[0_0_10px_rgba(34,197,94,0.5)] relative group-hover:bg-primary group-hover:shadow-neon transition-all"></div>
-                  <div className="w-1/6 bg-white/10 rounded-t h-[20%]"></div>
-                  <div className="w-1/6 bg-white/10 rounded-t h-[50%]"></div>
-                </div>
-                <div className="flex justify-between items-end">
-                  <p className="text-2xl font-condensed font-bold text-white">4 <span className="text-sm text-gray-400 font-normal">Vitórias</span></p>
-                  <p className="text-[10px] text-gray-500">Recorde: 8</p>
-                </div>
-              </div>
-
               {/* Rank Card */}
-              <div className="bg-surface-dark border border-white/5 rounded-xl p-5 relative overflow-hidden group hover:border-primary/30 transition-colors">
+              <div className="bg-surface-dark border border-white/5 rounded-xl p-3 md:p-5 relative overflow-hidden group hover:border-primary/30 transition-colors">
                 <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                   <span className="material-symbols-outlined text-4xl text-blue-500">leaderboard</span>
                 </div>
-                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-3">Ranking Global</p>
+
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Ranking Global / Sua Posição</p>
+                  <button
+                    onClick={() => onNavigate('ranking')}
+                    className="text-[10px] text-primary font-bold uppercase tracking-wider hover:text-white transition-colors"
+                  >
+                    Ranking Completo
+                  </button>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-3xl font-condensed font-bold text-white">#42</p>
@@ -266,7 +304,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     </div>
                   </div>
                 </div>
-                <div className="mt-3 w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                <div className="mt-2 w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
                   <div className="bg-gradient-to-r from-primary/50 to-primary h-full rounded-full w-[85%] shadow-neon-sm"></div>
                 </div>
               </div>
@@ -274,57 +312,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </section>
 
           {/* Recent Results */}
-          <div className="border-t border-white/5 pt-6">
-            <h3 className="font-condensed text-lg font-bold text-white uppercase tracking-wide mb-4">Resultados Recentes</h3>
-            <div className="overflow-x-auto pb-2">
-              <div className="flex gap-4 min-w-max">
-                <div className="flex items-center gap-4 bg-surface-dark border border-white/5 p-3 rounded-lg w-[280px] hover:border-white/20 transition-colors cursor-pointer">
-                  <div className="flex flex-col items-center">
-                    <img className="w-10 h-10 rounded-full object-cover border border-green-500/50 shadow-[0_0_5px_rgba(34,197,94,0.3)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvjheTvK32Gm-UKPDBJ2x7v0_w78nlO8I2FNEn2Umz2XDp8QH1RLD-JxnAUi93lFYHADP_DFOIPErsQ3MAIpIZ2eHMKYzmfWS1AAcbavodqsU3f6g6_0cd-3ykT6UXYxAofMg6ia7jYj1eV4vqaE4uyLW-6mNAqaA68s51v60G3xTzLjermCqojsMXNaJ6pZ974cGOABUQ6Yqxe-tehrWmAPt1k2XN08i8VSwe-zLmqNF-RDCqyhtlSSGEyERq4FNnNjZ3OKttVHhu" alt="O'Malley" />
-                    <span className="text-[10px] font-bold mt-1 text-white">O'Malley</span>
-                  </div>
-                  <div className="flex-1 text-center">
-                    <span className="text-xs font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">WIN</span>
-                    <p className="text-[10px] text-gray-500 mt-1">UFC 299</p>
-                  </div>
-                  <div className="flex flex-col items-center opacity-50">
-                    <img className="w-10 h-10 rounded-full object-cover grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMF3Cv-OMOtJ-8jrpzleOP-0AtftuXNbe5VBThqIrEvnccRwKUcEUSckJpVnO7CRV5_87Pc0Beut3040K464lDHvCPg3c860MEEwCqQAm63uY9lE_Oho7OXySpGFwLWvd5JKQHtz_AYC9L4AunLef1E8HwKUyipz03b5782EBId2hg5F1OepnxZFhVGSSlbejgKYRsRp-sz9iYjSjsfYpaKEk6LTolj3aHbXcT1tc9HC6yT99zEN7U19e-O1EzPROHDmcl8Iax84hS" alt="Vera" />
-                    <span className="text-[10px] font-bold mt-1 text-gray-400">Vera</span>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-4 bg-surface-dark border border-white/5 p-3 rounded-lg w-[280px] hover:border-white/20 transition-colors cursor-pointer">
-                  <div className="flex flex-col items-center opacity-50">
-                    <img className="w-10 h-10 rounded-full object-cover grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBznAjoZtX-9TpZ_1at98dPMdIZ6ibRJ72AWV6N5weje994PX5WGDRQryNUbWVxyzBge5A0XKuvnYC8kCAtinvI_vcJ4xuD5AAtvjflyYSMxi_0u744C9PZ8L8yVDdPJ-giZHnRxWHYmYIIbjiPwzEygtxGAZ56UD7KliiVWA2fNN_FFpK1XYbhtMlAanSyPoVWyTd97BH0U2gAfoxuMdeku1ktQiTAvoIqSGOnLfP1-XGIey0c1-VnNFBfNLSzfGXPpvvzaw0gRI3j" alt="Poirier" />
-                    <span className="text-[10px] font-bold mt-1 text-gray-400">Poirier</span>
-                  </div>
-                  <div className="flex-1 text-center">
-                    <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">LOSS</span>
-                    <p className="text-[10px] text-gray-500 mt-1">UFC 299</p>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <img className="w-10 h-10 rounded-full object-cover border border-white/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2hnAMz5cJJXtKorqT0NTxy_bVqToq4pJrC2UTK0_g0VRC_ExEDolYKiMf-Mr9tq6g-qta0M17jfRWQCL-tIuX0PcsJDK9zNgIv5aFY0HJJOqkolxNOX_iygsL_758Z4_CaqoN8I1O9sCuuzaZCq50zz1vJvcAH1N9WY53cyRhtrLyh2w3YsS1yS_Ai-RDN21bb0hki6QsRG1gPt5gLSvvLhUM3zaD6n-hLQhhSW3cekFwiiMHkryFE3Q1nFwggg_BIY8L9WPzIY9b" alt="St. Denis" />
-                    <span className="text-[10px] font-bold mt-1 text-white">St. Denis</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Sidebar */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           <Panel
-            title="Ranking do último evento"
-            subtitle="Top 5 Jogadores da Elite"
-            className="h-full"
+            title="Ranking"
+            subtitle="Top 5 Elite"
+            className="h-[50vh] lg:h-full"
             headerAction={
               <button
                 onClick={() => onNavigate('ranking')}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 hover:text-white transition-all text-[10px] font-condensed font-bold uppercase tracking-widest"
               >
                 <span className="material-symbols-outlined text-sm">leaderboard</span>
-                <span>Ver Todos os Rankings</span>
+                <span>Ver Todos</span>
               </button>
             }
           >

@@ -590,6 +590,7 @@ export class MockDataService implements IDataService {
 
     async login(email: string, password: string): Promise<User | null> {
         await this.delay(500);
+
         const user = this.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
         if (user) {
             this.currentUser = user;

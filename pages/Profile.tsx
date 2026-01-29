@@ -1,13 +1,268 @@
 import React from 'react';
 import { Screen } from '../App';
 import { useData } from '../contexts/DataContext';
+import { MockDataService } from '../services/MockDataService';
 
 interface ProfileProps {
   onNavigate: (screen: Screen) => void;
 }
 
 const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
-  const { user, leaderboard } = useData();
+  const { user, leaderboard, events, getAllPicksForEvent, getFightsForEvent } = useData();
+
+  // Data service instance for additional queries
+  const dataService = React.useMemo(() => new MockDataService(), []);
+
+  // Period filter state (similar to Ranking page)
+  const [periodFilter, setPeriodFilter] = React.useState<'week' | 'month' | 'year'>('month');
+
+  // Period selector dropdown state
+  const [showSelector, setShowSelector] = React.useState(false);
+  const [selectedPeriodId, setSelectedPeriodId] = React.useState<string | null>(null);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const [dropdownTop, setDropdownTop] = React.useState(0);
+
+  // Handle click outside to close dropdown
+  React.useEffect(() => {
+    if (!showSelector) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setShowSelector(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSelector]);
+
+  // Calculate dropdown top position when button is clicked
+  React.useEffect(() => {
+    if (showSelector && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownTop(rect.bottom + 8);
+    }
+  }, [showSelector]);
+
+  // Period label mapping
+  const periodLabels = {
+    'week': 'Último Evento',
+    'month': 'Mensal',
+    'year': 'Anual'
+  };
+
+  // Calculate user stats from picks
+  const [userStats, setUserStats] = React.useState({
+    winnerAccuracy: 0,
+    methodAccuracy: 0,
+    roundAccuracy: 0,
+    totalPicks: 0,
+    totalVictories: 0,
+    weeklyPoints: 0,
+    totalPoints: 0,
+    userRank: 0
+  });
+
+  React.useEffect(() => {
+    const calculateStats = async () => {
+      if (!user) {
+        setUserStats({
+          winnerAccuracy: 0,
+          methodAccuracy: 0,
+          roundAccuracy: 0,
+          totalPicks: 0,
+          totalVictories: 0,
+          weeklyPoints: 0,
+          totalPoints: 0,
+          userRank: 0
+        });
+        return;
+      }
+
+      try {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        // Get week start (7 days ago) for weekly points
+        const weekStart = new Date(now);
+        weekStart.setDate(weekStart.getDate() - 7);
+
+        // Filter events based on selected period
+        let filteredEvents: typeof events = [];
+
+        if (periodFilter === 'week') {
+          // Get last completed event
+          filteredEvents = events
+            .filter(e => e.status === 'completed')
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 1);
+        } else if (periodFilter === 'month') {
+          // Get all completed events from this month
+          filteredEvents = events.filter(event => {
+            const eventDate = new Date(event.date);
+            return event.status === 'completed' &&
+              eventDate.getMonth() === currentMonth &&
+              eventDate.getFullYear() === currentYear;
+          });
+        } else if (periodFilter === 'year') {
+          // Get all completed events from this year
+          filteredEvents = events.filter(event => {
+            const eventDate = new Date(event.date);
+            return event.status === 'completed' &&
+              eventDate.getFullYear() === currentYear;
+          });
+        }
+
+        const weeklyEvents = events.filter(event => {
+          const eventDate = new Date(event.date);
+          return event.status === 'completed' && eventDate >= weekStart;
+        });
+
+        let totalPicks = 0;
+        let correctWinner = 0;
+        let correctMethod = 0;
+        let correctRound = 0;
+        let weeklyPoints = 0;
+        let totalPoints = 0;
+
+        // Calculate stats based on filtered events
+        for (const event of filteredEvents) {
+          const allPicks = await getAllPicksForEvent(event.id);
+          const userPicksArray = allPicks.filter(pick => pick.user_id === user.id);
+
+          if (userPicksArray.length === 0) continue;
+
+          const fights = await getFightsForEvent(event.id);
+
+          for (const pick of userPicksArray) {
+            const fight = fights.find(f => f.id === pick.fight_id);
+            if (!fight || !fight.winner_id) continue;
+
+            totalPicks++;
+            totalPoints += pick.points_earned || 0;
+
+            // Check winner accuracy
+            if (pick.fighter_id === fight.winner_id) {
+              correctWinner++;
+
+              // Check method accuracy (only if winner was correct)
+              if (pick.method && fight.method) {
+                const pickMethod = pick.method.toUpperCase();
+                const fightMethod = fight.method.toUpperCase();
+
+                if (
+                  (pickMethod === 'KO/TKO' && (fightMethod.includes('KO') || fightMethod.includes('TKO'))) ||
+                  (pickMethod === 'SUB' && fightMethod.includes('SUB')) ||
+                  (pickMethod === 'DEC' && (fightMethod.includes('DEC') || fightMethod.includes('DECISION')))
+                ) {
+                  correctMethod++;
+
+                  // Check round accuracy (only if method was also correct)
+                  if (pick.round && fight.round_end) {
+                    if (pick.round === fight.round_end) {
+                      correctRound++;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Calculate weekly points
+        for (const event of weeklyEvents) {
+          const allPicks = await getAllPicksForEvent(event.id);
+          const userPicksArray = allPicks.filter(pick => pick.user_id === user.id);
+
+          for (const pick of userPicksArray) {
+            weeklyPoints += pick.points_earned || 0;
+          }
+        }
+
+        // Get user rank based on period
+        const periodLeaderboard = await dataService.getLeaderboard(periodFilter);
+        const userRankIndex = periodLeaderboard.findIndex(u => u.id === user.id);
+        const userRank = userRankIndex !== -1 ? userRankIndex + 1 : 0;
+
+        setUserStats({
+          winnerAccuracy: totalPicks > 0 ? Math.round((correctWinner / totalPicks) * 100) : 0,
+          methodAccuracy: correctWinner > 0 ? Math.round((correctMethod / correctWinner) * 100) : 0,
+          roundAccuracy: correctMethod > 0 ? Math.round((correctRound / correctMethod) * 100) : 0,
+          totalPicks,
+          totalVictories: correctWinner,
+          weeklyPoints,
+          totalPoints,
+          userRank
+        });
+      } catch (error) {
+        console.error('Error calculating user stats:', error);
+        setUserStats({
+          winnerAccuracy: 0,
+          methodAccuracy: 0,
+          roundAccuracy: 0,
+          totalPicks: 0,
+          totalVictories: 0,
+          weeklyPoints: 0,
+          totalPoints: 0,
+          userRank: 0
+        });
+      }
+    };
+
+    calculateStats();
+  }, [user, events, getAllPicksForEvent, getFightsForEvent, periodFilter, dataService]);
+
+  // Get completed events for history table
+  const [eventHistory, setEventHistory] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    const fetchEventHistory = async () => {
+      if (!user) {
+        setEventHistory([]);
+        return;
+      }
+
+      try {
+        const completedEvents = events
+          .filter(e => e.status === 'completed')
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 5);
+
+        const eventsWithStats = await Promise.all(
+          completedEvents.map(async (event) => {
+            const allPicks = await getAllPicksForEvent(event.id);
+            const userPicks = allPicks.filter(pick => pick.user_id === user.id);
+            const userPointsForEvent = userPicks.reduce((sum, pick) => sum + (pick.points_earned || 0), 0);
+
+            // Get user rank for this event
+            const eventLeaderboard = await dataService.getLeaderboard('week', event.id);
+            const userRankIndex = eventLeaderboard.findIndex(u => u.id === user.id);
+            const userRank = userRankIndex !== -1 ? userRankIndex + 1 : null;
+
+            return {
+              ...event,
+              userPoints: userPointsForEvent,
+              userRank
+            };
+          })
+        );
+
+        setEventHistory(eventsWithStats);
+      } catch (error) {
+        console.error('Error fetching event history:', error);
+        setEventHistory([]);
+      }
+    };
+
+    fetchEventHistory();
+  }, [user, events, getAllPicksForEvent, dataService]);
 
   if (!user) {
     return (
@@ -80,18 +335,122 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 </button>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4 mt-6 border-t border-border-dark pt-6 w-full md:max-w-lg">
-              <div>
-                <span className="block text-xs text-text-secondary uppercase tracking-widest font-bold">Vitórias</span>
-                <span className="block text-xl font-bold font-condensed text-white">24</span>
-              </div>
-              <div>
-                <span className="block text-xs text-text-secondary uppercase tracking-widest font-bold">Precisão</span>
-                <span className="block text-xl font-bold font-condensed text-white">65%</span>
-              </div>
-              <div>
-                <span className="block text-xs text-text-secondary uppercase tracking-widest font-bold">Ligas</span>
-                <span className="block text-xl font-bold font-condensed text-white">1</span>
+
+            {/* Period Filter Buttons */}
+            <div className="mt-6 border-t border-border-dark pt-6">
+              <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-3">Visualizar Estatísticas</p>
+              <div className="flex flex-wrap gap-2">
+                {/* Filter Buttons */}
+                <div className="flex bg-zinc-900 border border-white/10 p-1.5 rounded-xl shadow-lg">
+                  {[
+                    { id: 'week', label: 'Último Evento' },
+                    { id: 'month', label: 'Mensal' },
+                    { id: 'year', label: 'Anual' }
+                  ].map((btn, i) => (
+                    <React.Fragment key={btn.id}>
+                      {i > 0 && <div className="w-px bg-white/5 my-2 mx-1"></div>}
+                      <button
+                        onClick={() => setPeriodFilter(btn.id as 'week' | 'month' | 'year')}
+                        className={`px-4 py-2 font-condensed text-xs uppercase font-black tracking-widest transition-all rounded-lg ${periodFilter === btn.id
+                          ? 'bg-primary text-white scale-105 shadow-lg shadow-primary/40'
+                          : 'text-white/30 hover:text-white hover:bg-white/5'
+                          }`}
+                      >
+                        {btn.label}
+                      </button>
+                    </React.Fragment>
+                  ))}
+                </div>
+
+                {/* Period Selector Dropdown */}
+                <div className="relative">
+                  <button
+                    ref={buttonRef}
+                    onClick={() => setShowSelector(!showSelector)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 ${showSelector
+                        ? 'bg-primary border-primary text-white shadow-lg shadow-primary/40'
+                        : 'bg-zinc-900 border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                      }`}
+                  >
+                    <span className="material-symbols-outlined text-lg">history</span>
+                    <span className="font-condensed font-bold uppercase tracking-widest text-xs">
+                      {periodFilter === 'week' ? 'Outros Eventos' : periodFilter === 'month' ? 'Outros Meses' : 'Outros Anos'}
+                    </span>
+                    <span className={`material-symbols-outlined text-sm transition-transform ${showSelector ? 'rotate-180' : ''}`}>expand_more</span>
+                  </button>
+
+                  {showSelector && (
+                    <>
+                      {/* Backdrop overlay on mobile */}
+                      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 sm:hidden" onClick={() => setShowSelector(false)} />
+
+                      <div
+                        ref={dropdownRef}
+                        className="fixed left-4 right-4 sm:left-auto sm:right-4 sm:w-72 bg-zinc-900 border border-white/10 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-50 animate-in fade-in zoom-in-95 duration-200"
+                        style={{
+                          top: `${dropdownTop}px`,
+                          maxHeight: 'calc(100vh - 100px)'
+                        }}
+                      >
+                        <div className="mb-4 pb-2 border-b border-white/5">
+                          <span className="font-mono text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold">Arquivo // Historico</span>
+                        </div>
+                        <div className="space-y-1 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                          {periodFilter === 'week' ? (
+                            events.filter(e => e.status === 'completed').map(event => (
+                              <button
+                                key={event.id}
+                                onClick={() => { setSelectedPeriodId(event.id); setShowSelector(false); }}
+                                className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === event.id
+                                    ? 'bg-primary/20 text-primary'
+                                    : 'text-white/40 hover:bg-white/5 hover:text-white'
+                                  }`}
+                              >
+                                {event.title} - {event.subtitle}
+                              </button>
+                            ))
+                          ) : periodFilter === 'month' ? (
+                            [...Array(12)].map((_, i) => {
+                              const monthId = `2026-${(i + 1).toString().padStart(2, '0')}`;
+                              const monthName = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"][i];
+                              return (
+                                <button
+                                  key={monthId}
+                                  onClick={() => { setSelectedPeriodId(monthId); setShowSelector(false); }}
+                                  className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === monthId
+                                      ? 'bg-primary/20 text-primary'
+                                      : 'text-white/40 hover:bg-white/5 hover:text-white'
+                                    }`}
+                                >
+                                  Performance {monthName} 2026
+                                </button>
+                              );
+                            })
+                          ) : (
+                            ['2026', '2025'].map(year => (
+                              <button
+                                key={year}
+                                onClick={() => { setSelectedPeriodId(year); setShowSelector(false); }}
+                                className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === year
+                                    ? 'bg-primary/20 text-primary'
+                                    : 'text-white/40 hover:bg-white/5 hover:text-white'
+                                  }`}
+                              >
+                                Performance Anual {year}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                        <button
+                          onClick={() => { setSelectedPeriodId(null); setShowSelector(false); }}
+                          className="w-full mt-4 py-2 text-[10px] font-mono uppercase tracking-[0.3em] text-white/20 hover:text-primary transition-colors border-t border-white/5 pt-4"
+                        >
+                          Resetar para Atual
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -107,12 +466,12 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-primary !text-lg">equalizer</span>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-text-secondary">Pontos Totais</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-text-secondary">Pontos {periodLabels[periodFilter]}</h3>
               </div>
-              <p className="text-6xl font-bold font-condensed text-white tracking-tight">{user.points}</p>
+              <p className="text-6xl font-bold font-condensed text-white tracking-tight">{userStats.totalPoints}</p>
               <div className="mt-2 inline-flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded text-green-500 text-xs font-bold uppercase tracking-wide border border-green-500/20">
                 <span className="material-symbols-outlined !text-sm">trending_up</span>
-                +50 ESTA SEMANA
+                +{userStats.weeklyPoints} ESTA SEMANA
               </div>
             </div>
           </div>
@@ -123,12 +482,12 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-primary !text-lg">public</span>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-text-secondary">Ranking Atual</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-text-secondary">Ranking {periodLabels[periodFilter]}</h3>
               </div>
-              <p className="text-6xl font-bold font-condensed text-white tracking-tight">#{userRank}</p>
+              <p className="text-6xl font-bold font-condensed text-white tracking-tight">#{userStats.userRank || 'N/A'}</p>
               <div className="mt-2 inline-flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded text-green-500 text-xs font-bold uppercase tracking-wide border border-green-500/20">
                 <span className="material-symbols-outlined !text-sm">arrow_upward</span>
-                TOP {rankPercentile}% GLOBAL
+                TOP {Math.round((userStats.userRank / leaderboard.length) * 100)}% GLOBAL
               </div>
             </div>
           </div>
@@ -139,7 +498,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-primary !text-lg">military_tech</span>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-text-secondary">Melhor Rodada</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-text-secondary">Melhor {periodFilter === 'week' ? 'Evento' : periodFilter === 'month' ? 'Mês' : 'Ano'}</h3>
               </div>
               <p className="text-6xl font-bold font-condensed text-white tracking-tight">UFC 315</p>
               <div className="mt-2 inline-flex items-center gap-1 bg-border-dark px-2 py-0.5 rounded text-text-secondary text-xs font-bold uppercase tracking-wide border border-white/5">
@@ -156,7 +515,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
           <div className="flex items-center justify-between mb-6 border-b border-border-dark pb-4">
             <h2 className="text-lg font-bold font-condensed uppercase tracking-wide text-white flex items-center gap-2">
               <span className="w-1 h-5 bg-primary block"></span>
-              Análise de Precisão
+              Análise de Precisão - {periodLabels[periodFilter]}
             </h2>
             <button className="text-xs text-text-secondary hover:text-white uppercase font-bold tracking-widest transition-colors">Ver Detalhes</button>
           </div>
@@ -164,9 +523,9 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             {/* Donut Chart 1 */}
             <div className="flex flex-col items-center justify-center pt-4 md:pt-0">
               <div className="relative flex items-center justify-center mb-4">
-                <div className="w-[100px] h-[100px] rounded-full" style={{ background: 'conic-gradient(#ec1313 68%, transparent 0)', mask: 'radial-gradient(farthest-side, transparent 80%, black 0)', WebkitMask: 'radial-gradient(farthest-side, transparent 80%, black 0)' }}></div>
+                <div className="w-[100px] h-[100px] rounded-full" style={{ background: `conic-gradient(#ec1313 ${userStats.winnerAccuracy}%, transparent 0)`, mask: 'radial-gradient(farthest-side, transparent 80%, black 0)', WebkitMask: 'radial-gradient(farthest-side, transparent 80%, black 0)' }}></div>
                 <div className="absolute bg-card-dark w-[80px] h-[80px] rounded-full flex flex-col items-center justify-center border border-border-dark">
-                  <span className="text-2xl font-bold font-condensed text-white">68%</span>
+                  <span className="text-2xl font-bold font-condensed text-white">{userStats.winnerAccuracy}%</span>
                 </div>
               </div>
               <div className="text-center">
@@ -177,9 +536,9 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             {/* Donut Chart 2 */}
             <div className="flex flex-col items-center justify-center pt-8 md:pt-0">
               <div className="relative flex items-center justify-center mb-4">
-                <div className="w-[100px] h-[100px] rounded-full" style={{ background: 'conic-gradient(#ec1313 45%, transparent 0)', mask: 'radial-gradient(farthest-side, transparent 80%, black 0)', WebkitMask: 'radial-gradient(farthest-side, transparent 80%, black 0)' }}></div>
+                <div className="w-[100px] h-[100px] rounded-full" style={{ background: `conic-gradient(#ec1313 ${userStats.methodAccuracy}%, transparent 0)`, mask: 'radial-gradient(farthest-side, transparent 80%, black 0)', WebkitMask: 'radial-gradient(farthest-side, transparent 80%, black 0)' }}></div>
                 <div className="absolute bg-card-dark w-[80px] h-[80px] rounded-full flex flex-col items-center justify-center border border-border-dark">
-                  <span className="text-2xl font-bold font-condensed text-white">45%</span>
+                  <span className="text-2xl font-bold font-condensed text-white">{userStats.methodAccuracy}%</span>
                 </div>
               </div>
               <div className="text-center">
@@ -190,9 +549,9 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             {/* Donut Chart 3 */}
             <div className="flex flex-col items-center justify-center pt-8 md:pt-0">
               <div className="relative flex items-center justify-center mb-4">
-                <div className="w-[100px] h-[100px] rounded-full" style={{ background: 'conic-gradient(#ec1313 30%, transparent 0)', mask: 'radial-gradient(farthest-side, transparent 80%, black 0)', WebkitMask: 'radial-gradient(farthest-side, transparent 80%, black 0)' }}></div>
+                <div className="w-[100px] h-[100px] rounded-full" style={{ background: `conic-gradient(#ec1313 ${userStats.roundAccuracy}%, transparent 0)`, mask: 'radial-gradient(farthest-side, transparent 80%, black 0)', WebkitMask: 'radial-gradient(farthest-side, transparent 80%, black 0)' }}></div>
                 <div className="absolute bg-card-dark w-[80px] h-[80px] rounded-full flex flex-col items-center justify-center border border-border-dark">
-                  <span className="text-2xl font-bold font-condensed text-white">30%</span>
+                  <span className="text-2xl font-bold font-condensed text-white">{userStats.roundAccuracy}%</span>
                 </div>
               </div>
               <div className="text-center">
@@ -226,27 +585,38 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-dark">
-                <tr className="group hover:bg-[#23262b] transition-colors">
-                  <td className="p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 bg-center bg-cover rounded-sm border border-border-dark shrink-0" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuCpaPiYS1YVPFN4gMAiRTlC7S70k9sfeQk5UliIBnCVe3QIqn-fewjK6cgywTWZB746d3avd1att1hmX61qxWZCg0SVgnjh4BhiwFasvykcfsnxEVTjqg26SSirxmW8W5ho5x4IUIOcX1cq8a03M0fSGzp6WIDZp0scJXUOhjRkt-jxqSRbzQO3iDAB-LvvYXUMsyppubEAAYwmSAuuMJAvEwuYezfIjrbC7mbe_wzGZVhRhQbBZNFRQXwn4_dyHY3S1YSqAoYSfny2")' }}></div>
-                      <div>
-                        <p className="font-bold font-condensed text-lg text-white group-hover:text-primary transition-colors leading-tight">UFC 300: Pereira vs Hill</p>
-                        <p className="text-[11px] text-text-secondary font-mono mt-1 uppercase tracking-wider">13 Abr, 2024</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-center">
-                    <span className="font-bold font-condensed text-2xl text-white block">850</span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <span className="font-medium text-sm text-text-secondary font-mono">#120</span>
-                  </td>
-                  <td className="p-4 text-right">
-                    <span className="inline-block px-2 py-1 bg-green-900/20 text-green-500 text-[10px] font-bold border border-green-900/30 rounded-sm uppercase tracking-wide">Finalizado</span>
-                  </td>
-                </tr>
-                {/* Additional rows would go here */}
+                {eventHistory.length > 0 ? (
+                  eventHistory.map((event) => (
+                    <tr key={event.id} className="group hover:bg-[#23262b] transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 bg-center bg-cover rounded-sm border border-border-dark shrink-0" style={{ backgroundImage: `url("${event.banner_url}")` }}></div>
+                          <div>
+                            <p className="font-bold font-condensed text-lg text-white group-hover:text-primary transition-colors leading-tight">{event.title}</p>
+                            <p className="text-[11px] text-text-secondary font-mono mt-1 uppercase tracking-wider">
+                              {new Date(event.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="font-bold font-condensed text-2xl text-white block">{event.userPoints || 0}</span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="font-medium text-sm text-text-secondary font-mono">#{event.userRank || 'N/A'}</span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className="inline-block px-2 py-1 bg-green-900/20 text-green-500 text-[10px] font-bold border border-green-900/30 rounded-sm uppercase tracking-wide">Finalizado</span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-text-secondary text-sm">
+                      Nenhum evento completado ainda.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

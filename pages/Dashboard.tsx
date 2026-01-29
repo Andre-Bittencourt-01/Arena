@@ -2,16 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Screen } from '../App';
 import Panel from '../components/Panel';
 import { useData } from '../contexts/DataContext';
+import { MockDataService } from '../services/MockDataService';
 
 interface DashboardProps {
   onNavigate: (screen: Screen) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  const { events, leaderboard, user, setCurrentEvent } = useData();
+  const { events, leaderboard, user, setCurrentEvent, getAllPicksForEvent, getFightsForEvent } = useData();
   const [nextEvent, setNextEvent] = useState(events.find(e => e.status === 'upcoming') || null);
 
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+
+  // Data service instance for additional queries
+  const dataService = React.useMemo(() => new MockDataService(), []);
 
   useEffect(() => {
     // Priority: Live > Upcoming (Chronologically nearest)
@@ -69,6 +73,140 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const getEventMonth = (dateStr: string) => new Date(dateStr).toLocaleDateString('pt-BR', { month: 'long' }).toUpperCase();
   const getEventDay = (dateStr: string) => new Date(dateStr).getDate();
   const getEventTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  // Calculate user stats from picks
+  const [userStats, setUserStats] = React.useState({
+    winnerAccuracy: 0,
+    methodAccuracy: 0,
+    roundAccuracy: 0,
+    totalPicks: 0
+  });
+
+  useEffect(() => {
+    const calculateStats = async () => {
+      if (!user) {
+        setUserStats({ winnerAccuracy: 0, methodAccuracy: 0, roundAccuracy: 0, totalPicks: 0 });
+        return;
+      }
+
+      try {
+        // Get all completed events from this month
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+
+        const monthlyEvents = events.filter(event => {
+          const eventDate = new Date(event.date);
+          return event.status === 'completed' &&
+            eventDate.getMonth() === currentMonth &&
+            eventDate.getFullYear() === currentYear;
+        });
+
+        let totalPicks = 0;
+        let correctWinner = 0;
+        let correctMethod = 0;
+        let correctRound = 0;
+
+        // For each completed event, get user picks and compare with results
+        for (const event of monthlyEvents) {
+          const allPicks = await getAllPicksForEvent(event.id);
+          const userPicksArray = allPicks.filter(pick => pick.user_id === user.id);
+
+          if (userPicksArray.length === 0) continue;
+
+          const fights = await getFightsForEvent(event.id);
+
+          for (const pick of userPicksArray) {
+            const fight = fights.find(f => f.id === pick.fight_id);
+            if (!fight || !fight.winner_id) continue;
+
+            totalPicks++;
+
+            // Check winner accuracy
+            if (pick.fighter_id === fight.winner_id) {
+              correctWinner++;
+
+              // Check method accuracy (only if winner was correct)
+              if (pick.method && fight.method) {
+                const pickMethod = pick.method.toUpperCase();
+                const fightMethod = fight.method.toUpperCase();
+
+                if (
+                  (pickMethod === 'KO/TKO' && (fightMethod.includes('KO') || fightMethod.includes('TKO'))) ||
+                  (pickMethod === 'SUB' && fightMethod.includes('SUB')) ||
+                  (pickMethod === 'DEC' && (fightMethod.includes('DEC') || fightMethod.includes('DECISION')))
+                ) {
+                  correctMethod++;
+
+                  // Check round accuracy (only if method was also correct)
+                  if (pick.round && fight.round_end) {
+                    if (pick.round === fight.round_end) {
+                      correctRound++;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        setUserStats({
+          winnerAccuracy: totalPicks > 0 ? Math.round((correctWinner / totalPicks) * 100) : 0,
+          methodAccuracy: correctWinner > 0 ? Math.round((correctMethod / correctWinner) * 100) : 0,
+          roundAccuracy: correctMethod > 0 ? Math.round((correctRound / correctMethod) * 100) : 0,
+          totalPicks
+        });
+      } catch (error) {
+        console.error('Error calculating user stats:', error);
+        setUserStats({ winnerAccuracy: 0, methodAccuracy: 0, roundAccuracy: 0, totalPicks: 0 });
+      }
+    };
+
+    calculateStats();
+  }, [user, events]);
+
+  // Calculate user's monthly ranking position
+  const [monthlyRankData, setMonthlyRankData] = React.useState({
+    position: 0,
+    percentile: 0,
+    rankDelta: 0,
+    totalUsers: 0
+  });
+
+  useEffect(() => {
+    const calculateMonthlyRank = async () => {
+      if (!user) {
+        setMonthlyRankData({ position: 0, percentile: 0, rankDelta: 0, totalUsers: 0 });
+        return;
+      }
+
+      try {
+        // Get monthly leaderboard
+        const monthlyLeaderboard = await dataService.getLeaderboard('month');
+        const userPosition = monthlyLeaderboard.findIndex(u => u.id === user.id) + 1;
+        const totalUsers = monthlyLeaderboard.length;
+
+        // Calculate percentile (top X%)
+        const percentile = totalUsers > 0 ? Math.round((userPosition / totalUsers) * 100) : 0;
+
+        // Get rank delta from user's monthly_rank_delta property
+        const userInLeaderboard = monthlyLeaderboard.find(u => u.id === user.id);
+        const rankDelta = userInLeaderboard?.monthly_rank_delta || 0;
+
+        setMonthlyRankData({
+          position: userPosition || 0,
+          percentile,
+          rankDelta,
+          totalUsers
+        });
+      } catch (error) {
+        console.error('Error calculating monthly rank:', error);
+        setMonthlyRankData({ position: 0, percentile: 0, rankDelta: 0, totalUsers: 0 });
+      }
+    };
+
+    calculateMonthlyRank();
+  }, [user, leaderboard]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 md:py-8 font-grotesk pb-24 md:pb-8">
@@ -241,10 +379,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <div className="relative h-16 w-16 md:h-20 md:w-20">
                       <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
                         <path className="text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
-                        <path className="text-primary drop-shadow-[0_0_3px_rgba(255,31,31,0.8)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="82, 100" strokeWidth="3"></path>
+                        <path className="text-primary drop-shadow-[0_0_3px_rgba(255,31,31,0.8)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${userStats.winnerAccuracy}, 100`} strokeWidth="3"></path>
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xs md:text-sm font-bold text-white">82%</span>
+                        <span className="text-xs md:text-sm font-bold text-white">{userStats.winnerAccuracy}%</span>
                       </div>
                     </div>
                     <span className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-wide">Vencedor</span>
@@ -253,10 +391,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <div className="relative h-16 w-16 md:h-20 md:w-20">
                       <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
                         <path className="text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
-                        <path className="text-primary/70 drop-shadow-[0_0_3px_rgba(255,31,31,0.5)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="64, 100" strokeWidth="3"></path>
+                        <path className="text-primary/70 drop-shadow-[0_0_3px_rgba(255,31,31,0.5)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${userStats.methodAccuracy}, 100`} strokeWidth="3"></path>
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xs md:text-sm font-bold text-white">64%</span>
+                        <span className="text-xs md:text-sm font-bold text-white">{userStats.methodAccuracy}%</span>
                       </div>
                     </div>
                     <span className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-wide">Método</span>
@@ -265,10 +403,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <div className="relative h-16 w-16 md:h-20 md:w-20">
                       <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
                         <path className="text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
-                        <path className="text-primary/40 drop-shadow-[0_0_3px_rgba(255,31,31,0.3)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="45, 100" strokeWidth="3"></path>
+                        <path className="text-primary/40 drop-shadow-[0_0_3px_rgba(255,31,31,0.3)]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray={`${userStats.roundAccuracy}, 100`} strokeWidth="3"></path>
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-xs md:text-sm font-bold text-white">45%</span>
+                        <span className="text-xs md:text-sm font-bold text-white">{userStats.roundAccuracy}%</span>
                       </div>
                     </div>
                     <span className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-wide">Round</span>
@@ -294,18 +432,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-3xl font-condensed font-bold text-white">#42</p>
-                    <p className="text-[10px] text-gray-400">Top 15%</p>
+                    <p className="text-3xl font-condensed font-bold text-white">#{monthlyRankData.position || '-'}</p>
+                    <p className="text-[10px] text-gray-400">Top {monthlyRankData.percentile || 0}%</p>
                   </div>
                   <div className="text-right">
-                    <div className="inline-flex items-center gap-1 text-green-500 bg-green-500/10 px-2 py-1 rounded border border-green-500/20">
-                      <span className="material-symbols-outlined text-sm">arrow_upward</span>
-                      <span className="text-xs font-bold">12 Pos</span>
-                    </div>
+                    {monthlyRankData.rankDelta !== 0 && (
+                      <div className={`inline-flex items-center gap-1 ${monthlyRankData.rankDelta > 0 ? 'text-green-500 bg-green-500/10 border-green-500/20' : 'text-red-500 bg-red-500/10 border-red-500/20'} px-2 py-1 rounded border`}>
+                        <span className="material-symbols-outlined text-sm">{monthlyRankData.rankDelta > 0 ? 'arrow_upward' : 'arrow_downward'}</span>
+                        <span className="text-xs font-bold">{Math.abs(monthlyRankData.rankDelta)} Pos</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="mt-2 w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-gradient-to-r from-primary/50 to-primary h-full rounded-full w-[85%] shadow-neon-sm"></div>
+                  <div
+                    className="bg-gradient-to-r from-primary/50 to-primary h-full rounded-full shadow-neon-sm transition-all duration-500"
+                    style={{ width: `${Math.max(5, 100 - (monthlyRankData.percentile || 0))}%` }}
+                  ></div>
                 </div>
               </div>
             </div>

@@ -12,7 +12,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentScreen, onNavigate }) => {
   const navItems: { screen: Screen; label: string; icon: string }[] = [
     { screen: 'dashboard', label: 'Home', icon: 'home' },
     { screen: 'events', label: 'Eventos', icon: 'sports_mma' },
-    { screen: 'summary', label: 'Compartilhamento', icon: 'list_alt' },
+    { screen: 'story', label: 'Story Instagram', icon: 'share' },
     { screen: 'ranking', label: 'Rank', icon: 'leaderboard' },
     { screen: 'profile', label: 'Perfil', icon: 'person' },
   ];

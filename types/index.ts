@@ -34,6 +34,11 @@ export interface Fight {
     round_end?: string;
     time?: string; // Time round ended (e.g., "4:59")
     points: number; // Potential points for picking this fight correctly
+
+    // Locking
+    lock_status?: 'open' | 'locked'; // Manual override for specific fight
+    custom_lock_time?: string; // ISO date for specific fight scheduling
+    order?: number; // 1, 2, 3... for cascade logic
 }
 
 export interface Event {
@@ -45,6 +50,24 @@ export interface Event {
     location: string;
     banner_url: string;
     status: 'upcoming' | 'live' | 'completed';
+
+    // Locking System
+    lock_status?: 'open' | 'locked' | 'scheduled' | 'cascade';
+    lock_time?: string; // ISO date for 'scheduled' lock
+    cascade_start_time?: string; // ISO date for first fight in 'cascade' mode
+
+    // Advanced Banner Positioning (Granular Control)
+    banner_settings?: {
+        dashboard?: { desktop?: BannerConfig; mobile?: BannerConfig };
+        list?: { desktop?: BannerConfig; mobile?: BannerConfig };
+        summary?: { desktop?: BannerConfig; mobile?: BannerConfig };
+    };
+}
+
+export interface BannerConfig {
+    x: number; // percent 0-100
+    y: number; // percent 0-100
+    scale: number; // 1.0 to 3.0+
 }
 
 export interface User {

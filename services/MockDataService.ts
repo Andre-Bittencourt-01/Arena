@@ -3,6 +3,38 @@ import { Event, Fight, Fighter, User, Pick } from '../types';
 
 // --- Constants & Helpers ---
 
+export const getContentLockStatus = (event: Event, fight: Fight): { status: 'LOCKED' | 'OPEN', reason?: 'EVENT_CLOSED' | 'FIGHT_CLOSED' | 'CASCADE' | 'MANUAL' } => {
+    const now = new Date();
+
+    // 1. Check Event Level
+    if (event.lock_status === 'locked') return { status: 'LOCKED', reason: 'EVENT_CLOSED' };
+    if (event.lock_status === 'scheduled' && event.lock_time && now > new Date(event.lock_time)) {
+        return { status: 'LOCKED', reason: 'EVENT_CLOSED' };
+    }
+
+    // 2. Check Fight Level
+    if (fight.lock_status === 'locked') return { status: 'LOCKED', reason: 'MANUAL' };
+    if (fight.custom_lock_time && now > new Date(fight.custom_lock_time)) {
+        return { status: 'LOCKED', reason: 'FIGHT_CLOSED' };
+    }
+
+    // 3. Check Cascade
+    if (event.lock_status === 'cascade' && event.cascade_start_time && fight.order !== undefined) {
+        const cascadeBase = new Date(event.cascade_start_time).getTime();
+        // Assume 30 mins per fight order (order 1 = start time, order 2 = start + 30m)
+        // Adjust logic: Order 1 closes at start time? Or starts closing? 
+        // User request: "fechar a cada meia hora". 
+        // Let's say Order 1 closes at cascade_start_time. Order 2 at cascade_start_time + 30m.
+        const fightLockTime = cascadeBase + ((fight.order - 1) * 30 * 60 * 1000);
+
+        if (now.getTime() > fightLockTime) {
+            return { status: 'LOCKED', reason: 'CASCADE' };
+        }
+    }
+
+    return { status: 'OPEN' };
+};
+
 const MOCK_NAMES = [
     "Jon Jones", "Anderson Silva", "GSP", "Khabib", "Conor McGregor", "Charles Oliveira", "Alex Pereira",
     "Max Holloway", "Islam Makhachev", "Volkanovski", "José Aldo", "Amanda Nunes", "Cris Cyborg",
@@ -19,10 +51,10 @@ const METHODS = ['KO/TKO', 'DEC', 'SUB', 'DQ'];
 const DECISION_TYPES = ['UNÂNIME', 'DIVIDIDA', 'MAJORITÁRIA'];
 
 const initialFighters: Record<string, Fighter> = {
-    'omally': { id: 'omally', name: "Sean O'Malley", nickname: "Suga", image_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuA3IRQha8n77KLDV0WzOA4olQxonShActFOXs5yazG1ixoRPnmRutcox7D4uPTVjBjzNF7o-j35uiE7InRiST6WYYrFnQVlOvbNMC4rIenFG5B7tEOdgS5q_g1NXhyDxWPulWy0WkCqlL7hDdjt1klmHW7RfK2y0IxH0XqTY0_qUx0hGdng9PpF8IcS5qF2KaF2NQhdty3zqZb6f7Cb861du0ik2jM-IrKDkB4ky0pw7KEX8versByc1qYfOvcU9f_hMphq9GRoUHa8", wins: 17, losses: 1, draws: 0, nc: 0 },
-    'vera': { id: 'vera', name: "Marlon Vera", nickname: "Chito", image_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuADYyB70cnUW8i9Pjx9MLu8vAuG8Jz51kqMdOLfuqDyufWvn_kX0ZtzXCyOqO77Jpmioo65PH4Vdbwd2OyZATgcYEW2TsY4WRQJS8voi1lEYcWf1K8cKHyyUxyuGSbBnwTzCE3FAJXkjmBvOtl_IX96Vv4ej-_P4coQfv-msxG9HdyJQjUvEJxt9U_9yLrWk2BVYJl5xsToT2awspqn0a3wzXBHrUUOttcK8fQoDgjfOtZja3O-cJCQBskQNWa9aTNJ7j5AgweyuTnZ", wins: 23, losses: 8, draws: 1, nc: 0 },
-    'poirier': { id: 'poirier', name: "Dustin Poirier", nickname: "The Diamond", image_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuCybeXJ_ygQE_hrbXYk11pabc21j43ny6cHAetfznwuUm-jmlNftMO3qaUjbCSY51YmwBZXzhRcxh3sNeDDwUErJjPqKyftS4SsleS5gbpK27yuxS_CZ3LS5eWwkkJnyfPcjenqjkMMJMxspH7Z8tnDeuSJJTDPOo2joj6NVoGZYoLfWYreA3Byte4O-sKwih41hTb49cS1J4ZTO69NNHNlR8uxhRx0rN0-Cc7XxBgGkgt-0E3nRj39GVWUdLpICU5kxYT4ezLt4xnR", wins: 29, losses: 8, draws: 0, nc: 0 },
-    'saintdenis': { id: 'saintdenis', name: "Benoit Saint Denis", nickname: "God of War", image_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuB6N8NWBknCaO1Ey0PfW9TUBeqO6uU9IyUBv2UOv4mDkE_Ksqm8Jp7x5HwXIBIkWDmNqo64-pM9HJDitXgozIeEuBN2dFKbJ7dyyI3jXGpoQ9aO4bsFELWaKUOeDpnPIR1UXfps-2rkxba8jT_4AX73H-kGmwN57BY7QASrGKusJ0WaCxSf0KHM_a8PQmRIZCfPVZxLH4AVdpAZ4roDdXPOKR33N1X3jFnf6I0k9oCVVwSTmzDZi9OXVs7P4QWKcAj7yOUxnIqJfBsQ", wins: 13, losses: 1, draws: 0, nc: 0 }
+    'omally': { id: 'omally', name: "Sean O'Malley", nickname: "Suga", image_url: "/assets/images/fighter_1.png", wins: 17, losses: 1, draws: 0, nc: 0 },
+    'vera': { id: 'vera', name: "Marlon Vera", nickname: "Chito", image_url: "/assets/images/fighter_2.png", wins: 23, losses: 8, draws: 1, nc: 0 },
+    'poirier': { id: 'poirier', name: "Dustin Poirier", nickname: "The Diamond", image_url: "/assets/images/fighter_3.png", wins: 29, losses: 8, draws: 0, nc: 0 },
+    'saintdenis': { id: 'saintdenis', name: "Benoit Saint Denis", nickname: "God of War", image_url: "/assets/images/fighter_4.png", wins: 13, losses: 1, draws: 0, nc: 0 }
 };
 
 const initialEvents: Event[] = [
@@ -31,9 +63,8 @@ const initialEvents: Event[] = [
         title: 'UFC Fight Night',
         subtitle: 'Holloway vs Topuria',
         date: '2026-01-03T18:00:00',
-        end_date: '2026-01-04T02:00:00',
         location: 'Las Vegas, NV',
-        banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-10/102624-ufc-308-matchup-holloway-topuria-1920x1080-1.jpg?h=d1cb525d&itok=123',
+        banner_url: '/assets/images/banner_1.png',
         status: 'completed'
     },
     {
@@ -41,9 +72,8 @@ const initialEvents: Event[] = [
         title: 'UFC Fight Night',
         subtitle: 'Whittaker vs Chimaev',
         date: '2026-01-10T20:00:00',
-        end_date: '2026-01-11T04:00:00',
         location: 'Abu Dhabi, UAE',
-        banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-10/102624-ufc-308-matchup-whittaker-chimaev-1920x1080-1.jpg?h=d1cb525d&itok=123',
+        banner_url: '/assets/images/banner_2.png',
         status: 'completed'
     },
     {
@@ -51,9 +81,8 @@ const initialEvents: Event[] = [
         title: 'UFC 312',
         subtitle: 'Du Plessis vs Adesanya 2',
         date: '2026-01-17T22:00:00',
-        end_date: '2026-01-18T06:00:00',
         location: 'Perth, Australia',
-        banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-08/081724-ufc-305-matchup-du-plessis-adesanya-1920x1080-1.jpg?h=d1cb525d&itok=123',
+        banner_url: '/assets/images/banner_3.png',
         status: 'completed'
     },
     {
@@ -61,9 +90,8 @@ const initialEvents: Event[] = [
         title: 'UFC Fight Night',
         subtitle: 'Sandhagen vs Nurmagomedov',
         date: '2026-01-24T17:00:00',
-        end_date: '2026-01-25T01:00:00',
         location: 'Abu Dhabi, UAE',
-        banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-08/080324-ufc-fight-night-abu-dhabi-matchup-sandhagen-nurmagomedov-1920x1080-1.jpg?h=d1cb525d&itok=123',
+        banner_url: '/assets/images/banner_1.png',
         status: 'completed'
     },
     {
@@ -71,9 +99,8 @@ const initialEvents: Event[] = [
         title: 'UFC 313',
         subtitle: 'Pereira vs Ankalaev',
         date: '2026-01-31T22:00:00',
-        end_date: '2026-02-01T06:00:00',
         location: 'Las Vegas, NV',
-        banner_url: 'https://dmxg5wxfqgb4u.cloudfront.net/styles/background_image_xl/s3/2024-10/100524-ufc-307-matchup-pereira-rountree-jr-1920x1080-1.jpg?h=d1cb525d&itok=123',
+        banner_url: '/assets/images/banner_2.png',
         status: 'live'
     },
     {
@@ -81,9 +108,8 @@ const initialEvents: Event[] = [
         title: 'UFC 325',
         subtitle: 'Volkanovski vs Lopes',
         date: '2026-01-31T19:00:00',
-        end_date: '2026-02-01T03:00:00',
         location: 'Sydney, AUS',
-        banner_url: 'https://thumbor.prod.vidiocdn.com/OZMdsauvnjLe0WlogFvKuRg3Sso=/960x576/filters:quality(70)/vidio-web-prod-headline/uploads/headline/mobile_image/35557/ufc-325-volkanovski-vs-lopes-2-86965e.jpg',
+        banner_url: '/assets/images/banner_3.png',
         status: 'upcoming'
     }
 ];
@@ -95,11 +121,13 @@ const generateFightersAndFights = () => {
     const getFighter = (name: string): Fighter => {
         const id = name.toLowerCase().replace(/\s/g, '').replace(/[\.'-]/g, '');
         if (!fighters[id]) {
+            // Cycle through 5 generic fighter images
+            const imgIdx = (Object.keys(fighters).length % 5) + 1;
             fighters[id] = {
                 id,
                 name,
                 nickname: 'The ' + name.split(' ').pop(),
-                image_url: "https://lh3.googleusercontent.com/aida-public/AB6AXuDdv6fnH2aUkUnStYycJnEKhaBICr74VmX4NnJNWQeAiTlNYjfRaYYdIaoUwqoIEjja3cV-obJrnb8Gr2KiHkzQz-DeJP1i1-21wlLJCmCXKcRBgb6F2m-uUznPWRZzMhZNCqAZa6eSt2I623-0Z_DFPK5NPmKdViNtogczjn5ZtJ-ArZKYBj2bztA5emkHyNyEy2LqUPyIDFtazLxIRtXY1YTN904jPv1NkVDpSRAx_bnPSnUrqaadV4tkE7fo8AizW2OjfaNetD1y",
+                image_url: `/assets/images/fighter_${imgIdx}.png`,
                 wins: Math.floor(Math.random() * 30),
                 losses: Math.floor(Math.random() * 10),
                 draws: Math.floor(Math.random() * 3),
@@ -244,12 +272,15 @@ const generateUsersAndPicks = (fights: Fight[]) => {
         const name = MOCK_NAMES[i % MOCK_NAMES.length];
         const sanitizedId = name.toLowerCase().replace(/\./g, '').replace(/\s/g, '_');
 
+        // Cycle through 3 generic user images
+        const imgIdx = (i % 3) + 1;
+
         users.push({
             id: sanitizedId,
             name: name,
             email: `${sanitizedId}@example.com`,
             password: 'password',
-            avatar_url: `https://ui-avatars.com/api/?name=${name.replace(/\s/g, '+')}&background=random`,
+            avatar_url: `/assets/images/user_${imgIdx}.png`,
             points: 0
         });
     }
@@ -315,15 +346,24 @@ export class MockDataService implements IDataService {
     }
 
     private recalculateAllPoints() {
-        const fightIds = Array.from(new Set(this.picks.map(p => p.fight_id)));
-        fightIds.forEach(fightId => {
-            const fight = this.fights.find(f => f.id === fightId);
+        const fightMap = new Map(this.fights.map(f => [f.id, f]));
+
+        // Optimize: Group picks by fightId
+        const picksByFight = new Map<string, Pick[]>();
+        this.picks.forEach(p => {
+            const list = picksByFight.get(p.fight_id) || [];
+            list.push(p);
+            picksByFight.set(p.fight_id, list);
+        });
+
+        picksByFight.forEach((picks, fightId) => {
+            const fight = fightMap.get(fightId);
             if (fight && fight.winner_id) {
-                this.recalculatePointsForFightInternal(fight);
+                this.recalculatePointsForFightInternal(fight, picks);
             }
         });
 
-        this.users.forEach(u => this.recalculateUserPoints(u.id));
+        this.users.forEach(u => this.recalculateUserPointsInternal(u.id));
         this.recalculateRanks();
     }
 
@@ -348,10 +388,16 @@ export class MockDataService implements IDataService {
         const currentPoints = this.users.map(u => ({ id: u.id, points: u[pointsField] || 0 }));
         const currentRankMap = this.getRankMap(currentPoints);
 
+        // Optimize: Pre-calculate last event points for ALL users
+        const lastEventPointsMap = new Map<string, number>();
+        this.picks.filter(p => p.event_id === lastEventId).forEach(p => {
+            const current = lastEventPointsMap.get(p.user_id) || 0;
+            lastEventPointsMap.set(p.user_id, current + (p.points_earned || 0));
+        });
+
         // Points excluding last event
         const previousPoints = this.users.map(u => {
-            const userPicksInLastEvent = this.picks.filter(p => p.user_id === u.id && p.event_id === lastEventId);
-            const lastEventPoints = userPicksInLastEvent.reduce((sum, p) => sum + (p.points_earned || 0), 0);
+            const lastEventPoints = lastEventPointsMap.get(u.id) || 0;
             return { id: u.id, points: (u[pointsField] || 0) - lastEventPoints };
         });
         const previousRankMap = this.getRankMap(previousPoints);
@@ -359,7 +405,6 @@ export class MockDataService implements IDataService {
         this.users.forEach(u => {
             const curRank = currentRankMap[u.id];
             const prevRank = previousRankMap[u.id];
-            // Delta = Previous position - Current position (e.g., 5th to 3rd = 5 - 3 = +2 positions climbed)
             u[deltaField] = prevRank - curRank;
         });
     }
@@ -378,8 +423,8 @@ export class MockDataService implements IDataService {
         return map;
     }
 
-    private recalculatePointsForFightInternal(fight: Fight) {
-        const fightPicks = this.picks.filter(p => p.fight_id === fight.id);
+    private recalculatePointsForFightInternal(fight: Fight, picks?: Pick[]) {
+        const fightPicks = picks || this.picks.filter(p => p.fight_id === fight.id);
         if (fightPicks.length === 0) return;
 
         const correctWinnerPicks = fightPicks.filter(p => p.fighter_id === fight.winner_id);
@@ -494,11 +539,12 @@ export class MockDataService implements IDataService {
         if (index !== -1) {
             this.fights[index] = fight;
             if (fight.winner_id) {
-                this.recalculatePointsForFightInternal(fight);
-                const affectedUserIds = this.picks.filter(p => p.fight_id === fight.id).map(p => p.user_id);
-                const uniqueUserIds = Array.from(new Set(affectedUserIds));
-                for (const userId of uniqueUserIds) {
-                    await this.recalculateUserPoints(userId);
+                const fightPicks = this.picks.filter(p => p.fight_id === fight.id);
+                this.recalculatePointsForFightInternal(fight, fightPicks);
+
+                const affectedUserIds = Array.from(new Set(fightPicks.map(p => p.user_id)));
+                for (const userId of affectedUserIds) {
+                    await this.recalculateUserPointsInternal(userId);
                 }
                 this.recalculateRanks();
             }
@@ -618,12 +664,15 @@ export class MockDataService implements IDataService {
         } else {
             this.picks.push(updatedPick);
         }
-        await this.recalculateUserPoints(updatedPick.user_id);
+        await this.recalculateUserPointsInternal(updatedPick.user_id);
         this.recalculateRanks();
     }
 
-    private async recalculateUserPoints(userId: string): Promise<void> {
+    private async recalculateUserPointsInternal(userId: string): Promise<void> {
         const userPicks = this.picks.filter(p => p.user_id === userId);
+
+        // Map events for fast access
+        const eventMap = new Map(this.events.map(e => [e.id, e]));
 
         // Find Last Event (completed)
         const completedEvents = this.events
@@ -632,7 +681,6 @@ export class MockDataService implements IDataService {
 
         const lastEventId = completedEvents.length > 0 ? completedEvents[0].id : null;
 
-        // Month / Year for current context (today)
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
@@ -646,21 +694,18 @@ export class MockDataService implements IDataService {
             const pts = pick.points_earned || 0;
             totalPoints += pts;
 
-            const event = this.events.find(e => e.id === pick.event_id);
+            const event = eventMap.get(pick.event_id);
             if (event) {
                 const eventDate = new Date(event.date);
 
-                // Last Event
                 if (lastEventId && pick.event_id === lastEventId) {
                     lastEventPoints += pts;
                 }
 
-                // Monthly
                 if (eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear) {
                     monthlyPoints += pts;
                 }
 
-                // Yearly
                 if (eventDate.getFullYear() === currentYear) {
                     yearlyPoints += pts;
                 }

@@ -3,6 +3,7 @@ import { Screen } from '../App';
 import Panel from '../components/Panel';
 import { useData } from '../contexts/DataContext';
 import { Fight, Pick } from '../types';
+import { getContentLockStatus } from '../services/MockDataService';
 
 interface PicksProps {
   onNavigate: (screen: Screen) => void;
@@ -66,7 +67,16 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
     currentFights.find(f => f.id === activeFightId) || null
     , [activeFightId, currentFights]);
 
+  // Lock Calculation
+  const lockInfo = useMemo(() => {
+    if (!currentEvent || !activeFight) return { status: 'OPEN', reason: undefined };
+    return getContentLockStatus(currentEvent, activeFight);
+  }, [currentEvent, activeFight]);
+
+  const isLocked = lockInfo.status === 'LOCKED';
+
   const handleConfirm = async () => {
+    if (isLocked) return;
     if (!user) {
       alert("Você precisa estar logado para palpitar!");
       return;
@@ -251,10 +261,24 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
                   </div>
                 )}
               </div>
+              {/* Locked Overlay for Fighters */}
+              {isLocked && (
+                <div className="absolute inset-0 z-30 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center p-4">
+                  <span className="material-symbols-outlined text-4xl text-white/50 mb-2">lock</span>
+                  <p className="text-white font-bold uppercase tracking-widest text-sm text-center">
+                    {lockInfo.reason === 'EVENT_CLOSED' ? 'Evento Fechado' :
+                      lockInfo.reason === 'FIGHT_CLOSED' ? 'Votação Encerrada' :
+                        lockInfo.reason === 'CASCADE' ? 'Fechamento Automático' : 'Bloqueado'}
+                  </p>
+                  {lockInfo.reason === 'CASCADE' && (
+                    <p className="text-xs text-white/40 mt-1 font-mono">{activeFight.time ? `Início estimado: ${activeFight.time}` : 'Via Agendamento'}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Selection Steps - Flexible spacing with reduced vertical padding */}
-            <div className="flex-1 overflow-hidden px-3 py-1.5 md:p-4 flex flex-col justify-evenly bg-surface-dark relative">
+            <div className={`flex-1 overflow-hidden px-3 py-1.5 md:p-4 flex flex-col justify-evenly bg-surface-dark relative ${isLocked ? 'pointer-events-none opacity-50 grayscale' : ''}`}>
               <div className="absolute left-7 top-0 bottom-0 w-px border-l border-dashed border-border-dark hidden md:block opacity-20"></div>
 
               {/* Step 1: Winner */}
@@ -346,15 +370,28 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
             <div className="p-2 md:p-4 border-t border-white/10 bg-surface-dark/95 backdrop-blur-md flex flex-col flex-shrink-0">
               <button
                 onClick={handleConfirm}
-                disabled={!selectedWinnerId || !selectedMethod || !selectedRound || isSubmitting}
-                className={`w-full rounded-xl md:rounded-2xl py-2.5 md:py-6 text-white font-condensed font-black text-base md:text-2xl uppercase tracking-widest flex items-center justify-center gap-2 md:gap-3 transition-all ${selectedWinnerId && selectedMethod && selectedRound ? 'bg-primary hover:bg-primary-hover active:scale-[0.98] shadow-neon' : 'bg-surface-highlight text-white/10 cursor-not-allowed'}`}
+                disabled={!selectedWinnerId || !selectedMethod || !selectedRound || isSubmitting || isLocked}
+                className={`w-full rounded-xl md:rounded-2xl py-2.5 md:py-6 text-white font-condensed font-black text-base md:text-2xl uppercase tracking-widest flex items-center justify-center gap-2 md:gap-3 transition-all ${isLocked ? 'bg-white/5 text-white/20 cursor-not-allowed border-none shadow-none' :
+                  selectedWinnerId && selectedMethod && selectedRound
+                    ? 'bg-primary hover:bg-primary-hover active:scale-[0.98] shadow-neon'
+                    : 'bg-surface-highlight text-white/10 cursor-not-allowed'
+                  }`}
               >
                 {isSubmitting ? (
                   <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-white"></div>
                 ) : (
                   <>
-                    <span>{eventPicks[activeFight.id!] ? 'Atualizar' : 'Confirmar'}</span>
-                    <span className="material-symbols-outlined font-black text-base md:text-xl">arrow_forward</span>
+                    {isLocked ? (
+                      <>
+                        <span className="material-symbols-outlined font-black text-base md:text-xl">lock</span>
+                        <span>Palpites Encerrados</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{eventPicks[activeFight.id!] ? 'Atualizar' : 'Confirmar'}</span>
+                        <span className="material-symbols-outlined font-black text-base md:text-xl">arrow_forward</span>
+                      </>
+                    )}
                   </>
                 )}
               </button>
@@ -379,6 +416,8 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
               {currentFights.map((fight, i) => {
                 const isCurrent = fight.id === activeFightId;
                 const hasPick = !!eventPicks[fight.id];
+                const fightLockInfo = getContentLockStatus(currentEvent, fight);
+                const isFightLocked = fightLockInfo.status === 'LOCKED';
 
                 return (
                   <div
@@ -387,9 +426,13 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
                     className={`group cursor-pointer relative flex items-center gap-2 p-1.5 md:p-2 rounded-lg transition-all duration-300 ${isCurrent ? 'bg-primary/10 border border-primary ring-1 ring-white/5' : 'bg-surface-highlight/20 border border-white/5 hover:bg-surface-highlight/40'}`}
                   >
                     <div className={`flex items-center justify-center rounded-full p-1 transition-all ${hasPick ? 'text-green-500 bg-green-500/10' : (isCurrent ? 'text-primary bg-primary/20 animate-pulse' : 'text-white/20 bg-black/40')}`}>
-                      <span className="material-symbols-outlined text-[12px] md:text-base font-bold">
-                        {hasPick ? 'check_circle' : (isCurrent ? 'sports_mma' : 'radio_button_unchecked')}
-                      </span>
+                      {isFightLocked && !hasPick ? (
+                        <span className="material-symbols-outlined text-2xl md:text-3xl font-bold text-gray-500/50">lock</span>
+                      ) : (
+                        <span className="material-symbols-outlined text-[12px] md:text-base font-bold">
+                          {hasPick ? 'check_circle' : (isCurrent ? 'sports_mma' : 'radio_button_unchecked')}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -397,6 +440,9 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
                         <p className={`text-[6px] md:text-[7px] font-black uppercase tracking-tight ${isCurrent ? 'text-primary' : (hasPick ? 'text-green-500/70' : 'text-text-muted')}`}>
                           Luta {i + 1}
                         </p>
+                        {isFightLocked && (
+                          <span className="text-[10px] text-white/30 material-symbols-outlined scale-75">lock_clock</span>
+                        )}
                       </div>
                       <p className={`text-[9px] md:text-[11px] font-condensed font-black leading-none truncate italic ${isCurrent ? 'text-white' : (hasPick ? 'text-white/80' : 'text-white/40')}`}>
                         {fight.fighter_a.name.split(' ').pop()} <span className="opacity-20 mx-0.5">VS</span> {fight.fighter_b.name.split(' ').pop()}

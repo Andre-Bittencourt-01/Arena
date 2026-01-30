@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Screen } from '../App';
 import { useData } from '../contexts/DataContext';
 import { Event, Fight, Pick } from '../types';
+import ResponsiveBanner from '../components/common/ResponsiveBanner';
+import * as dateUtils from '../services/utils/dateUtils';
 
 interface EventResultsProps {
     onNavigate: (screen: Screen) => void;
@@ -79,8 +81,11 @@ const EventResults: React.FC<EventResultsProps> = ({ onNavigate, eventId }) => {
         <div className="flex flex-col min-h-[calc(100vh-64px)] font-sans bg-background-dark">
             {/* Banner Header */}
             <section className="relative w-full h-[220px] overflow-hidden bg-background-dark border-b border-white/5">
-                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${event.banner_url}")` }}></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/90 to-transparent"></div>
+                <ResponsiveBanner
+                    event={event}
+                    context="summary"
+                    overlayClassName="bg-gradient-to-t from-background-dark via-background-dark/90 to-transparent"
+                />
                 <div className="absolute inset-0 bg-gradient-to-r from-background-dark/90 via-background-dark/60 to-transparent"></div>
 
                 <div className="relative h-full flex flex-col justify-end pb-6 px-6 lg:px-8 max-w-[1600px] mx-auto">
@@ -96,7 +101,7 @@ const EventResults: React.FC<EventResultsProps> = ({ onNavigate, eventId }) => {
                             <h1 className="text-4xl md:text-5xl font-condensed font-bold text-white leading-none uppercase italic">
                                 {event.title}: <span className="text-primary">{event.subtitle.split(' vs ')[0]}</span> vs <span className="text-white">{event.subtitle.split(' vs ')[1]}</span>
                             </h1>
-                            <p className="text-gray-400 font-condensed uppercase tracking-wide text-sm">{event.location} • {new Date(event.date).toLocaleDateString()}</p>
+                            <p className="text-gray-400 font-condensed uppercase tracking-wide text-sm">{dateUtils.getLocationCity(event.location)} • {dateUtils.getEventDay(event.date)} {dateUtils.getEventMonthLong(event.date)}</p>
                         </div>
 
                         <div className="flex gap-4">

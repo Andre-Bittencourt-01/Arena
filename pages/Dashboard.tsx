@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Screen } from '../App';
 import Panel from '../components/Panel';
 import { useData } from '../contexts/DataContext';
-import { MockDataService } from '../services/MockDataService';
+import ResponsiveBanner from '../components/common/ResponsiveBanner';
+import * as dateUtils from '../services/utils/dateUtils';
 
 interface DashboardProps {
   onNavigate: (screen: Screen) => void;
@@ -11,11 +12,9 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { events, leaderboard, user, setCurrentEvent, getAllPicksForEvent, getFightsForEvent } = useData();
   const [nextEvent, setNextEvent] = useState(events.find(e => e.status === 'upcoming') || null);
-
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
-  // Data service instance for additional queries
-  const dataService = React.useMemo(() => new MockDataService(), []);
+
 
   useEffect(() => {
     // Priority: Live > Upcoming (Chronologically nearest)
@@ -36,25 +35,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     if (!nextEvent) return;
 
     const calculateTimeLeft = () => {
-      // If live, we count down to the END of the event (betting remains open for unstarted fights)
-      // If upcoming, we count down to the START of the event
+      if (!nextEvent) return null;
       const targetDate = nextEvent.status === 'live'
         ? (nextEvent.end_date ? new Date(nextEvent.end_date).getTime() : new Date(nextEvent.date).getTime() + 8 * 60 * 60 * 1000)
         : new Date(nextEvent.date).getTime();
 
-      const now = new Date().getTime();
-      const difference = targetDate - now;
-
-      if (difference > 0) {
-        return {
-          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-          minutes: Math.floor((difference / 1000 / 60) % 60),
-          seconds: Math.floor((difference / 1000) % 60),
-        };
-      } else {
-        return null; // Event completely finished
-      }
+      return dateUtils.formatTimeLeft(targetDate);
     };
 
     // Initial calc
@@ -68,11 +54,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return () => clearInterval(timer);
   }, [nextEvent]);
 
-  // Formatting helpers
-  const formatNumber = (num: number) => num < 10 ? `0${num}` : num;
-  const getEventMonth = (dateStr: string) => new Date(dateStr).toLocaleDateString('pt-BR', { month: 'long' }).toUpperCase();
-  const getEventDay = (dateStr: string) => new Date(dateStr).getDate();
-  const getEventTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
 
   // Calculate user stats from picks
   const [userStats, setUserStats] = React.useState({
@@ -181,17 +163,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       }
 
       try {
-        // Get monthly leaderboard
-        const monthlyLeaderboard = await dataService.getLeaderboard('month');
-        const userPosition = monthlyLeaderboard.findIndex(u => u.id === user.id) + 1;
-        const totalUsers = monthlyLeaderboard.length;
+        // Use leaderboard from context (already sorted and filtered by period if DataContext had it)
+        // Since DataContext provides 'leaderboard' which is usually 'all', we search for user there.
+        // Actually, let's keep it simple and just show position in global leaderboard if monthly is not available.
+        const userPosition = leaderboard.findIndex(u => u.id === user.id) + 1;
+        const totalUsers = leaderboard.length;
 
         // Calculate percentile (top X%)
         const percentile = totalUsers > 0 ? Math.round((userPosition / totalUsers) * 100) : 0;
 
         // Get rank delta from user's monthly_rank_delta property
-        const userInLeaderboard = monthlyLeaderboard.find(u => u.id === user.id);
-        const rankDelta = userInLeaderboard?.monthly_rank_delta || 0;
+        const rankDelta = user.monthly_rank_delta || 0;
 
         setMonthlyRankData({
           position: userPosition || 0,
@@ -237,10 +219,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </div>
               <div className="absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/60 to-transparent z-10"></div>
-                <img
-                  alt={nextEvent.title}
-                  className="h-full w-full object-cover object-top opacity-60 mix-blend-overlay group-hover:scale-105 transition-transform duration-700"
-                  src={nextEvent.banner_url}
+                <ResponsiveBanner
+                  event={nextEvent}
+                  context="dashboard"
+                  className="transition-transform duration-700 group-hover:scale-[1.05]"
                 />
               </div>
               <div className="relative z-20 p-5 md:p-10 h-full flex flex-col justify-end">
@@ -259,23 +241,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                           {nextEvent.title.split(' ')[0]} <span className="text-primary drop-shadow-[0_0_10px_rgba(255,31,31,0.5)]">{nextEvent.title.split(' ')[1]}</span>
                         </h2>
 
-                        {/* Mobile Timer moved here */}
                         <div className="md:hidden mb-2">
                           <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1.5">Tempo para Palpitar</p>
                           {timeLeft ? (
                             <div className="flex gap-1.5 font-condensed">
                               <div className="flex flex-col items-center bg-[#1e1e21]/90 backdrop-blur border border-white/10 p-2 rounded w-12">
-                                <span className="text-xl font-bold text-white leading-none">{formatNumber(timeLeft.days)}</span>
+                                <span className="text-xl font-bold text-white leading-none">{timeLeft.days.toString().padStart(2, '0')}</span>
                                 <span className="text-[7px] uppercase text-gray-500 font-bold">Dias</span>
                               </div>
                               <div className="text-xl font-bold text-primary self-center pb-2">:</div>
                               <div className="flex flex-col items-center bg-[#1e1e21]/90 backdrop-blur border border-white/10 p-2 rounded w-12">
-                                <span className="text-xl font-bold text-white leading-none">{formatNumber(timeLeft.hours)}</span>
+                                <span className="text-xl font-bold text-white leading-none">{timeLeft.hours.toString().padStart(2, '0')}</span>
                                 <span className="text-[7px] uppercase text-gray-500 font-bold">Hrs</span>
                               </div>
                               <div className="text-xl font-bold text-primary self-center pb-2">:</div>
                               <div className="flex flex-col items-center bg-[#1e1e21]/90 backdrop-blur border border-white/10 p-2 rounded w-12 border-primary/30">
-                                <span className="text-xl font-bold text-white leading-none">{formatNumber(timeLeft.minutes)}</span>
+                                <span className="text-xl font-bold text-white leading-none">{timeLeft.minutes.toString().padStart(2, '0')}</span>
                                 <span className="text-[7px] uppercase text-gray-500 font-bold">Min</span>
                               </div>
                             </div>
@@ -294,17 +275,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-400 text-[10px] md:text-sm font-mono border-t border-white/10 pt-2 md:pt-3 mt-1">
                         <div className="flex items-center gap-1">
                           <span className="material-symbols-outlined text-primary text-[14px] md:text-base">calendar_month</span>
-                          <span>{getEventDay(nextEvent.date)} {getEventMonth(nextEvent.date)}</span>
+                          <span>{dateUtils.getEventDay(nextEvent.date)} {dateUtils.getEventMonthLong(nextEvent.date)}</span>
                         </div>
                         <span className="hidden md:block w-1 h-1 bg-gray-600 rounded-full"></span>
                         <div className="flex items-center gap-1">
                           <span className="material-symbols-outlined text-primary text-[14px] md:text-base">schedule</span>
-                          <span>{getEventTime(nextEvent.date)}</span>
+                          <span>{dateUtils.getEventTime(nextEvent.date)}</span>
                         </div>
                         <span className="hidden md:block w-1 h-1 bg-gray-600 rounded-full"></span>
                         <div className="flex items-center gap-1">
                           <span className="material-symbols-outlined text-primary text-[14px] md:text-base">location_on</span>
-                          <span>{nextEvent.location.split(',')[0].toUpperCase()}</span>
+                          <span>{dateUtils.getLocationCity(nextEvent.location)}</span>
                         </div>
                       </div>
                     </div>
@@ -318,17 +299,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         {timeLeft ? (
                           <div className="flex gap-1.5 md:gap-2 font-condensed">
                             <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg">
-                              <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.days)}</span>
+                              <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{timeLeft.days.toString().padStart(2, '0')}</span>
                               <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Dias</span>
                             </div>
                             <div className="text-xl font-bold text-primary self-start mt-1 md:mt-2">:</div>
                             <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg">
-                              <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.hours)}</span>
+                              <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{timeLeft.hours.toString().padStart(2, '0')}</span>
                               <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Hrs</span>
                             </div>
                             <div className="text-xl font-bold text-primary self-start mt-1 md:mt-2">:</div>
                             <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg border-primary/30">
-                              <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{formatNumber(timeLeft.minutes)}</span>
+                              <span className="text-2xl md:text-3xl font-bold text-white leading-none" style={{ textShadow: '0 4px 0 #5a0000' }}>{timeLeft.minutes.toString().padStart(2, '0')}</span>
                               <span className="text-[8px] md:text-[9px] uppercase text-gray-500 font-bold mt-1">Min</span>
                             </div>
                           </div>

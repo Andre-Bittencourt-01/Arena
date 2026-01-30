@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Event, Fight, Fighter, User, Pick } from '../types';
 import { IDataService, RankingPeriod } from '../services/types';
 import { MockDataService } from '../services/MockDataService';
@@ -38,6 +38,7 @@ interface DataContextType {
     setRankingFilter: (period: RankingPeriod) => void;
     selectedPeriodId: string | null;
     setSelectedPeriodId: (id: string | null) => void;
+    getLeaderboard: (period: RankingPeriod, periodId?: string) => Promise<User[]>;
 
     // Auth
     user: User | null;
@@ -61,7 +62,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
 
-    const refreshData = async () => {
+    const refreshData = useCallback(async () => {
         setLoading(true);
         try {
             const [fetchedEvents, fetchedFighters] = await Promise.all([
@@ -71,36 +72,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setEvents(fetchedEvents);
             setFighters(fetchedFighters);
 
-            // Default to first event if none selected
-            if (!currentEvent && fetchedEvents.length > 0) {
+            // Fetch leaderboard with stable dependencies
+            const fetchedLeaderboard = await dataService.getLeaderboard(rankingFilter, selectedPeriodId || undefined);
+            setLeaderboard(fetchedLeaderboard);
+
+            if (currentEvent) {
+                const refreshedEvent = await dataService.getEvent(currentEvent.id);
+                if (refreshedEvent) setCurrentEvent(refreshedEvent);
+
+                const fights = await dataService.getFights(currentEvent.id);
+                setCurrentFights(fights);
+            } else if (fetchedEvents.length > 0) {
+                // Default to first event if none selected
                 const firstEvent = fetchedEvents[0];
                 setCurrentEvent(firstEvent);
                 const fights = await dataService.getFights(firstEvent.id);
                 setCurrentFights(fights);
             }
 
-            const fetchedLeaderboard = await dataService.getLeaderboard(rankingFilter, selectedPeriodId || undefined);
-            setLeaderboard(fetchedLeaderboard);
-
-            if (currentEvent) {
-                // Refresh current event fights
-                const fights = await dataService.getFights(currentEvent.id);
-                setCurrentFights(fights);
-            }
-
-            // Refresh Current User Data (to get updated points/rank info)
             if (user) {
                 const updatedUser = await dataService.getUser(user.id);
-                if (updatedUser) {
-                    setUser(updatedUser);
-                }
+                if (updatedUser) setUser(updatedUser);
             }
         } catch (error) {
             console.error("Failed to fetch data", error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [rankingFilter, selectedPeriodId, currentEvent, user]); // Added dependencies to refresh correctly
 
     useEffect(() => {
         setSelectedPeriodId(null); // Reset specific period when switching filters
@@ -122,104 +121,111 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [selectedPeriodId]);
 
     // Auth
-    const login = async (email: string, password: string) => {
+    const login = useCallback(async (email: string, password: string) => {
         const loggedUser = await dataService.login(email, password);
         if (loggedUser) {
             setUser(loggedUser);
             return true;
         }
         return false;
-    };
+    }, []);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         setUser(null);
-    };
+    }, []);
 
-    // Events
-    const createEvent = async (event: Omit<Event, 'id'>) => {
+    const createEvent = useCallback(async (event: Omit<Event, 'id'>) => {
         await dataService.createEvent(event);
         await refreshData();
-    };
+    }, [refreshData]);
 
-    const updateEvent = async (event: Event) => {
+    const updateEvent = useCallback(async (event: Event) => {
         await dataService.updateEvent(event);
         await refreshData();
-    };
+    }, [refreshData]);
 
-    const deleteEvent = async (id: string) => {
+    const deleteEvent = useCallback(async (id: string) => {
         await dataService.deleteEvent(id);
         if (currentEvent && currentEvent.id === id) {
             setCurrentEvent(null);
             setCurrentFights([]);
         }
         await refreshData();
-    };
+    }, [currentEvent, refreshData]);
 
-    // Fights
-    const getFightsForEvent = async (eventId: string) => {
+    const getFightsForEvent = useCallback(async (eventId: string) => {
         return await dataService.getFights(eventId);
-    };
+    }, []);
 
-    const createFight = async (fight: Fight) => {
+    const createFight = useCallback(async (fight: Fight) => {
         await dataService.createFight(fight);
         if (currentEvent && fight.event_id === currentEvent.id) {
             await refreshData();
         }
-    };
+    }, [currentEvent, refreshData]);
 
-    const updateFight = async (fight: Fight) => {
+    const updateFight = useCallback(async (fight: Fight) => {
         await dataService.updateFight(fight);
         if (currentEvent && fight.event_id === currentEvent.id) {
             await refreshData();
         }
-    };
+    }, [currentEvent, refreshData]);
 
-    const deleteFight = async (id: string) => {
+    const deleteFight = useCallback(async (id: string) => {
         await dataService.deleteFight(id);
         if (currentEvent) {
             await refreshData();
         }
-    };
+    }, [currentEvent, refreshData]);
 
-    // Fighters
-    const createFighter = async (fighter: Omit<Fighter, 'id'>) => {
+    const createFighter = useCallback(async (fighter: Omit<Fighter, 'id'>) => {
         await dataService.createFighter(fighter);
         await refreshData();
-    };
+    }, [refreshData]);
+
+    const updatePick = useCallback(async (pick: Pick) => {
+        await dataService.updatePick(pick);
+        await refreshData();
+    }, [refreshData]);
+
+    const value = useMemo(() => ({
+        events,
+        currentEvent,
+        setCurrentEvent,
+        currentFights,
+        loading,
+        refreshData,
+        createEvent,
+        updateEvent,
+        deleteEvent,
+        getEvent: (id: string) => dataService.getEvent(id),
+        getFightsForEvent,
+        createFight,
+        updateFight,
+        deleteFight,
+        fighters,
+        createFighter,
+        getPicksForEvent: (eventId: string) => dataService.getPicksForEvent(eventId),
+        getAllPicksForEvent: (eventId: string) => dataService.getAllPicksForEvent(eventId),
+        updatePick,
+        leaderboard,
+        rankingFilter,
+        setRankingFilter,
+        selectedPeriodId,
+        setSelectedPeriodId,
+        user,
+        login,
+        logout,
+        getLeaderboard: (period: RankingPeriod, periodId?: string) => dataService.getLeaderboard(period, periodId)
+    }), [
+        events, currentEvent, currentFights, loading, refreshData, createEvent,
+        updateEvent, deleteEvent, getFightsForEvent, createFight, updateFight,
+        deleteFight, fighters, createFighter, updatePick, leaderboard,
+        rankingFilter, selectedPeriodId, user, login, logout
+    ]);
 
     return (
-        <DataContext.Provider value={{
-            events,
-            currentEvent,
-            setCurrentEvent,
-            currentFights,
-            loading,
-            refreshData,
-            createEvent,
-            updateEvent,
-            deleteEvent,
-            getEvent: (id: string) => dataService.getEvent(id),
-            getFightsForEvent,
-            createFight,
-            updateFight,
-            deleteFight,
-            fighters,
-            createFighter,
-            getPicksForEvent: (eventId: string) => dataService.getPicksForEvent(eventId),
-            getAllPicksForEvent: (eventId: string) => dataService.getAllPicksForEvent(eventId),
-            updatePick: async (pick: Pick) => {
-                await dataService.updatePick(pick);
-                await refreshData(); // Refresh leaderboard and other data
-            },
-            leaderboard,
-            rankingFilter,
-            setRankingFilter,
-            selectedPeriodId,
-            setSelectedPeriodId,
-            user,
-            login,
-            logout
-        }}>
+        <DataContext.Provider value={value}>
             {children}
         </DataContext.Provider>
     );

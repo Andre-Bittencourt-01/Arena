@@ -361,8 +361,11 @@ const Ranking: React.FC = () => {
                 </div>
                 <div className="text-center z-10 w-full mt-2">
                   <h4 className="font-condensed text-xs md:text-lg uppercase tracking-tighter text-white font-black leading-none mb-1 truncate px-1">{second.name}</h4>
-                  <div className="border-t border-white/5 pt-1 md:pt-2 mt-1 md:mt-4">
-                    <div className="font-display font-black text-sm md:text-xl text-silver leading-none tracking-tight">{getFilteredPoints(second)}</div>
+                  <div className="border-t border-white/5 pt-1 md:pt-2 mt-1 md:mt-4 flex items-center justify-center gap-2">
+                    {rankingFilter !== 'week' && <div className="scale-75">{renderPerformance(second)}</div>}
+                    <div className="font-display font-black text-sm md:text-xl text-silver leading-none tracking-tight">
+                      {getFilteredPoints(second)}<span className="text-[10px] md:text-xs opacity-50 ml-0.5">Pts</span>
+                    </div>
                   </div>
                 </div>
               </>
@@ -387,9 +390,12 @@ const Ranking: React.FC = () => {
                 <div className="text-center z-10 w-full mt-2">
                   <h4 className="font-condensed text-sm md:text-xl uppercase tracking-tighter text-white font-black leading-none mb-0.5 md:mb-1 truncate px-1">{first.name}</h4>
                   <div className="font-mono text-[5px] md:text-[7px] text-gold/60 uppercase tracking-[0.4em] font-black mt-0.5 hidden sm:block">PODER_MÁXIMO</div>
-                  <div className="border-t border-white/10 pt-2 md:pt-3 mt-1 md:mt-4">
-                    <div className="text-[9px] text-white/30 uppercase tracking-[0.5em] font-black hidden md:block">Ranking_Oficial</div>
-                    <div className="font-display font-black text-xl md:text-4xl text-gold leading-none tracking-tight">{getFilteredPoints(first)}</div>
+                  <div className="border-t border-white/10 pt-2 md:pt-3 mt-1 md:mt-4 flex items-center justify-center gap-2">
+                    <div className="text-[9px] text-white/30 uppercase tracking-[0.5em] font-black hidden md:block absolute -top-3 left-1/2 -translate-x-1/2 w-full text-center">Ranking_Oficial</div>
+                    {rankingFilter !== 'week' && <div className="scale-90">{renderPerformance(first)}</div>}
+                    <div className="font-display font-black text-xl md:text-4xl text-gold leading-none tracking-tight">
+                      {getFilteredPoints(first)}<span className="text-xs md:text-sm opacity-50 ml-1">Pts</span>
+                    </div>
                   </div>
                 </div>
               </>
@@ -412,8 +418,11 @@ const Ranking: React.FC = () => {
                 </div>
                 <div className="text-center z-10 w-full mt-2">
                   <h4 className="font-condensed text-xs md:text-lg uppercase tracking-tighter text-white font-black leading-none mb-1 truncate px-1">{third.name}</h4>
-                  <div className="border-t border-white/5 pt-1 md:pt-2 mt-1 md:mt-4">
-                    <div className="font-display font-black text-sm md:text-xl text-bronze leading-none tracking-tight">{getFilteredPoints(third)}</div>
+                  <div className="border-t border-white/5 pt-1 md:pt-2 mt-1 md:mt-4 flex items-center justify-center gap-2">
+                    {rankingFilter !== 'week' && <div className="scale-75">{renderPerformance(third)}</div>}
+                    <div className="font-display font-black text-sm md:text-xl text-bronze leading-none tracking-tight">
+                      {getFilteredPoints(third)}<span className="text-[10px] md:text-xs opacity-50 ml-0.5">Pts</span>
+                    </div>
                   </div>
                 </div>
               </>

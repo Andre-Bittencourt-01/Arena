@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Screen } from '../App';
 import { useData } from '../contexts/DataContext';
 import { Event } from '../types';
+import ResponsiveBanner from '../components/common/ResponsiveBanner';
+import * as dateUtils from '../services/utils/dateUtils';
 
 interface EventsProps {
   onNavigate: (screen: Screen) => void;
@@ -31,11 +33,7 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
     }
   });
 
-  // Formatting helpers
-  const getEventMonth = (dateStr: string) => new Date(dateStr).toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase().replace('.', '');
-  const getEventDay = (dateStr: string) => new Date(dateStr).getDate();
-  const getEventTime = (dateStr: string) => new Date(dateStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const getLocationCity = (loc: string) => loc.split(',')[0].toUpperCase();
+
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-4 md:py-12 font-sans">
@@ -58,6 +56,7 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
             Passados
           </button>
         </div>
+
       </div>
 
       <div className="flex flex-col gap-6">
@@ -71,18 +70,12 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
                 }`}
             >
               <div className="absolute inset-0 z-0">
-                <img
-                  className={`w-full h-full object-cover object-top transition-transform duration-700 ${event.status === 'completed' ? 'opacity-20 grayscale' :
-                    event.status === 'live' ? 'opacity-30 mix-blend-luminosity group-hover:scale-105' :
-                      'opacity-50 mix-blend-overlay group-hover:scale-105'
-                    }`}
-                  src={event.banner_url}
-                  alt={event.title}
+                <ResponsiveBanner
+                  event={event}
+                  context="list"
+                  className={event.status === 'completed' ? 'opacity-20 grayscale' : event.status === 'live' ? 'opacity-30 mix-blend-luminosity hover:opacity-40' : 'opacity-50 mix-blend-overlay hover:opacity-60'}
+                  overlayClassName={`bg-gradient-to-r from-background-dark to-transparent ${event.status === 'completed' ? 'via-background-dark/95' : event.status === 'live' ? 'via-background-dark/80' : 'via-background-dark/90'}`}
                 />
-                <div className={`absolute inset-0 bg-gradient-to-r from-background-dark to-transparent ${event.status === 'completed' ? 'via-background-dark/95' :
-                  event.status === 'live' ? 'via-background-dark/80' :
-                    'via-background-dark/90'
-                  }`}></div>
               </div>
 
               <div className="relative z-10 p-4 md:p-8 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
@@ -117,11 +110,11 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
                   <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] md:text-sm font-medium mt-2 ${event.status === 'completed' ? 'text-gray-500' : 'text-gray-400'}`}>
                     <span className="flex items-center gap-1.5">
                       <span className={`material-symbols-outlined text-base md:text-lg ${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'}`}>calendar_today</span>
-                      {getEventDay(event.date)} {getEventMonth(event.date)}
+                      {dateUtils.getEventDay(event.date)} {dateUtils.getEventMonth(event.date)}
                     </span>
                     <span className="flex items-center gap-1.5">
                       <span className={`material-symbols-outlined text-base md:text-lg ${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'}`}>location_on</span>
-                      {getLocationCity(event.location)}
+                      {dateUtils.getLocationCity(event.location)}
                     </span>
                   </div>
                 </div>

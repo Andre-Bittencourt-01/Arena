@@ -12,7 +12,14 @@ interface EventHeaderProps {
 const EventHeader: React.FC<EventHeaderProps> = ({ event, onNavigate, backLabel = "Voltar para Eventos", showStats }) => {
     return (
         <section className="relative w-full h-[220px] overflow-hidden bg-background-dark border-b border-white/5">
-            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${event.banner_url}")` }}></div>
+            <div className="absolute inset-0 bg-cover bg-center bg-[position:var(--pos-mobile)] md:bg-[position:var(--pos-desktop)] transition-transform duration-700 scale-[var(--scale-mobile)] md:scale-[var(--scale-desktop)]"
+                style={{
+                    backgroundImage: `url("${event.banner_url}")`,
+                    '--pos-mobile': event.banner_settings?.summary?.mobile ? `${event.banner_settings.summary.mobile.x}% ${event.banner_settings.summary.mobile.y}%` : (event.banner_position_mobile || '50% 20%'),
+                    '--pos-desktop': event.banner_settings?.summary?.desktop ? `${event.banner_settings.summary.desktop.x}% ${event.banner_settings.summary.desktop.y}%` : (event.banner_position_desktop || '50% 50%'),
+                    '--scale-mobile': event.banner_settings?.summary?.mobile?.scale || 1,
+                    '--scale-desktop': event.banner_settings?.summary?.desktop?.scale || 1,
+                } as React.CSSProperties}></div>
             <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/90 to-transparent"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-background-dark/90 via-background-dark/60 to-transparent"></div>
 

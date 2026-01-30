@@ -1,17 +1,13 @@
 import React from 'react';
 import { Screen } from '../App';
 import { useData } from '../contexts/DataContext';
-import { MockDataService } from '../services/MockDataService';
 
 interface ProfileProps {
   onNavigate: (screen: Screen) => void;
 }
 
 const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
-  const { user, leaderboard, events, getAllPicksForEvent, getFightsForEvent } = useData();
-
-  // Data service instance for additional queries
-  const dataService = React.useMemo(() => new MockDataService(), []);
+  const { user, leaderboard, events, getAllPicksForEvent, getFightsForEvent, getLeaderboard } = useData();
 
   // Period filter state (similar to Ranking page)
   const [periodFilter, setPeriodFilter] = React.useState<'week' | 'month' | 'year'>('month');
@@ -187,7 +183,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
         }
 
         // Get user rank based on period
-        const periodLeaderboard = await dataService.getLeaderboard(periodFilter);
+        const periodLeaderboard = await getLeaderboard(periodFilter);
         const userRankIndex = periodLeaderboard.findIndex(u => u.id === user.id);
         const userRank = userRankIndex !== -1 ? userRankIndex + 1 : 0;
 
@@ -217,7 +213,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
     };
 
     calculateStats();
-  }, [user, events, getAllPicksForEvent, getFightsForEvent, periodFilter, dataService]);
+  }, [user, events, getAllPicksForEvent, getFightsForEvent, periodFilter, getLeaderboard]);
 
   // Get completed events for history table
   const [eventHistory, setEventHistory] = React.useState<any[]>([]);
@@ -242,7 +238,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
             const userPointsForEvent = userPicks.reduce((sum, pick) => sum + (pick.points_earned || 0), 0);
 
             // Get user rank for this event
-            const eventLeaderboard = await dataService.getLeaderboard('week', event.id);
+            const eventLeaderboard = await getLeaderboard('week', event.id);
             const userRankIndex = eventLeaderboard.findIndex(u => u.id === user.id);
             const userRank = userRankIndex !== -1 ? userRankIndex + 1 : null;
 
@@ -262,7 +258,7 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
     };
 
     fetchEventHistory();
-  }, [user, events, getAllPicksForEvent, dataService]);
+  }, [user, events, getAllPicksForEvent, getLeaderboard]);
 
   if (!user) {
     return (
@@ -368,8 +364,8 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                     ref={buttonRef}
                     onClick={() => setShowSelector(!showSelector)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 ${showSelector
-                        ? 'bg-primary border-primary text-white shadow-lg shadow-primary/40'
-                        : 'bg-zinc-900 border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                      ? 'bg-primary border-primary text-white shadow-lg shadow-primary/40'
+                      : 'bg-zinc-900 border-white/10 text-white/60 hover:text-white hover:border-white/30'
                       }`}
                   >
                     <span className="material-symbols-outlined text-lg">history</span>
@@ -402,8 +398,8 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                                 key={event.id}
                                 onClick={() => { setSelectedPeriodId(event.id); setShowSelector(false); }}
                                 className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === event.id
-                                    ? 'bg-primary/20 text-primary'
-                                    : 'text-white/40 hover:bg-white/5 hover:text-white'
+                                  ? 'bg-primary/20 text-primary'
+                                  : 'text-white/40 hover:bg-white/5 hover:text-white'
                                   }`}
                               >
                                 {event.title} - {event.subtitle}
@@ -418,8 +414,8 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                                   key={monthId}
                                   onClick={() => { setSelectedPeriodId(monthId); setShowSelector(false); }}
                                   className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === monthId
-                                      ? 'bg-primary/20 text-primary'
-                                      : 'text-white/40 hover:bg-white/5 hover:text-white'
+                                    ? 'bg-primary/20 text-primary'
+                                    : 'text-white/40 hover:bg-white/5 hover:text-white'
                                     }`}
                                 >
                                   Performance {monthName} 2026
@@ -432,8 +428,8 @@ const Profile: React.FC<ProfileProps> = ({ onNavigate }) => {
                                 key={year}
                                 onClick={() => { setSelectedPeriodId(year); setShowSelector(false); }}
                                 className={`w-full text-left px-4 py-3 rounded-lg font-condensed text-sm uppercase font-bold tracking-wider transition-colors ${selectedPeriodId === year
-                                    ? 'bg-primary/20 text-primary'
-                                    : 'text-white/40 hover:bg-white/5 hover:text-white'
+                                  ? 'bg-primary/20 text-primary'
+                                  : 'text-white/40 hover:bg-white/5 hover:text-white'
                                   }`}
                               >
                                 Performance Anual {year}

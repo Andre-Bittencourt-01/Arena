@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { Screen } from '../App';
 import { useData } from '../contexts/DataContext';
+import ResponsiveBanner from '../components/common/ResponsiveBanner';
+import * as dateUtils from '../services/utils/dateUtils';
 
 interface CardSummaryProps {
   onNavigate: (screen: Screen) => void;
@@ -30,8 +32,11 @@ const CardSummary: React.FC<CardSummaryProps> = ({ onNavigate }) => {
   return (
     <div className="flex flex-col h-full font-display bg-background-dark overflow-hidden">
       <section className="relative w-full h-[120px] md:h-[220px] overflow-hidden bg-background-dark border-b border-white/5 flex-shrink-0">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${currentEvent.banner_url}")` }}></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/90 to-transparent"></div>
+        <ResponsiveBanner
+          event={currentEvent}
+          context="summary"
+          overlayClassName="bg-gradient-to-t from-background-dark via-background-dark/90 to-transparent"
+        />
         <div className="absolute inset-0 bg-gradient-to-r from-background-dark/90 via-background-dark/60 to-transparent"></div>
         <div className="relative h-full flex flex-col justify-end pb-3 px-4 lg:px-8 max-w-[1600px] mx-auto">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-2 md:gap-6">
@@ -43,7 +48,7 @@ const CardSummary: React.FC<CardSummaryProps> = ({ onNavigate }) => {
               <h1 className="text-xl md:text-5xl font-condensed font-bold text-white leading-none uppercase italic truncate max-w-[280px] md:max-w-none">
                 {currentEvent.title}: <span className="text-primary">{currentEvent.subtitle.split(' vs ')[0]}</span> vs {currentEvent.subtitle.split(' vs ')[1]}
               </h1>
-              <p className="text-gray-400 font-condensed uppercase tracking-wide text-[10px] md:text-sm">{currentEvent.location.split(',')[0]} • 23:00</p>
+              <p className="text-gray-400 font-condensed uppercase tracking-wide text-[10px] md:text-sm">{dateUtils.getLocationCity(currentEvent.location)} • {dateUtils.getEventTime(currentEvent.date)}</p>
             </div>
             <div className="flex gap-2">
               <div className="bg-surface-dark/80 backdrop-blur border border-white/10 rounded p-1.5 md:p-3 min-w-[80px] md:min-w-[120px]">

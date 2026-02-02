@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Panel from '../components/Panel';
 import { useData } from '../contexts/DataContext';
+import { ApiDataService } from '../services/ApiDataService';
 import { FightCategory, WeightClass, Event as UFCEvent, Fight, BannerConfig, Fighter } from '../types';
 
 // --- Helper Components ---
@@ -30,15 +31,33 @@ const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         updateFight,
         deleteFight,
         getFightsForEvent,
-        fighters,
         createFighter,
         getAllPicksForEvent,
         updatePick,
         getAdminEvents
     } = useData();
 
+    // Local state for fighters to ensure dropdown population
+    const [availableFighters, setAvailableFighters] = useState<Fighter[]>([]);
+    const [isLoadingFighters, setIsLoadingFighters] = useState(false);
+
     useEffect(() => {
-        getAdminEvents();
+        const loadGlobalData = async () => {
+            getAdminEvents();
+
+            // Fetch fighters explicitly
+            try {
+                setIsLoadingFighters(true);
+                const api = new ApiDataService();
+                const fightersList = await api.getFighters();
+                setAvailableFighters(fightersList);
+            } catch (error) {
+                console.error("Erro ao carregar lutadores:", error);
+            } finally {
+                setIsLoadingFighters(false);
+            }
+        };
+        loadGlobalData();
     }, [getAdminEvents]);
 
     // View Mode: 'list' or 'edit' or 'picks' or 'results'
@@ -412,7 +431,7 @@ const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 // LIST VIEW
                 <EventList
                     events={events}
-                    fighters={fighters}
+                    fighters={availableFighters}
                     onNavigateToResults={navigateToResults}
                     onNavigateToPicks={navigateToPicks}
                     onNavigateToCreate={navigateToCreate}
@@ -430,7 +449,7 @@ const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             ) : viewMode === 'picks' as any ? (
                 <PicksManager
                     events={events}
-                    fighters={fighters}
+                    fighters={availableFighters}
                     getAllPicksForEvent={getAllPicksForEvent}
                     getFightsForEvent={getFightsForEvent}
                     updatePick={updatePick}
@@ -483,7 +502,7 @@ const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
 
                             <FightManager
                                 editingEventId={editingEventId!}
-                                fighters={fighters}
+                                fighters={availableFighters}
                                 currentEventFights={currentEventFights}
                                 setCurrentEventFights={setCurrentEventFights}
                                 eventLockStatus={eventLockStatus}
@@ -503,7 +522,7 @@ const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
             ) : viewMode === 'results' ? (
                 <ResultsManager
                     events={events}
-                    fighters={fighters}
+                    fighters={availableFighters}
                     getFightsForEvent={getFightsForEvent}
                     updateFight={updateFight}
                     onBack={navigateToList}

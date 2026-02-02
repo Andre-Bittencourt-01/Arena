@@ -3,6 +3,28 @@ import { IDataService, RankingPeriod } from './types';
 import { Event, Fight, Fighter, User, Pick, League, UserDTO, LeagueDTO, PickDTO } from '../types';
 import { mapUserDTOToDomain, mapLeagueDTOToDomain, mapPickDTOToDomain } from './adapters';
 
+// Helper Adapter
+const adaptFightData = (fight: any) => ({
+    ...fight,
+    // Garante compatibilidade de IDs
+    id: fight.id,
+    fighter_a_id: fight.fighterAId || fight.fighter_a_id,
+    fighter_b_id: fight.fighterBId || fight.fighter_b_id,
+    event_id: fight.eventId || fight.event_id,
+
+    // --- CORREÇÃO: Campos de Resultado ---
+    winner_id: fight.winnerId || fight.winner_id,
+    round_end: fight.roundEnd || fight.round_end,
+    method: fight.method,
+    result: fight.result,
+    time: fight.time,
+
+    // Objetos Aninhados
+    fighter_a: fight.fighterA || fight.fighter_a,
+    fighter_b: fight.fighterB || fight.fighter_b,
+    winner: fight.winner // Objeto do vencedor
+});
+
 export class ApiDataService implements IDataService {
     // Events
     async getEvents(): Promise<Event[]> {
@@ -31,7 +53,7 @@ export class ApiDataService implements IDataService {
                 cascade_start_time: this.ensureISOString(event.cascade_start_time),
             };
 
-            const response = await api.post('/events', payload, {
+            const response = await api.post('/admin/events', payload, {
                 headers: { 'x-admin-secret': 'arena-mma-secret-2025' }
             });
             return response.data;
@@ -51,7 +73,7 @@ export class ApiDataService implements IDataService {
                 cascade_start_time: this.ensureISOString(event.cascade_start_time),
             };
 
-            const response = await api.put(`/events/${event.id}`, payload, {
+            const response = await api.put(`/admin/events/${event.id}`, payload, {
                 headers: { 'x-admin-secret': 'arena-mma-secret-2025' }
             });
             return response.data;
@@ -72,45 +94,50 @@ export class ApiDataService implements IDataService {
     }
 
     async deleteEvent(id: string): Promise<void> {
-        await api.delete(`/events/${id}`, {
+        await api.delete(`/admin/events/${id}`, {
             headers: { 'x-admin-secret': 'arena-mma-secret-2025' }
         });
     }
 
     // Fights
-    async getFights(eventId: string): Promise<Fight[]> {
+    async getFightsForEvent(eventId: string): Promise<Fight[]> {
         const response = await api.get(`/events/${eventId}/fights`);
-        return response.data;
+        return (response.data || []).map(adaptFightData);
+    }
+
+    async getFights(eventId: string): Promise<Fight[]> {
+        return this.getFightsForEvent(eventId);
     }
 
     async createFight(fight: Fight): Promise<Fight> {
-        const response = await api.post('/fights', fight, {
+        const response = await api.post('/admin/fights', fight, {
             headers: { 'x-admin-secret': 'arena-mma-secret-2025' }
         });
-        return response.data;
+        return adaptFightData(response.data);
     }
 
     async updateFight(fight: Fight): Promise<Fight> {
-        const response = await api.put(`/fights/${fight.id}`, fight, {
+        // Envia para o backend (O adapter que criamos antes vai rodar na volta/leitura e no retorno do endpoint)
+        const response = await api.put(`/admin/fights/${fight.id}`, fight, {
             headers: { 'x-admin-secret': 'arena-mma-secret-2025' }
         });
-        return response.data;
+        return adaptFightData(response.data);
     }
 
     async deleteFight(id: string): Promise<void> {
-        await api.delete(`/fights/${id}`, {
+        await api.delete(`/admin/fights/${id}`, {
             headers: { 'x-admin-secret': 'arena-mma-secret-2025' }
         });
     }
 
     // Fighters
     async getFighters(): Promise<Fighter[]> {
-        const response = await api.get('/fighters');
+        const response = await api.get('/admin/fighters');
         return response.data;
     }
 
     async createFighter(fighter: Omit<Fighter, 'id'>): Promise<Fighter> {
-        const response = await api.post('/fighters', fighter, {
+        const response = await api.post('/admin/fighters', fighter, {
             headers: { 'x-admin-secret': 'arena-mma-secret-2025' }
         });
         return response.data;

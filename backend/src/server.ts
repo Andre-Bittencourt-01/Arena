@@ -7,7 +7,9 @@ import { EventController } from './presentation/controllers/EventController.js';
 import { AuthController } from './presentation/controllers/AuthController.js';
 import { verifyJwt } from './infra/http/middlewares/verifyJwt.js';
 import { leagueRoutes } from './infrastructure/http/routes/leagueRoutes.js';
+
 import { authRoutes } from './infrastructure/http/routes/authRoutes.js';
+import { userRoutes } from './infrastructure/http/routes/userRoutes.js';
 
 const server = Fastify({
     logger: true
@@ -34,9 +36,12 @@ server.register(leagueRoutes);
 
 // Auth Routes
 server.register(authRoutes);
+server.register(userRoutes);
 
 // Admin Routes
 import { adminRoutes } from './infrastructure/http/routes/adminRoutes.js';
+import { eventRoutes } from './infrastructure/http/routes/eventRoutes.js';
+server.register(eventRoutes, { prefix: 'events' });
 server.register(adminRoutes, { prefix: 'admin' });
 
 const start = async () => {

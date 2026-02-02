@@ -22,9 +22,20 @@ export class PrismaFighterRepository implements IFighterRepository {
         });
     }
 
-    async findAll(): Promise<Fighter[]> {
-        return await prisma.fighter.findMany({
+    async findAll(): Promise<any[]> {
+        const prismaFighters = await prisma.fighter.findMany({
             orderBy: { name: 'asc' }
         });
+
+        return prismaFighters.map(f => ({
+            id: f.id,
+            name: f.name,
+            nickname: f.nickname || '',
+            imageUrl: f.image_url || '',
+            wins: f.wins,
+            losses: f.losses,
+            draws: f.draws,
+            nc: f.nc
+        }));
     }
 }

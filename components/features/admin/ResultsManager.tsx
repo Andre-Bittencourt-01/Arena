@@ -134,16 +134,20 @@ const ResultsManager: React.FC<ResultsManagerProps> = ({
                             className="admin-input"
                         >
                             <option value="">Selecione um evento...</option>
-                            {events.map(event => (
-                                <option key={event.id} value={event.id}>{event.title} - {event.subtitle}</option>
-                            ))}
+                            {Array.isArray(events) && events.length > 0 ? (
+                                events.map(event => (
+                                    <option key={event.id} value={event.id}>{event?.title || 'Sem título'} - {event?.subtitle || ''}</option>
+                                ))
+                            ) : (
+                                <option value="" disabled>Nenhum evento carregado</option>
+                            )}
                         </select>
                     </div>
 
                     {/* Fights List */}
                     {resultsEventId && (
                         <div className="space-y-4">
-                            {currentEventFights.length === 0 ? (
+                            {!Array.isArray(currentEventFights) || currentEventFights.length === 0 ? (
                                 <p className="text-gray-500 text-sm">Nenhuma luta encontrada neste evento.</p>
                             ) : (
                                 currentEventFights.map(fight => {
@@ -156,13 +160,13 @@ const ResultsManager: React.FC<ResultsManagerProps> = ({
                                                 <div className="flex items-center gap-4">
                                                     <div className="text-right">
                                                         <p className={`font-bold uppercase ${fight.winner_id === fight.fighter_a_id ? 'text-green-500' : 'text-white'}`}>
-                                                            {fight.fighter_a.name}
+                                                            {fight?.fighter_a?.name || 'Unknown A'}
                                                         </p>
                                                     </div>
                                                     <span className="text-xs text-gray-500 font-bold">VS</span>
                                                     <div className="text-left">
                                                         <p className={`font-bold uppercase ${fight.winner_id === fight.fighter_b_id ? 'text-green-500' : 'text-white'}`}>
-                                                            {fight.fighter_b.name}
+                                                            {fight?.fighter_b?.name || 'Unknown B'}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -223,8 +227,8 @@ const ResultsManager: React.FC<ResultsManagerProps> = ({
                                                                 className="admin-input"
                                                             >
                                                                 <option value="">Selecione...</option>
-                                                                <option value={fight.fighter_a_id}>{fight.fighter_a.name}</option>
-                                                                <option value={fight.fighter_b_id}>{fight.fighter_b.name}</option>
+                                                                <option value={fight.fighter_a_id}>{fight?.fighter_a?.name || 'Fighter A'}</option>
+                                                                <option value={fight.fighter_b_id}>{fight?.fighter_b?.name || 'Fighter B'}</option>
                                                             </select>
                                                         </div>
                                                     )}

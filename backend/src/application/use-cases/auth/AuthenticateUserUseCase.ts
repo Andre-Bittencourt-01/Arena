@@ -41,7 +41,6 @@ export class AuthenticateUserUseCase {
         try {
             console.log("⚖️ [DEBUG AUTH] Comparando senha com bcrypt...");
             const isPasswordValid = await compare(password || "", user.password_hash);
-
             console.log(`📊 [DEBUG AUTH] Resultado da comparação bcrypt: ${isPasswordValid}`);
 
             if (!isPasswordValid) {

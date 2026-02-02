@@ -1,0 +1,214 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- DOMÍNIO DE ACESSO & USUÁRIO ---
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  password_hash    String?  // Nullable pois pode ser login social
+  name             String
+  avatar_url       String?
+  created_at       DateTime @default(now())
+
+  // Auth Providers (Identity)
+  google_id        String?  @unique
+  apple_subject_id String?  @unique
+
+  // YouTube Membership Logic
+  youtube_channel_id String? // O ID do canal DESTE usuário (para validação)
+  isYoutubeMember    Boolean   @default(false)
+  lastYoutubeSync    DateTime?
+
+  // Gamification & Ranking (Novos Campos)
+  points             Int      @default(0)
+  monthly_points     Int      @default(0)
+  yearly_points      Int      @default(0)
+  monthly_rank_delta Int      @default(0) // Variação no ranking (subiu/desceu)
+
+  // Relações
+  role             SystemRole @default(MEMBER)
+  memberships      UserMembership[] // Assinaturas ativas (YouTube)
+  picks            Pick[]           // Palpites no jogo
+  owned_leagues    League[]         @relation("LeagueOwner")
+  league_memberships LeagueMember[] // Ligas que participa
+}
+
+enum SystemRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model SystemSettings {
+  key         String @id // Ex: "apple_login_enabled"
+  value       String // Ex: "true"
+  description String?
+}
+
+// --- DOMÍNIO DE MEMBROS (YouTube) ---
+model ManagedChannel {
+  id               String   @id @default(uuid())
+  name             String
+  youtube_id       String   @unique // ID do Canal (ex: UC_xyz...)
+  refresh_token    String   // CRÍTICO: Armazenar criptografado
+  is_active        Boolean  @default(true)
+  last_sync_status String?
+  members          UserMembership[]
+}
+
+model UserMembership {
+  id                 String   @id @default(uuid())
+  user_id            String
+  managed_channel_id String
+  tier_name          String   // Ex: "Ouro", "Prata"
+  is_active          Boolean  @default(true)
+  last_updated_at    DateTime @updatedAt
+
+  user    User           @relation(fields: [user_id], references: [id])
+  channel ManagedChannel @relation(fields: [managed_channel_id], references: [id])
+
+  @@unique([user_id, managed_channel_id]) // Um usuário só pode ter 1 status por canal
+}
+
+// --- DOMÍNIO DO JOGO (UFC Core) ---
+model Event {
+  id                 String   @id // Ex: "evt_ufc325" (Permitir string customizada)
+  title              String
+  subtitle           String?
+  date               DateTime
+  end_date           DateTime?
+  location           String?
+  banner_url         String?
+  banner_settings    Json?
+  status             EventStatus @default(SCHEDULED)
+  lock_status        LockStatus  @default(OPEN) // Trava de apostas
+  lock_time          DateTime?
+  cascade_start_time DateTime?
+
+  fights Fight[]
+  picks  Pick[]
+}
+
+model Fighter {
+  id        String @id // Ex: "omally"
+  name      String
+  nickname  String?
+  image_url String?
+  wins      Int    @default(0)
+  losses    Int    @default(0)
+  draws     Int    @default(0)
+  nc        Int    @default(0)
+
+  fights_as_a Fight[] @relation("FighterA")
+  fights_as_b Fight[] @relation("FighterB")
+  won_fights  Fight[] @relation("Winner")
+  picked_by   Pick[]
+}
+
+model Fight {
+  id           String @id // Ex: "fight_ufc325_01"
+  event_id     String
+  fighter_a_id String
+  fighter_b_id String
+  winner_id    String?
+
+  // Detalhes
+  category      String? // Main Event, Co-Main...
+  weight_class  String?
+  rounds        Int
+  is_title      Boolean @default(false)
+  
+  // Resultado
+  result        FightResult? // WIN, DRAW, NC
+  method        String?      // KO, SUB, DEC
+  round_end     String?      // R1, R2...
+  time          String?
+
+  event     Event   @relation(fields: [event_id], references: [id])
+  fighter_a Fighter @relation("FighterA", fields: [fighter_a_id], references: [id])
+  fighter_b Fighter @relation("FighterB", fields: [fighter_b_id], references: [id])
+  winner    Fighter? @relation("Winner", fields: [winner_id], references: [id])
+  
+  picks     Pick[]
+}
+
+model Pick {
+  id            String   @id @default(uuid())
+  user_id       String
+  fight_id      String
+  event_id      String   // Redundância útil para queries de performance
+  fighter_id    String   // Quem ele escolheu
+  
+  method        String   // KO/TKO, SUB, DEC
+  round         String   // R1, R2, DEC
+  points_earned Int      @default(0)
+
+  user    User    @relation(fields: [user_id], references: [id])
+  fight   Fight   @relation(fields: [fight_id], references: [id])
+  event   Event   @relation(fields: [event_id], references: [id])
+  fighter Fighter @relation(fields: [fighter_id], references: [id])
+
+  @@unique([user_id, fight_id]) // Um palpite por luta
+}
+
+// --- DOMÍNIO SOCIAL (Ligas) ---
+model League {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  invite_code String   @unique
+  logo_url    String?
+  created_at  DateTime @default(now())
+  
+  owner_id    String
+  owner       User     @relation("LeagueOwner", fields: [owner_id], references: [id])
+  
+  members     LeagueMember[]
+}
+
+model LeagueMember {
+  id        String   @id @default(uuid())
+  league_id String
+  user_id   String
+  role      LeagueRole @default(MEMBER)
+  joined_at DateTime   @default(now())
+
+  league League @relation(fields: [league_id], references: [id])
+  user   User   @relation(fields: [user_id], references: [id])
+
+  @@unique([league_id, user_id])
+}
+
+// --- ENUMS ---
+enum EventStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+}
+
+enum LockStatus {
+  OPEN
+  CLOSED
+}
+
+enum FightResult {
+  WIN
+  DRAW
+  NC
+}
+
+enum LeagueRole {
+  OWNER
+  ADMIN
+  MEMBER
+}

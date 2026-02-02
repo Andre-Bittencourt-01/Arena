@@ -12,10 +12,15 @@ import EventEditor from '../components/features/admin/EventEditor';
 import FightManager from '../components/features/admin/FightManager';
 import ResultsManager from '../components/features/admin/ResultsManager';
 import PicksManager from '../components/features/admin/PicksManager';
+import { Screen } from '../App';
 
 // --- Helper Components ---
 
-const Admin: React.FC = () => {
+interface AdminProps {
+    onNavigate: (screen: Screen) => void;
+}
+
+const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
     const {
         events,
         createEvent,
@@ -28,8 +33,13 @@ const Admin: React.FC = () => {
         fighters,
         createFighter,
         getAllPicksForEvent,
-        updatePick
+        updatePick,
+        getAdminEvents
     } = useData();
+
+    useEffect(() => {
+        getAdminEvents();
+    }, [getAdminEvents]);
 
     // View Mode: 'list' or 'edit' or 'picks' or 'results'
     const [viewMode, setViewMode] = useState<'list' | 'edit' | 'picks' | 'results'>('list');
@@ -301,6 +311,11 @@ const Admin: React.FC = () => {
         setViewMode('results');
         setEditingEventId(null);
     };
+
+    const navigateToStory = () => {
+        onNavigate('story');
+    };
+
     const updateBannerSetting = (key: 'x' | 'y' | 'scale', value: number) => {
         setBannerSettings(prev => {
             const contextData = prev[activeContext] || {
@@ -352,7 +367,47 @@ const Admin: React.FC = () => {
                 </div>
             )}
 
-            {/* View Switching */}
+            {/* View Switching & Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
+                <div className="flex bg-zinc-900 p-1 rounded-lg border border-white/10">
+                    <button
+                        onClick={navigateToList}
+                        className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-primary text-white shadow-neon-sm' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Eventos
+                    </button>
+                    <button
+                        onClick={navigateToPicks}
+                        className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-all ${viewMode === 'picks' as any ? 'bg-primary text-white shadow-neon-sm' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Palpites
+                    </button>
+                    <button
+                        onClick={navigateToResults}
+                        className={`px-4 py-2 rounded text-xs font-bold uppercase tracking-widest transition-all ${viewMode === 'results' ? 'bg-primary text-white shadow-neon-sm' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Resultados
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={navigateToStory}
+                        className="bg-zinc-800 hover:bg-zinc-700 text-white/70 hover:text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/5 flex items-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-sm">share</span>
+                        📸 Testar Story Creator
+                    </button>
+                    <button
+                        onClick={navigateToCreate}
+                        className="bg-primary hover:bg-red-700 text-white px-6 py-2 rounded font-bold uppercase text-sm shadow-neon-sm transition-all active:scale-95"
+                    >
+                        Novo Evento
+                    </button>
+                </div>
+            </div>
+
+            {/* Modal Overlay */}
             {viewMode === 'list' ? (
                 // LIST VIEW
                 <EventList

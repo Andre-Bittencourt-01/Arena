@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Event, Fight, Fighter, User, Pick } from '../types';
+import { Event, Fight, Fighter, User, Pick, League } from '../types';
+
 import { IDataService, RankingPeriod } from '../services/types';
 import { MockDataService } from '../services/MockDataService';
+import { ApiDataService } from '../services/ApiDataService';
 
 interface DataContextType {
     events: Event[];
@@ -16,6 +18,7 @@ interface DataContextType {
     updateEvent: (event: Event) => Promise<void>;
     deleteEvent: (id: string) => Promise<void>;
     getEvent: (id: string) => Promise<Event | null>;
+    getAdminEvents: () => Promise<void>;
 
     // Fights
     getFightsForEvent: (eventId: string) => Promise<Fight[]>;
@@ -40,16 +43,30 @@ interface DataContextType {
     setSelectedPeriodId: (id: string | null) => void;
     getLeaderboard: (period: RankingPeriod, periodId?: string) => Promise<User[]>;
 
-    // Auth
-    user: User | null;
-    login: (email: string, password: string) => Promise<boolean>;
-    logout: () => void;
+    // Auth (Retired here, use AuthContext)
+    // user: User | null;
+    // login: (email: string, password: string) => Promise<boolean>;
+    // logout: () => void;
+    getMe: () => Promise<User | null>;
+
+    // Leagues
+
+    createLeague: (name: string, ownerId: string, description?: string, logoUrl?: string) => Promise<League>;
+    joinLeague: (inviteCode: string, userId: string) => Promise<League>;
+    getLeaguesForUser: (userId: string) => Promise<League[]>;
+    getLeagueByInviteCode: (code: string) => Promise<League | null>;
+    getLeagueById: (id: string) => Promise<League | null>;
+    updateLeague: (id: string, data: { name: string, description: string, logo_url?: string }) => Promise<League>;
+    deleteLeague: (id: string) => Promise<void>;
+    removeMember: (leagueId: string, userId: string) => Promise<League>;
+    manageAdmin: (leagueId: string, userId: string, action: 'promote' | 'demote') => Promise<League>;
 }
+
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 // Singleton service instance
-const dataService: IDataService = new MockDataService();
+const dataService: IDataService = new ApiDataService();
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [events, setEvents] = useState<Event[]>([]);
@@ -57,10 +74,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [currentFights, setCurrentFights] = useState<Fight[]>([]);
     const [fighters, setFighters] = useState<Fighter[]>([]);
     const [leaderboard, setLeaderboard] = useState<User[]>([]);
-    const [rankingFilter, setRankingFilter] = useState<RankingPeriod>('week');
+    const [rankingFilter, setRankingFilter] = useState<RankingPeriod>('month');
     const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<User | null>(null);
 
     const refreshData = useCallback(async () => {
         setLoading(true);
@@ -90,16 +106,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setCurrentFights(fights);
             }
 
-            if (user) {
-                const updatedUser = await dataService.getUser(user.id);
-                if (updatedUser) setUser(updatedUser);
-            }
+            // User refresh would happen in AuthContext now, but for data consistency:
+            // if (user) {
+            //     const updatedUser = await dataService.getMe();
+            //     if (updatedUser) setUser(updatedUser);
+            // }
         } catch (error) {
             console.error("Failed to fetch data", error);
         } finally {
             setLoading(false);
         }
-    }, [rankingFilter, selectedPeriodId, currentEvent, user]); // Added dependencies to refresh correctly
+    }, [rankingFilter, selectedPeriodId, currentEvent]); // Removed user dependency
 
     useEffect(() => {
         setSelectedPeriodId(null); // Reset specific period when switching filters
@@ -120,24 +137,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshData();
     }, [selectedPeriodId]);
 
-    // Auth
-    const login = useCallback(async (email: string, password: string) => {
-        const loggedUser = await dataService.login(email, password);
-        if (loggedUser) {
-            setUser(loggedUser);
-            return true;
-        }
-        return false;
-    }, []);
-
-    const logout = useCallback(() => {
-        setUser(null);
-    }, []);
+    // Auth retired from here
 
     const createEvent = useCallback(async (event: Omit<Event, 'id'>) => {
         await dataService.createEvent(event);
         await refreshData();
     }, [refreshData]);
+
+    const getAdminEvents = useCallback(async () => {
+        setLoading(true);
+        try {
+            const fetchedEvents = await dataService.getAdminEvents();
+            setEvents(fetchedEvents);
+        } catch (error) {
+            console.error("Failed to fetch admin events", error);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     const updateEvent = useCallback(async (event: Event) => {
         await dataService.updateEvent(event);
@@ -199,6 +216,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateEvent,
         deleteEvent,
         getEvent: (id: string) => dataService.getEvent(id),
+        getAdminEvents,
         getFightsForEvent,
         createFight,
         updateFight,
@@ -213,15 +231,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRankingFilter,
         selectedPeriodId,
         setSelectedPeriodId,
-        user,
-        login,
-        logout,
-        getLeaderboard: (period: RankingPeriod, periodId?: string) => dataService.getLeaderboard(period, periodId)
+        getMe: () => dataService.getMe(),
+        getUserById: (id: string) => dataService.getUserById(id),
+        getLeaderboard: (period: RankingPeriod, periodId?: string) => dataService.getLeaderboard(period, periodId),
+
+
+        // Leagues
+        createLeague: (name: string, ownerId: string, description?: string, logoUrl?: string) => dataService.createLeague(name, ownerId, description, logoUrl),
+        joinLeague: (inviteCode: string, userId: string) => dataService.joinLeague(inviteCode, userId),
+        getLeaguesForUser: (userId: string) => dataService.getLeaguesForUser(userId),
+        getLeagueByInviteCode: (code: string) => dataService.getLeagueByInviteCode(code),
+        getLeagueById: (id: string) => dataService.getLeagueById(id),
+        updateLeague: (id: string, data: { name: string, description: string, logo_url?: string }) => dataService.updateLeague(id, data),
+        deleteLeague: (id: string) => dataService.deleteLeague(id),
+        removeMember: (leagueId: string, userId: string) => dataService.removeMember(leagueId, userId),
+        manageAdmin: (leagueId: string, userId: string, action: 'promote' | 'demote') => dataService.manageAdmin(leagueId, userId, action)
     }), [
+
         events, currentEvent, currentFights, loading, refreshData, createEvent,
         updateEvent, deleteEvent, getFightsForEvent, createFight, updateFight,
         deleteFight, fighters, createFighter, updatePick, leaderboard,
-        rankingFilter, selectedPeriodId, user, login, logout
+        rankingFilter, selectedPeriodId, getAdminEvents
     ]);
 
     return (

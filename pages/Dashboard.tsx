@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Screen } from '../App';
 import Panel from '../components/Panel';
 import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
 import ResponsiveBanner from '../components/common/ResponsiveBanner';
 import * as dateUtils from '../services/utils/dateUtils';
 
@@ -10,7 +11,8 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  const { events, leaderboard, user, setCurrentEvent, getAllPicksForEvent, getFightsForEvent } = useData();
+  const { events, leaderboard, setCurrentEvent, getAllPicksForEvent, getFightsForEvent } = useData();
+  const { user } = useAuth();
   const [nextEvent, setNextEvent] = useState(events.find(e => e.status === 'upcoming') || null);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
@@ -172,8 +174,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         // Calculate percentile (top X%)
         const percentile = totalUsers > 0 ? Math.round((userPosition / totalUsers) * 100) : 0;
 
-        // Get rank delta from user's monthly_rank_delta property
-        const rankDelta = user.monthly_rank_delta || 0;
+        // Get rank delta from user's monthlyRankDelta property
+        const rankDelta = user.monthlyRankDelta || 0;
 
         setMonthlyRankData({
           position: userPosition || 0,
@@ -461,14 +463,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <div key={u.id} className={`group flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer ${index === 0 ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/20 hover:border-yellow-500/50' : 'bg-surface-lighter border-white/5 hover:border-primary/50'}`}>
                   <div className="relative shrink-0">
                     <div className={`h-10 w-10 rounded-full p-0.5 ${index === 0 ? 'bg-gradient-to-b from-yellow-400 to-yellow-600 shadow-[0_0_10px_rgba(234,179,8,0.4)]' : index === 1 ? 'bg-silver' : index === 2 ? 'bg-bronze' : 'bg-gray-600'}`}>
-                      <img alt={`Rank ${index + 1} Avatar`} className={`h-full w-full rounded-full object-cover ${index > 0 ? 'grayscale group-hover:grayscale-0 transition-all' : ''}`} src={u.avatar_url} />
+                      <img alt={`Rank ${index + 1} Avatar`} className={`h-full w-full rounded-full object-cover ${index > 0 ? 'grayscale group-hover:grayscale-0 transition-all' : ''}`} src={u.avatar} />
                     </div>
                     <div className={`absolute -bottom-1 -right-1 text-black text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-black ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-silver' : index === 2 ? 'bg-bronze' : 'bg-gray-400'}`}>{index + 1}</div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center mb-0">
                       <p className={`text-xs font-bold truncate transition-colors ${index === 0 ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>{u.name}</p>
-                      <span className={`text-xs font-bold ${index === 0 ? 'text-yellow-500' : 'text-gray-400 group-hover:text-white'}`}>{u.last_event_points || u.points} pts</span>
+                      <span className={`text-xs font-bold ${index === 0 ? 'text-yellow-500' : 'text-gray-400 group-hover:text-white'}`}>{u.points} pts</span>
                     </div>
                   </div>
                 </div>
@@ -482,7 +484,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   >
                     <div className="relative shrink-0">
                       <div className="h-10 w-10 rounded-full p-0.5 bg-primary">
-                        <img alt="User Avatar" className="h-full w-full rounded-full object-cover" src={user.avatar_url} />
+                        <img alt="User Avatar" className="h-full w-full rounded-full object-cover" src={user.avatar} />
                       </div>
                       <div className="absolute -bottom-1 -right-1 bg-white text-black text-[10px] font-bold w-6 h-4 flex items-center justify-center rounded-full border border-primary">
                         {leaderboard.findIndex(u => u.id === user.id) + 1}

@@ -62,6 +62,9 @@ export interface Event {
         list?: { desktop?: BannerConfig; mobile?: BannerConfig };
         summary?: { desktop?: BannerConfig; mobile?: BannerConfig };
     };
+    _count?: {
+        fights: number;
+    };
 }
 
 export interface BannerConfig {
@@ -70,28 +73,7 @@ export interface BannerConfig {
     scale: number; // 1.0 to 3.0+
 }
 
-export interface User {
-    id: string;
-    name: string;
-    email: string;
-    password?: string; // In a real app, hash this. Mocking "a" for now.
-    avatar_url: string;
-    points: number;
-    last_event_points?: number;
-    monthly_points?: number;
-    yearly_points?: number;
-    monthly_rank_delta?: number; // Positive = climbed, Negative = dropped
-    yearly_rank_delta?: number;
-}
+// Re-export common types
+export * from './dtos.js';
+export * from './domain.js';
 
-export interface Pick {
-    id: string;
-    user_id: string;
-    event_id: string;
-    fight_id: string;
-    fighter_id: string; // The fighter picked to win
-    method?: 'KO/TKO' | 'SUB' | 'DEC';
-    round?: string; // "R1", "R2", "R3"... or "Unanimous", "Split"
-    points_earned?: number;
-    admin_note?: string; // Reason for manual point adjustment
-}

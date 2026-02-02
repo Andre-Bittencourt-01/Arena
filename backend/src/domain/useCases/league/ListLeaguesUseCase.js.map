@@ -1,0 +1,1 @@
+{"version":3,"file":"ListLeaguesUseCase.js","sourceRoot":"","sources":["ListLeaguesUseCase.ts"],"names":[],"mappings":"AAEA,MAAM,OAAO,kBAAkB;IACP;IAApB,YAAoB,gBAAmC;QAAnC,qBAAgB,GAAhB,gBAAgB,CAAmB;IAAI,CAAC;IAE5D,KAAK,CAAC,OAAO;QACT,OAAO,MAAM,IAAI,CAAC,gBAAgB,CAAC,OAAO,EAAE,CAAC;IACjD,CAAC;CACJ"}

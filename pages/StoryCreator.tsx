@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Event, Fight, Pick } from '../types';
 import { toPng } from 'html-to-image';
 
 const StoryCreator: React.FC = () => {
-  const { user, events, getFightsForEvent, getPicksForEvent } = useData();
+  const { events, getFightsForEvent, getPicksForEvent } = useData();
+  const { user } = useAuth();
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [fights, setFights] = useState<Fight[]>([]);
@@ -209,7 +211,7 @@ const StoryCreator: React.FC = () => {
               <div className="flex items-center gap-2">
                 <div
                   className="w-8 h-8 rounded-full bg-cover bg-center border border-white/20 shadow-lg"
-                  style={{ backgroundImage: `url("${user?.avatar_url}")` }}
+                  style={{ backgroundImage: `url("${user?.avatar}")` }}
                 ></div>
                 <div>
                   <p className="text-white text-[10px] font-bold leading-none">{user?.name}</p>
@@ -379,7 +381,7 @@ const StoryCreator: React.FC = () => {
                           <div className={`relative ${imgWidth} h-full shrink-0 transition-all border-r border-white/5
                               ${isUpcoming && myPickId === fA.id ? 'border-2 border-accent-green box-border z-10' : ''}
                           `}>
-                            <img src={fA.image_url} className={`w-full h-full object-cover object-top ${f1Dim ? 'grayscale opacity-50' : ''}`} />
+                            <img src={fA.image_url} alt={fA.name} className={`w-full h-full object-cover object-top ${f1Dim ? 'grayscale opacity-50' : ''}`} />
                             {myPickId === fA.id && <div className={`absolute bottom-0 h-0.5 w-full ${isPickCorrect ? 'bg-accent-green' : isCompleted && winnerId ? 'bg-red-500' : 'bg-accent-green'}`}></div>}
 
                             {isCompleted && winnerId === fA.id && (
@@ -502,7 +504,7 @@ const StoryCreator: React.FC = () => {
                           <div className={`relative ${imgWidth} h-full shrink-0 transition-all border-l border-white/5
                              ${isUpcoming && myPickId === fB.id ? 'border-2 border-accent-green box-border z-10' : ''}
                           `}>
-                            <img src={fB.image_url} className={`w-full h-full object-cover object-top ${f2Dim ? 'grayscale opacity-50' : ''}`} />
+                            <img src={fB.image_url} alt={fB.name} className={`w-full h-full object-cover object-top ${f2Dim ? 'grayscale opacity-50' : ''}`} />
                             {myPickId === fB.id && <div className={`absolute bottom-0 h-0.5 w-full ${isPickCorrect ? 'bg-accent-green' : isCompleted && winnerId ? 'bg-red-500' : 'bg-accent-green'}`}></div>}
 
                             {isCompleted && winnerId === fB.id && (

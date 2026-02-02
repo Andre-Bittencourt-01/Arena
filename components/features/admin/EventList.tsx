@@ -73,6 +73,11 @@ const EventList: React.FC<EventListProps> = ({
                                         <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-300">
                                             {new Date(event.date).toLocaleDateString()}
                                         </span>
+                                        {event._count && (
+                                            <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded font-bold">
+                                                {event._count.fights} {event._count.fights === 1 ? 'Luta' : 'Lutas'}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

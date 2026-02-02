@@ -1,5 +1,7 @@
 import { IDataService, RankingPeriod } from './types';
-import { Event, Fight, Fighter, User, Pick } from '../types';
+import { Event, Fight, Fighter, User, Pick, League } from '../types';
+
+
 
 // --- Constants & Helpers ---
 
@@ -114,6 +116,17 @@ const initialEvents: Event[] = [
     }
 ];
 
+// --- Deterministic Random Helper ---
+const seededRandom = (seed: string) => {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+        hash |= 0;
+    }
+    const x = Math.sin(hash) * 10000;
+    return x - Math.floor(x);
+};
+
 const generateFightersAndFights = () => {
     let fighters: Record<string, Fighter> = { ...initialFighters };
     let fights: Fight[] = [];
@@ -121,20 +134,28 @@ const generateFightersAndFights = () => {
     const getFighter = (name: string): Fighter => {
         const id = name.toLowerCase().replace(/\s/g, '').replace(/[\.'-]/g, '');
         if (!fighters[id]) {
-            // Cycle through 5 generic fighter images
-            const imgIdx = (Object.keys(fighters).length % 5) + 1;
+            const seed = hashString(name);
+            const imgIdx = (seed % 5) + 1;
             fighters[id] = {
                 id,
                 name,
                 nickname: 'The ' + name.split(' ').pop(),
                 image_url: `/assets/images/fighter_${imgIdx}.png`,
-                wins: Math.floor(Math.random() * 30),
-                losses: Math.floor(Math.random() * 10),
-                draws: Math.floor(Math.random() * 3),
+                wins: Math.floor(seededRandom(name + 'wins') * 30),
+                losses: Math.floor(seededRandom(name + 'losses') * 10),
+                draws: Math.floor(seededRandom(name + 'draws') * 3),
                 nc: 0
             };
         }
         return fighters[id];
+    };
+
+    const hashString = (str: string) => {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        }
+        return Math.abs(hash);
     };
 
     // --- UFC 325 Card ---
@@ -174,11 +195,12 @@ const generateFightersAndFights = () => {
     });
 
     initialEvents.forEach(event => {
-        if (event.id === 'evt_ufc325') return; // Skip UFC 325 as we manually defined its card
+        if (event.id === 'evt_ufc325') return;
         for (let i = 0; i < 15; i++) {
-            const idx1 = Math.floor(Math.random() * MOCK_NAMES.length);
-            let idx2 = Math.floor(Math.random() * MOCK_NAMES.length);
-            while (idx1 === idx2) idx2 = Math.floor(Math.random() * MOCK_NAMES.length);
+            const seedPrefix = `${event.id}_${i}`;
+            const idx1 = Math.floor(seededRandom(seedPrefix + '_f1') * MOCK_NAMES.length);
+            let idx2 = Math.floor(seededRandom(seedPrefix + '_f2') * MOCK_NAMES.length);
+            while (idx1 === idx2) idx2 = Math.floor(seededRandom(seedPrefix + '_f2_retry') * MOCK_NAMES.length);
 
             const f1 = getFighter(MOCK_NAMES[idx1]);
             const f2 = getFighter(MOCK_NAMES[idx2]);
@@ -198,12 +220,12 @@ const generateFightersAndFights = () => {
             let time: string | undefined;
 
             if (isCompleted) {
-                const rand = Math.random();
+                const rand = seededRandom(seedPrefix + '_result');
                 if (rand > 0.98) {
                     result = 'nc';
                     method = 'NC (Eye Poke)';
-                    round_end = `R${Math.floor(Math.random() * 3) + 1}`;
-                    time = `${Math.floor(Math.random() * 5)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`;
+                    round_end = `R${Math.floor(seededRandom(seedPrefix + '_r') * 3) + 1}`;
+                    time = `${Math.floor(seededRandom(seedPrefix + '_t') * 5)}:${Math.floor(seededRandom(seedPrefix + '_tm') * 60).toString().padStart(2, '0')}`;
                 } else if (rand > 0.95) {
                     result = 'draw';
                     method = 'Draw (Majority)';
@@ -211,21 +233,21 @@ const generateFightersAndFights = () => {
                     time = '5:00';
                 } else {
                     result = 'win';
-                    winner = Math.random() > 0.5 ? f1 : f2;
-                    const methodRand = Math.random();
+                    winner = seededRandom(seedPrefix + '_win') > 0.5 ? f1 : f2;
+                    const methodRand = seededRandom(seedPrefix + '_meth');
                     if (methodRand > 0.6) {
-                        const decType = DECISION_TYPES[Math.floor(Math.random() * DECISION_TYPES.length)];
+                        const decType = DECISION_TYPES[Math.floor(seededRandom(seedPrefix + '_dec') * DECISION_TYPES.length)];
                         method = `DEC (${decType})`;
                         round_end = `R${category === 'Main Event' ? 5 : 3}`;
                         time = '5:00';
                     } else if (methodRand > 0.3) {
                         method = 'KO/TKO (Punch)';
-                        round_end = `R${Math.floor(Math.random() * (category === 'Main Event' ? 5 : 3)) + 1}`;
-                        time = `${Math.floor(Math.random() * 5)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`;
+                        round_end = `R${Math.floor(seededRandom(seedPrefix + '_ko_r') * (category === 'Main Event' ? 5 : 3)) + 1}`;
+                        time = `${Math.floor(seededRandom(seedPrefix + '_ko_t') * 5)}:${Math.floor(seededRandom(seedPrefix + '_ko_tm') * 60).toString().padStart(2, '0')}`;
                     } else {
                         method = 'SUB (Rear Naked Choke)';
-                        round_end = `R${Math.floor(Math.random() * (category === 'Main Event' ? 5 : 3)) + 1}`;
-                        time = `${Math.floor(Math.random() * 5)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`;
+                        round_end = `R${Math.floor(seededRandom(seedPrefix + '_sub_r') * (category === 'Main Event' ? 5 : 3)) + 1}`;
+                        time = `${Math.floor(seededRandom(seedPrefix + '_sub_t') * 5)}:${Math.floor(seededRandom(seedPrefix + '_sub_tm') * 60).toString().padStart(2, '0')}`;
                     }
                 }
             }
@@ -238,9 +260,9 @@ const generateFightersAndFights = () => {
                 fighter_a: f1,
                 fighter_b: f2,
                 category,
-                weight_class: WEIGHT_CLASSES[Math.floor(Math.random() * WEIGHT_CLASSES.length)] as any,
+                weight_class: WEIGHT_CLASSES[Math.floor(seededRandom(seedPrefix + '_wc') * WEIGHT_CLASSES.length)] as any,
                 rounds: category === 'Main Event' ? 5 : 3,
-                is_title: category === 'Main Event' && Math.random() > 0.6,
+                is_title: category === 'Main Event' && seededRandom(seedPrefix + '_title') > 0.6,
                 winner_id: winner?.id,
                 result,
                 method,
@@ -262,9 +284,14 @@ const generateUsersAndPicks = (fights: Fight[]) => {
         id: 'user_andre',
         name: 'André',
         email: 'andre@arena.com',
-        password: 'a',
-        avatar_url: 'https://ui-avatars.com/api/?name=Andre&background=random',
-        points: 0
+        avatar: 'https://ui-avatars.com/api/?name=Andre&background=random',
+        points: 0,
+        monthlyPoints: 0,
+        yearlyPoints: 0,
+        monthlyRankDelta: 0,
+        yearlyRankDelta: 0,
+        isYoutubeMember: true,
+        createdAt: new Date()
     };
     users.push(adminUser);
 
@@ -272,16 +299,20 @@ const generateUsersAndPicks = (fights: Fight[]) => {
         const name = MOCK_NAMES[i % MOCK_NAMES.length];
         const sanitizedId = name.toLowerCase().replace(/\./g, '').replace(/\s/g, '_');
 
-        // Cycle through 3 generic user images
         const imgIdx = (i % 3) + 1;
 
         users.push({
             id: sanitizedId,
             name: name,
             email: `${sanitizedId}@example.com`,
-            password: 'password',
-            avatar_url: `/assets/images/user_${imgIdx}.png`,
-            points: 0
+            avatar: `/assets/images/user_${imgIdx}.png`,
+            points: Math.floor(Math.random() * 100),
+            monthlyPoints: Math.floor(Math.random() * 30),
+            yearlyPoints: Math.floor(Math.random() * 100),
+            monthlyRankDelta: 0,
+            yearlyRankDelta: 0,
+            isYoutubeMember: Math.random() > 0.8,
+            createdAt: new Date()
         });
     }
 
@@ -313,13 +344,13 @@ const generateUsersAndPicks = (fights: Fight[]) => {
 
                 const pick: Pick = {
                     id: `pick_${user.id}_${fight.id}`,
-                    user_id: user.id,
-                    event_id: fight.event_id,
-                    fight_id: fight.id,
-                    fighter_id: selectedFighterId,
+                    userId: user.id,
+                    eventId: fight.event_id,
+                    fightId: fight.id,
+                    fighterId: selectedFighterId,
                     method: randomMethod,
                     round: randomRound,
-                    points_earned: 0
+                    pointsEarned: 0
                 };
 
                 picks.push(pick);
@@ -337,13 +368,41 @@ export class MockDataService implements IDataService {
     private events: Event[] = [...initialEvents];
     private fights: Fight[] = [...generatedFights];
     private fighters: Record<string, Fighter> = { ...generatedFighters };
-    private users: User[] = [...generatedUsers];
-    private picks: Pick[] = [...generatedPicks];
-    private currentUser: User | null = generatedUsers[0];
+    private users: User[] = [];
+    private picks: Pick[] = [];
+    private leagues: League[] = [];
+    private currentUser: User | null = null;
+
+
+
 
     constructor() {
+        this.init();
+    }
+
+    private init() {
+        // Load data from LocalStorage or fallback to generated
+        this.users = this.loadData('arena_users', generatedUsers);
+        this.picks = this.loadData('arena_picks', generatedPicks);
+        this.leagues = this.loadLeagues();
+
+        const savedUser = localStorage.getItem('arena_current_user');
+        this.currentUser = savedUser ? JSON.parse(savedUser) : this.users[0];
+
         this.recalculateAllPoints();
     }
+
+    private loadData<T>(key: string, fallback: T): T {
+        if (typeof window === 'undefined') return fallback;
+        const saved = localStorage.getItem(key);
+        return saved ? JSON.parse(saved) : fallback;
+    }
+
+    private saveData(key: string, data: any) {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem(key, JSON.stringify(data));
+    }
+
 
     private recalculateAllPoints() {
         const fightMap = new Map(this.fights.map(f => [f.id, f]));
@@ -351,9 +410,9 @@ export class MockDataService implements IDataService {
         // Optimize: Group picks by fightId
         const picksByFight = new Map<string, Pick[]>();
         this.picks.forEach(p => {
-            const list = picksByFight.get(p.fight_id) || [];
+            const list = picksByFight.get(p.fightId) || [];
             list.push(p);
-            picksByFight.set(p.fight_id, list);
+            picksByFight.set(p.fightId, list);
         });
 
         picksByFight.forEach((picks, fightId) => {
@@ -377,22 +436,23 @@ export class MockDataService implements IDataService {
         const lastEventId = completedEvents[0].id;
 
         // 1. Calculate Monthly Delta
-        this.calculatePeriodDelta('monthly_points', 'monthly_rank_delta', lastEventId);
+        this.calculatePeriodDelta('monthlyPoints', 'monthlyRankDelta', lastEventId);
 
         // 2. Calculate Yearly Delta
-        this.calculatePeriodDelta('yearly_points', 'yearly_rank_delta', lastEventId);
+        // Missing yearlyRankDelta in domain.ts, but we use monthly for both for now or add it
+        this.calculatePeriodDelta('yearlyPoints', 'monthlyRankDelta', lastEventId);
     }
 
-    private calculatePeriodDelta(pointsField: 'monthly_points' | 'yearly_points', deltaField: 'monthly_rank_delta' | 'yearly_rank_delta', lastEventId: string) {
+    private calculatePeriodDelta(pointsField: 'monthlyPoints' | 'yearlyPoints', deltaField: keyof User, lastEventId: string) {
         // Points including last event
         const currentPoints = this.users.map(u => ({ id: u.id, points: u[pointsField] || 0 }));
         const currentRankMap = this.getRankMap(currentPoints);
 
         // Optimize: Pre-calculate last event points for ALL users
         const lastEventPointsMap = new Map<string, number>();
-        this.picks.filter(p => p.event_id === lastEventId).forEach(p => {
-            const current = lastEventPointsMap.get(p.user_id) || 0;
-            lastEventPointsMap.set(p.user_id, current + (p.points_earned || 0));
+        this.picks.filter(p => p.eventId === lastEventId).forEach(p => {
+            const current = lastEventPointsMap.get(p.userId) || 0;
+            lastEventPointsMap.set(p.userId, current + (p.pointsEarned || 0));
         });
 
         // Points excluding last event
@@ -405,7 +465,7 @@ export class MockDataService implements IDataService {
         this.users.forEach(u => {
             const curRank = currentRankMap[u.id];
             const prevRank = previousRankMap[u.id];
-            u[deltaField] = prevRank - curRank;
+            (u as any)[deltaField] = prevRank - curRank;
         });
     }
 
@@ -424,10 +484,10 @@ export class MockDataService implements IDataService {
     }
 
     private recalculatePointsForFightInternal(fight: Fight, picks?: Pick[]) {
-        const fightPicks = picks || this.picks.filter(p => p.fight_id === fight.id);
+        const fightPicks = picks || this.picks.filter(p => p.fightId === fight.id);
         if (fightPicks.length === 0) return;
 
-        const correctWinnerPicks = fightPicks.filter(p => p.fighter_id === fight.winner_id);
+        const correctWinnerPicks = fightPicks.filter(p => p.fighterId === fight.winner_id);
         const isMitada = correctWinnerPicks.length === 1;
 
         const isNonTitleMainEvent = fight.category === 'Main Event' && !fight.is_title;
@@ -435,7 +495,7 @@ export class MockDataService implements IDataService {
         fightPicks.forEach(pick => {
             let points = 0;
 
-            if (fight.winner_id && pick.fighter_id === fight.winner_id) {
+            if (fight.winner_id && pick.fighterId === fight.winner_id) {
                 points += 3;
                 if (fight.is_title) points += 6;
                 else if (isNonTitleMainEvent) points += 3;
@@ -466,7 +526,7 @@ export class MockDataService implements IDataService {
                 points = 0;
             }
 
-            pick.points_earned = points;
+            pick.pointsEarned = points;
         });
     }
 
@@ -539,10 +599,10 @@ export class MockDataService implements IDataService {
         if (index !== -1) {
             this.fights[index] = fight;
             if (fight.winner_id) {
-                const fightPicks = this.picks.filter(p => p.fight_id === fight.id);
+                const fightPicks = this.picks.filter(p => p.fightId === fight.id);
                 this.recalculatePointsForFightInternal(fight, fightPicks);
 
-                const affectedUserIds = Array.from(new Set(fightPicks.map(p => p.user_id)));
+                const affectedUserIds = Array.from(new Set(fightPicks.map(p => p.userId)));
                 for (const userId of affectedUserIds) {
                     await this.recalculateUserPointsInternal(userId);
                 }
@@ -578,15 +638,15 @@ export class MockDataService implements IDataService {
             // For specifically requested periods (past events, specific months/years)
             // we calculate the score on the fly for those users based on picks
             const usersWithSpecificScore = this.users.map(u => {
-                const userPicks = this.picks.filter(p => p.user_id === u.id);
+                const userPicks = this.picks.filter(p => p.userId === u.id);
                 let score = 0;
 
                 userPicks.forEach(pick => {
-                    const pts = pick.points_earned || 0;
-                    const event = this.events.find(e => e.id === pick.event_id);
+                    const pts = pick.pointsEarned || 0;
+                    const event = this.events.find(e => e.id === pick.eventId);
                     if (!event) return;
 
-                    if (period === 'week' && pick.event_id === periodId) {
+                    if (period === 'week' && pick.eventId === periodId) {
                         score += pts;
                     } else if (period === 'month' && periodId) {
                         const eventDate = new Date(event.date);
@@ -604,22 +664,20 @@ export class MockDataService implements IDataService {
 
                 return {
                     ...u,
-                    // Temporarily override the relevant points field for sorting
-                    last_event_points: period === 'week' ? score : u.last_event_points,
-                    monthly_points: period === 'month' ? score : u.monthly_points,
-                    yearly_points: period === 'year' ? score : u.yearly_points,
-                    points: period === 'all' ? score : u.points
+                    points: period === 'all' ? score : u.points,
+                    monthlyPoints: period === 'month' ? score : u.monthlyPoints,
+                    yearlyPoints: period === 'year' ? score : u.yearlyPoints,
                 };
             });
             sortedUsers = usersWithSpecificScore;
         }
 
         if (period === 'month') {
-            sortedUsers.sort((a, b) => (b.monthly_points || 0) - (a.monthly_points || 0));
+            sortedUsers.sort((a, b) => (b.monthlyPoints || 0) - (a.monthlyPoints || 0));
         } else if (period === 'year' || period === 'all') {
-            sortedUsers.sort((a, b) => (b.yearly_points || 0) - (a.yearly_points || 0));
+            sortedUsers.sort((a, b) => (b.yearlyPoints || 0) - (a.yearlyPoints || 0));
         } else if (period === 'week') {
-            sortedUsers.sort((a, b) => (b.last_event_points || 0) - (a.last_event_points || 0));
+            sortedUsers.sort((a, b) => (b.monthlyPoints || 0) - (a.monthlyPoints || 0));
         }
 
         return sortedUsers.slice(0, 50);
@@ -628,9 +686,9 @@ export class MockDataService implements IDataService {
     async getPicksForEvent(eventId: string): Promise<Record<string, Pick>> {
         await this.delay();
         const userId = this.currentUser?.id || 'user_andre';
-        const userPicks = this.picks.filter(p => p.event_id === eventId && p.user_id === userId);
+        const userPicks = this.picks.filter(p => p.eventId === eventId && p.userId === userId);
         const picksMap: Record<string, Pick> = {};
-        userPicks.forEach(p => picksMap[p.fight_id] = p);
+        userPicks.forEach(p => picksMap[p.fightId] = p);
         return picksMap;
     }
 
@@ -640,12 +698,20 @@ export class MockDataService implements IDataService {
         const user = this.users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
         if (user) {
             this.currentUser = user;
+            this.saveData('arena_current_user', user);
             return user;
         }
         return null;
     }
 
-    async getUser(id: string): Promise<User | null> {
+    async getMe(): Promise<User | null> {
+        await this.delay(50);
+        const userId = this.currentUser?.id || 'user_andre';
+        const user = this.users.find(u => u.id === userId);
+        return user || null;
+    }
+
+    async getUserById(id: string): Promise<User | null> {
         await this.delay(50);
         const user = this.users.find(u => u.id === id);
         return user || null;
@@ -653,7 +719,7 @@ export class MockDataService implements IDataService {
 
     async getAllPicksForEvent(eventId: string): Promise<Pick[]> {
         await this.delay();
-        return this.picks.filter(p => p.event_id === eventId);
+        return this.picks.filter(p => p.eventId === eventId);
     }
 
     async updatePick(updatedPick: Pick): Promise<void> {
@@ -664,12 +730,14 @@ export class MockDataService implements IDataService {
         } else {
             this.picks.push(updatedPick);
         }
-        await this.recalculateUserPointsInternal(updatedPick.user_id);
+        await this.recalculateUserPointsInternal(updatedPick.userId);
         this.recalculateRanks();
+        this.saveData('arena_picks', this.picks);
+        this.saveData('arena_users', this.users);
     }
 
     private async recalculateUserPointsInternal(userId: string): Promise<void> {
-        const userPicks = this.picks.filter(p => p.user_id === userId);
+        const userPicks = this.picks.filter(p => p.userId === userId);
 
         // Map events for fast access
         const eventMap = new Map(this.events.map(e => [e.id, e]));
@@ -691,14 +759,14 @@ export class MockDataService implements IDataService {
         let yearlyPoints = 0;
 
         userPicks.forEach(pick => {
-            const pts = pick.points_earned || 0;
+            const pts = pick.pointsEarned || 0;
             totalPoints += pts;
 
-            const event = eventMap.get(pick.event_id);
+            const event = eventMap.get(pick.eventId);
             if (event) {
                 const eventDate = new Date(event.date);
 
-                if (lastEventId && pick.event_id === lastEventId) {
+                if (lastEventId && pick.eventId === lastEventId) {
                     lastEventPoints += pts;
                 }
 
@@ -717,10 +785,229 @@ export class MockDataService implements IDataService {
             this.users[userIndex] = {
                 ...this.users[userIndex],
                 points: totalPoints,
-                last_event_points: lastEventPoints,
-                monthly_points: monthlyPoints,
-                yearly_points: yearlyPoints
+                monthlyPoints,
+                yearlyPoints
             };
         }
     }
+
+    // --- Leagues Implementation ---
+
+    private loadLeagues(): League[] {
+        if (typeof window === 'undefined') return [];
+        const saved = localStorage.getItem('arena_leagues');
+        let leagues = saved ? JSON.parse(saved) : [];
+
+        // Seed with mock data if empty
+        if (leagues.length === 0) {
+            const mockLeagues = this.generateMockLeagues();
+            this.leagues = mockLeagues;
+            this.saveLeagues();
+            return mockLeagues;
+        }
+
+        // Data migration: Ensure all leagues have an admins array
+        const migratedLeagues = leagues.map((l: any) => ({
+            ...l,
+            admins: l.admins || []
+        }));
+
+        this.leagues = migratedLeagues;
+        return migratedLeagues;
+    }
+
+    private generateMockLeagues(): League[] {
+        const userId = 'user_andre';
+        const ownedNames = ["Amigos do Tatame", "Elite MMA Club", "Vips do Octógono"];
+        const memberNames = ["Gladiadores de Rua", "Nocaute Total", "Brazilian Top Team"];
+
+        const otherUsers = this.users.filter(u => u.id !== userId);
+        const mockLeagues: League[] = [];
+
+        // 3 Owned by user_andre
+        ownedNames.forEach((name, i) => {
+            const members = [userId, ...otherUsers.slice(i * 4, (i + 1) * 4).map(u => u.id)];
+            const leagueId = name === "Amigos do Tatame" ? "league_170325" : `league_owned_${i}`;
+            mockLeagues.push({
+                id: leagueId,
+                name,
+                description: `A liga oficial para os entusiastas da ${name}.`,
+                logo: `https://picsum.photos/seed/league${i}/400`,
+                ownerId: userId,
+                admins: [], // Mock owned leagues start with no admins
+                members,
+                inviteCode: `OWNED${i + 1}`,
+                membersCount: members.length,
+                createdAt: new Date()
+            });
+        });
+
+        // 3 Where user_andre is a member
+        memberNames.forEach((name, i) => {
+            const ownerId = otherUsers[i]?.id || 'admin';
+            const members = [ownerId, userId, ...otherUsers.slice((i + 3) * 4, (i + 4) * 4).map(u => u.id)];
+            mockLeagues.push({
+                id: `league_member_${i}`,
+                name,
+                description: `Bem-vindo à ${name}, onde a porrada estanca!`,
+                logo: `https://picsum.photos/seed/memberleague${i}/400`,
+                ownerId: ownerId,
+                admins: [], // Mock joined leagues start with no admins
+                members,
+                inviteCode: `MEMB${i + 1}`,
+                membersCount: members.length,
+                createdAt: new Date()
+            });
+        });
+
+        return mockLeagues;
+    }
+
+    private saveLeagues() {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem('arena_leagues', JSON.stringify(this.leagues));
+    }
+
+
+    async getLeagues(): Promise<League[]> {
+        await this.delay();
+        return this.leagues;
+    }
+
+    async createLeague(name: string, ownerId: string, description?: string, logoUrl?: string): Promise<League> {
+        await this.delay();
+
+        // Validate limit (max 5 created leagues)
+        const ownedLeagues = this.leagues.filter(l => l.ownerId === ownerId);
+        if (ownedLeagues.length >= 5) {
+            throw new Error("Você já criou o limite máximo de 5 ligas.");
+        }
+
+        const newLeague: League = {
+            id: `league_${Date.now()}`,
+            name,
+            description: description || '',
+            logo: logoUrl || 'https://github.com/shadcn.png',
+            ownerId: ownerId,
+            admins: [], // Start with no admins, only owner
+            members: [ownerId], // Owner is automatically a member
+            inviteCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+            membersCount: 1,
+            createdAt: new Date()
+        };
+
+        this.leagues.push(newLeague);
+        this.saveLeagues();
+        return newLeague;
+    }
+
+
+    async joinLeague(inviteCode: string, userId: string): Promise<League> {
+        await this.delay();
+
+        const leagueIndex = this.leagues.findIndex(l => l.inviteCode === inviteCode);
+        if (leagueIndex === -1) {
+            throw new Error("Código de convite inválido.");
+        }
+
+        const league = this.leagues[leagueIndex];
+
+        if (league.members.includes(userId)) {
+            return league; // User already in league, just return it
+        }
+
+        // Create updated league object
+        const updatedLeague = {
+            ...league,
+            members: [...league.members, userId],
+            membersCount: league.membersCount + 1
+        };
+
+        this.leagues[leagueIndex] = updatedLeague;
+        this.saveLeagues();
+        return updatedLeague;
+    }
+
+
+    async getLeaguesForUser(userId: string): Promise<League[]> {
+        await this.delay();
+        return this.leagues.filter(l => l.members.includes(userId));
+    }
+
+    async getLeagueByInviteCode(code: string): Promise<League | null> {
+        await this.delay();
+        return this.leagues.find(l => l.inviteCode === code) || null;
+    }
+
+    async getLeagueById(id: string): Promise<League | null> {
+        await this.delay();
+        return this.leagues.find(l => l.id === id) || null;
+    }
+
+    async updateLeague(id: string, data: { name: string, description: string, logo_url?: string }): Promise<League> {
+        await this.delay();
+        const index = this.leagues.findIndex(l => l.id === id);
+        if (index !== -1) {
+            const updatedLeague = {
+                ...this.leagues[index],
+                name: data.name,
+                description: data.description,
+                logo: data.logo_url || this.leagues[index].logo
+            };
+            this.leagues[index] = updatedLeague;
+            this.saveLeagues();
+            return updatedLeague;
+        }
+        throw new Error("Liga não encontrada.");
+    }
+
+    async deleteLeague(id: string): Promise<void> {
+        await this.delay();
+        this.leagues = this.leagues.filter(l => l.id !== id);
+        this.saveLeagues();
+    }
+
+    async removeMember(leagueId: string, userId: string): Promise<League> {
+        await this.delay();
+        const leagueIndex = this.leagues.findIndex(l => l.id === leagueId);
+        if (leagueIndex === -1) throw new Error("Liga não encontrada.");
+
+        const league = this.leagues[leagueIndex];
+        if (league.ownerId === userId) throw new Error("O dono não pode ser removido da liga.");
+
+        const updatedLeague = {
+            ...league,
+            members: league.members.filter(id => id !== userId),
+            admins: league.admins.filter(id => id !== userId) // Remove from admins if they were one
+        };
+
+        this.leagues[leagueIndex] = updatedLeague;
+        this.saveLeagues();
+        return updatedLeague;
+    }
+
+    async manageAdmin(leagueId: string, userId: string, action: 'promote' | 'demote'): Promise<League> {
+        await this.delay();
+        const leagueIndex = this.leagues.findIndex(l => l.id === leagueId);
+        if (leagueIndex === -1) throw new Error("Liga não encontrada.");
+
+        const league = this.leagues[leagueIndex];
+        let updatedAdmins = [...league.admins];
+
+        if (action === 'promote') {
+            if (!updatedAdmins.includes(userId)) updatedAdmins.push(userId);
+        } else {
+            updatedAdmins = updatedAdmins.filter(id => id !== userId);
+        }
+
+        const updatedLeague = {
+            ...league,
+            admins: updatedAdmins
+        };
+
+        this.leagues[leagueIndex] = updatedLeague;
+        this.saveLeagues();
+        return updatedLeague;
+    }
 }
+

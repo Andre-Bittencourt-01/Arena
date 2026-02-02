@@ -53,7 +53,7 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
   useEffect(() => {
     if (activeFightId && eventPicks[activeFightId]) {
       const pick = eventPicks[activeFightId];
-      setSelectedWinnerId(pick.fighter_id);
+      setSelectedWinnerId(pick.fighterId);
       setSelectedMethod(pick.method);
       setSelectedRound(pick.round);
     } else {
@@ -95,13 +95,13 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
 
       const updatedPick: Pick = {
         id: pickId,
-        user_id: user.id,
-        event_id: currentEvent.id,
-        fight_id: activeFight.id,
-        fighter_id: selectedWinnerId,
+        userId: user.id,
+        eventId: currentEvent.id,
+        fightId: activeFight.id,
+        fighterId: selectedWinnerId,
         method: selectedMethod,
         round: selectedRound,
-        points_earned: 0
+        pointsEarned: 0
       };
 
       await updatePick(updatedPick);
@@ -491,7 +491,7 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
                     const isCurrent = fight.id === activeFightId;
                     const hasPick = !!eventPicks[fight.id];
                     const pick = eventPicks[fight.id];
-                    const selectedFighter = pick ? (fight.fighter_a_id === pick.fighter_id ? fight.fighter_a : fight.fighter_b) : null;
+                    const selectedFighter = pick ? (fight.fighter_a_id === pick.fighterId ? fight.fighter_a : fight.fighter_b) : null;
 
                     return (
                       <div

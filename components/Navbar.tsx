@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { Screen } from '../App';
 
 interface NavbarProps {
@@ -7,15 +8,16 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentScreen, onNavigate }) => {
+  const { user } = useAuth();
   const isActive = (screen: Screen) => currentScreen === screen;
 
   const navItems: { screen: Screen; label: string; icon: string }[] = [
     { screen: 'dashboard', label: 'Home', icon: 'home' },
     { screen: 'events', label: 'Eventos', icon: 'sports_mma' },
-    { screen: 'story', label: 'Story Instagram', icon: 'share' },
-    { screen: 'ranking', label: 'Rank', icon: 'leaderboard' },
-    { screen: 'profile', label: 'Perfil', icon: 'person' },
+    { screen: 'leagues', label: 'Ligas', icon: 'groups' },
+    { screen: 'ranking', label: 'Ranking', icon: 'trophy' },
   ];
+
 
   return (
     <>
@@ -56,7 +58,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentScreen, onNavigate }) => {
               <img
                 alt="User Avatar"
                 className="h-full w-full object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdv6fnH2aUkUnStYycJnEKhaBICr74VmX4NnJNWQeAiTlNYjfRaYYdIaoUwqoIEjja3cV-obJrnb8Gr2KiHkzQz-DeJP1i1-21wlLJCmCXKcRBgb6F2m-uUznPWRZzMhZNCqAZa6eSt2I623-0Z_DFPK5NPmKdViNtogczjn5ZtJ-ArZKYBj2bztA5emkHyNyEy2LqUPyIDFtazLxIRtXY1YTN904jPv1NkVDpSRAx_bnPSnUrqaadV4tkE7fo8AizW2OjfaNetD1y"
+                src={user?.avatar || "https://ui-avatars.com/api/?name=" + (user?.name || "User") + "&background=random"}
               />
             </div>
           </div>

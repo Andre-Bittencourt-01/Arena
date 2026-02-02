@@ -1,4 +1,4 @@
-# Mobile Design Thinking
+e do # Mobile Design Thinking
 
 > **This file prevents AI from using memorized patterns and forces genuine thinking.**
 > Mechanisms to prevent standard AI training defaults in mobile development.

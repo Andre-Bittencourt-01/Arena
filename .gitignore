@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 errors.txt
+CONTEXT_EXPORT_PART_*.md
+projeto_completo_export/
+Para apagar depois/
+admin_*.md
+fix_imports.py

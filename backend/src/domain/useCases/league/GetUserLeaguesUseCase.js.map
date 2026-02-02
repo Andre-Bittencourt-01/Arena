@@ -1,0 +1,1 @@
+{"version":3,"file":"GetUserLeaguesUseCase.js","sourceRoot":"","sources":["GetUserLeaguesUseCase.ts"],"names":[],"mappings":"AAEA,MAAM,OAAO,qBAAqB;IACV;IAApB,YAAoB,gBAAmC;QAAnC,qBAAgB,GAAhB,gBAAgB,CAAmB;IAAI,CAAC;IAE5D,KAAK,CAAC,OAAO,CAAC,MAAc;QACxB,OAAO,MAAM,IAAI,CAAC,gBAAgB,CAAC,YAAY,CAAC,MAAM,CAAC,CAAC;IAC5D,CAAC;CACJ"}

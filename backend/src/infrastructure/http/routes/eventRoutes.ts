@@ -12,6 +12,7 @@ const pickController = new PickController();
 
 export async function eventRoutes(server: FastifyInstance) {
     // Public routes for event data (cards/fights)
+    server.get('/', (req, reply) => eventController.list(req, reply));
     server.get('/upcoming', (req, reply) => eventController.getUpcoming(req, reply));
     server.get('/:id/fights', (req, reply) => getEventFightsController.handle(req, reply));
 

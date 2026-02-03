@@ -3,9 +3,14 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Event, Fight, Pick } from '../types';
 import { toPng } from 'html-to-image';
+import { Screen } from '../App';
 
-const StoryCreator: React.FC = () => {
-  const { events, getFightsForEvent, getPicksForEvent } = useData();
+interface StoryCreatorProps {
+  onNavigate?: (screen: Screen) => void;
+}
+
+const StoryCreator: React.FC<StoryCreatorProps> = ({ onNavigate }) => {
+  const { events, getFightsForEvent, getPicksForEvent, currentEvent } = useData();
   const { user } = useAuth();
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -23,14 +28,19 @@ const StoryCreator: React.FC = () => {
   // Load initial event
   useEffect(() => {
     if (!selectedEventId && events.length > 0) {
-      const latestCompleted = pastEvents[0];
-      if (latestCompleted) {
-        setSelectedEventId(latestCompleted.id);
-      } else if (upcomingEvents.length > 0) {
-        setSelectedEventId(upcomingEvents[0].id);
+      if (currentEvent) {
+        // Se viemos de um palpite recente, mostre ele!
+        setSelectedEventId(currentEvent.id);
+      } else {
+        const latestCompleted = pastEvents[0];
+        if (latestCompleted) {
+          setSelectedEventId(latestCompleted.id);
+        } else if (upcomingEvents.length > 0) {
+          setSelectedEventId(upcomingEvents[0].id);
+        }
       }
     }
-  }, [events, selectedEventId]);
+  }, [events, selectedEventId, currentEvent]);
 
   // Fetch data
   useEffect(() => {
@@ -81,6 +91,38 @@ const StoryCreator: React.FC = () => {
     }
   };
 
+  // Share Handler (Native)
+  const handleShare = async () => {
+    if (storyRef.current && navigator.share) {
+      try {
+        setDownloading(true);
+        // Gera o blob da imagem com qualidade alta
+        const dataUrl = await toPng(storyRef.current, {
+          cacheBust: true,
+          pixelRatio: 2,
+          quality: 0.95,
+          backgroundColor: '#000000'
+        });
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File([blob], "meus-palpites.png", { type: "image/png" });
+
+        // Chama a API nativa de compartilhamento (Instagram/WhatsApp abre direto)
+        await navigator.share({
+          title: 'Meus Palpites - Arena MMA',
+          text: `Confira meus palpites para o ${selectedEvent?.title}!`,
+          files: [file]
+        });
+      } catch (error) {
+        console.error("Erro ao compartilhar", error);
+      } finally {
+        setDownloading(false);
+      }
+    } else {
+      // Fallback para Download se não suportar share (Desktop)
+      handleDownload();
+    }
+  };
+
   // Stats
   let totalPoints = 0;
   let correctPicks = 0;
@@ -95,7 +137,6 @@ const StoryCreator: React.FC = () => {
 
   return (
     <div className="flex flex-col lg:flex-row h-full overflow-hidden min-h-[calc(100vh-64px)] bg-background-dark">
-      {/* SIDEBAR */}
       {/* SIDEBAR */}
       <aside className={`w-full lg:w-80 bg-surface-dark border-r border-white/5 p-6 flex flex-col shrink-0 overflow-y-auto max-h-[calc(100vh-64px)] custom-scrollbar z-20 ${mobileView === 'list' ? 'flex' : 'hidden'} lg:flex`}>
         <div className="mb-8">
@@ -145,19 +186,34 @@ const StoryCreator: React.FC = () => {
           )}
         </div>
 
-        <div className="mt-auto pt-8">
+        {/* Área de Ações (Atualizada) */}
+        <div className="mt-auto pt-8 flex flex-col gap-3">
+          {/* Botão Compartilhar/Baixar */}
           <button
-            onClick={handleDownload}
+            onClick={handleShare}
             disabled={downloading}
-            className="w-full bg-surface hover:bg-primary hover:text-white text-white transition-all p-4 rounded-xl border border-white/10 flex items-center justify-center gap-2 group disabled:opacity-50"
+            className="w-full py-4 bg-primary hover:bg-primary-hover text-white font-condensed font-black uppercase tracking-widest rounded-xl shadow-neon flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {downloading ? (
-              <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/50 border-t-white"></span>
+              <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
             ) : (
-              <span className="material-symbols-outlined group-hover:scale-110 transition-transform">download</span>
+              <>
+                <span className="material-symbols-outlined">share</span>
+                <span>Compartilhar Card</span>
+              </>
             )}
-            <span className="font-bold font-condensed uppercase text-sm">{downloading ? 'Gerando...' : 'Baixar Imagem'}</span>
           </button>
+
+          {/* Botão Voltar (Secundário) */}
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('ranking')}
+              className="w-full py-3 bg-white/5 hover:bg-white/10 text-gray-300 font-condensed font-bold uppercase tracking-widest rounded-xl border border-white/10 flex items-center justify-center gap-2 transition-all"
+            >
+              <span className="material-symbols-outlined">leaderboard</span>
+              <span>Ver Ranking</span>
+            </button>
+          )}
         </div>
       </aside>
 

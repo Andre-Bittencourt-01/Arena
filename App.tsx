@@ -88,7 +88,7 @@ const App: React.FC = () => {
             {currentScreen === 'picks' && <Picks onNavigate={handleNavigate} />}
             {currentScreen === 'ranking' && <Ranking />}
             {currentScreen === 'profile' && <Profile onNavigate={handleNavigate} />}
-            {currentScreen === 'story' && <StoryCreator />}
+            {currentScreen === 'story' && <StoryCreator onNavigate={handleNavigate} />}
             {currentScreen === 'summary' && <CardSummary onNavigate={handleNavigate} />}
 
             {currentScreen === 'admin' && <Admin onNavigate={handleNavigate} />}

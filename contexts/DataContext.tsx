@@ -83,7 +83,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { user, loading: authLoading } = useAuth();
 
     const refreshData = useCallback(async () => {
-        setLoading(true);
+        // Silent refresh - do not set loading to true
+        console.log("🚀 [CONTEXT] refreshData disparado!");
         try {
             const [fetchedEvents, fetchedFighters] = await Promise.all([
                 dataService.getEvents(),
@@ -97,17 +98,45 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLeaderboard(fetchedLeaderboard);
 
             if (currentEvent) {
-                const refreshedEvent = await dataService.getEvent(currentEvent.id);
+                // Mantém o evento selecionado pelo usuário se existir
+                const refreshedEvent = fetchedEvents.find(e => e.id === currentEvent.id);
                 if (refreshedEvent) setCurrentEvent(refreshedEvent);
 
+                // Recarrega lutas
                 const fights = await dataService.getFights(currentEvent.id);
                 setCurrentFights(fights);
             } else if (fetchedEvents.length > 0) {
-                // Default to first event if none selected
-                const firstEvent = fetchedEvents[0];
-                setCurrentEvent(firstEvent);
-                const fights = await dataService.getFights(firstEvent.id);
-                setCurrentFights(fights);
+                // LÓGICA SMART: Encontrar o evento mais relevante baseado no RELÓGIO
+                const now = new Date().getTime();
+
+                // 1. Ordena por data (Mais antigo -> Mais novo)
+                const sortedEvents = [...fetchedEvents].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+                // 2. Tenta achar um AO VIVO (Começou e não acabou)
+                let bestEvent = sortedEvents.find(e => {
+                    const start = new Date(e.date).getTime();
+                    // Se não tiver data fim, assume 6 horas de duração
+                    const end = e.end_date ? new Date(e.end_date).getTime() : start + (6 * 60 * 60 * 1000);
+                    return now >= start && now <= end;
+                });
+
+                // 3. Se não tiver Live, pega o PRÓXIMO (Futuro mais próximo)
+                if (!bestEvent) {
+                    bestEvent = sortedEvents.find(e => new Date(e.date).getTime() > now);
+                }
+
+                // 4. Se não tiver Futuro (tudo passado), pega o ÚLTIMO realizado
+                if (!bestEvent) {
+                    bestEvent = sortedEvents[sortedEvents.length - 1]; // O último da lista ordenada por data é o mais recente
+                }
+
+                // Define o vencedor
+                if (bestEvent) {
+                    console.log(`🎯 [CONTEXT] Evento Inicial Selecionado: ${bestEvent.title} (${bestEvent.date})`);
+                    setCurrentEvent(bestEvent);
+                    const fights = await dataService.getFights(bestEvent.id);
+                    setCurrentFights(fights);
+                }
             }
 
             // User refresh would happen in AuthContext now, but for data consistency:
@@ -123,7 +152,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [rankingFilter, selectedPeriodId, currentEvent]); // Removed user dependency
 
     useEffect(() => {
-        if (authLoading) return;
+        console.log(`🔄 [CONTEXT] Estado Auth alterou. User: ${!!user}, Loading: ${authLoading}`);
+
+        if (authLoading) {
+            console.log("⏳ [CONTEXT] Aguardando autenticação carregar...");
+            return;
+        }
+
+        console.log("✅ [CONTEXT] Autenticação resolvida. Iniciando refreshData...");
         setSelectedPeriodId(null); // Reset specific period when switching filters
         refreshData();
     }, [rankingFilter, authLoading, user]); // Refresh when filter changes or auth state changes

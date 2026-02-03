@@ -5,6 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { Event } from '../types';
 import ResponsiveBanner from '../components/common/ResponsiveBanner';
 import * as dateUtils from '../services/utils/dateUtils';
+import { getEventStatus } from '../services/utils/eventStatus';
 
 interface EventsProps {
   onNavigate: (screen: Screen) => void;
@@ -13,25 +14,35 @@ interface EventsProps {
 
 const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
   const { events, setCurrentEvent } = useData();
+  console.log('📊 [DEBUG EVENTS] Dados brutos:', events);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
 
-  // Filter and sort events
+  // ... dentro do filter ...
   const filteredEvents = events.filter(event => {
+    const status = getEventStatus(event); // status normalizado (UPCOMING, LIVE, COMPLETED)
+
     if (activeTab === 'upcoming') {
-      return event.status === 'upcoming' || event.status === 'live';
+      // Mostra futuros e ao vivo
+      return status === 'UPCOMING' || status === 'LIVE';
     } else {
-      return event.status === 'completed';
+      // Mostra passados
+      return status === 'COMPLETED';
     }
   }).sort((a, b) => {
-    // Upcoming: Ascending status (Live first), then date. Past: Descending date.
+    const statusA = getEventStatus(a);
+    const statusB = getEventStatus(b);
+
+    // Mesma lógica de ordenação, mas usando status confiável
     if (activeTab === 'upcoming') {
-      if (a.status === 'live' && b.status !== 'live') return -1;
-      if (b.status === 'live' && a.status !== 'live') return 1;
+      if (statusA === 'LIVE' && statusB !== 'LIVE') return -1;
+      if (statusB === 'LIVE' && statusA !== 'LIVE') return 1;
       return new Date(a.date).getTime() - new Date(b.date).getTime();
     } else {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     }
   });
+
+  console.log('🔎 [DEBUG EVENTS] Eventos Filtrados:', filteredEvents.length, activeTab);
 
 
 
@@ -64,8 +75,8 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
           filteredEvents.map(event => (
             <article
               key={event.id}
-              className={`relative group overflow-hidden rounded-xl bg-surface-dark border border-white/5 transition-all duration-300 shadow-lg ${event.status === 'live' ? 'hover:border-yellow-500/30' :
-                event.status === 'upcoming' ? 'hover:border-primary/50 hover:shadow-neon-sm' :
+              className={`relative group overflow-hidden rounded-xl bg-surface-dark border border-white/5 transition-all duration-300 shadow-lg ${getEventStatus(event) === 'LIVE' ? 'hover:border-yellow-500/30' :
+                getEventStatus(event) === 'UPCOMING' ? 'hover:border-primary/50 hover:shadow-neon-sm' :
                   'opacity-80 hover:opacity-100'
                 }`}
             >
@@ -73,15 +84,15 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
                 <ResponsiveBanner
                   event={event}
                   context="list"
-                  className={event.status === 'completed' ? 'opacity-20 grayscale' : event.status === 'live' ? 'opacity-30 mix-blend-luminosity hover:opacity-40' : 'opacity-50 mix-blend-overlay hover:opacity-60'}
-                  overlayClassName={`bg-gradient-to-r from-background-dark to-transparent ${event.status === 'completed' ? 'via-background-dark/95' : event.status === 'live' ? 'via-background-dark/80' : 'via-background-dark/90'}`}
+                  className={getEventStatus(event) === 'COMPLETED' ? 'opacity-20 grayscale' : getEventStatus(event) === 'LIVE' ? 'opacity-30 mix-blend-luminosity hover:opacity-40' : 'opacity-50 mix-blend-overlay hover:opacity-60'}
+                  overlayClassName={`bg-gradient-to-r from-background-dark to-transparent ${getEventStatus(event) === 'COMPLETED' ? 'via-background-dark/95' : getEventStatus(event) === 'LIVE' ? 'via-background-dark/80' : 'via-background-dark/90'}`}
                 />
               </div>
 
               <div className="relative z-10 p-4 md:p-8 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
                 <div className="flex-1 space-y-1.5 md:space-y-3">
                   {/* Status Badge */}
-                  {event.status === 'live' && (
+                  {getEventStatus(event) === 'LIVE' && (
                     <div className="flex items-center gap-3">
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/40 text-yellow-500 text-[8px] md:text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">
                         <span className="w-1 h-1 rounded-full bg-yellow-500 mr-2 animate-pulse"></span>
@@ -89,31 +100,31 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
                       </span>
                     </div>
                   )}
-                  {event.status === 'upcoming' && (
+                  {getEventStatus(event) === 'UPCOMING' && (
                     <span className="inline-block px-1.5 py-0.5 rounded bg-primary/10 border border-primary/40 text-primary text-[8px] md:text-[10px] font-bold uppercase tracking-widest backdrop-blur-md shadow-neon-sm">
                       Palpites Abertos
                     </span>
                   )}
-                  {event.status === 'completed' && (
+                  {getEventStatus(event) === 'COMPLETED' && (
                     <span className="inline-block px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 text-[8px] md:text-[10px] font-bold uppercase tracking-widest backdrop-blur-md">
                       Finalizado
                     </span>
                   )}
 
-                  <h3 className={`font-condensed text-2xl md:text-6xl leading-none tracking-tight ${event.status === 'completed' ? 'text-gray-300' : 'text-white'}`}>
+                  <h3 className={`font-condensed text-2xl md:text-6xl leading-none tracking-tight ${getEventStatus(event) === 'COMPLETED' ? 'text-gray-300' : 'text-white'}`}>
                     {event.title}
                   </h3>
                   <p className="font-condensed text-base md:text-3xl text-gray-300 uppercase leading-none truncate max-w-[240px] md:max-w-none">
-                    {event.subtitle.split(' vs ')[0]} <span className={`${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'} font-bold`}>VS</span> {event.subtitle.split(' vs ')[1]}
+                    {event.subtitle.split(' vs ')[0]} <span className={`${getEventStatus(event) === 'LIVE' ? 'text-yellow-500' : getEventStatus(event) === 'UPCOMING' ? 'text-primary' : 'text-gray-600'} font-bold`}>VS</span> {event.subtitle.split(' vs ')[1]}
                   </p>
 
-                  <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] md:text-sm font-medium mt-2 ${event.status === 'completed' ? 'text-gray-500' : 'text-gray-400'}`}>
+                  <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] md:text-sm font-medium mt-2 ${getEventStatus(event) === 'COMPLETED' ? 'text-gray-500' : 'text-gray-400'}`}>
                     <span className="flex items-center gap-1.5">
-                      <span className={`material-symbols-outlined text-base md:text-lg ${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'}`}>calendar_today</span>
+                      <span className={`material-symbols-outlined text-base md:text-lg ${getEventStatus(event) === 'LIVE' ? 'text-yellow-500' : getEventStatus(event) === 'UPCOMING' ? 'text-primary' : 'text-gray-600'}`}>calendar_today</span>
                       {dateUtils.getEventDay(event.date)} {dateUtils.getEventMonth(event.date)}
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className={`material-symbols-outlined text-base md:text-lg ${event.status === 'live' ? 'text-yellow-500' : event.status === 'upcoming' ? 'text-primary' : 'text-gray-600'}`}>location_on</span>
+                      <span className={`material-symbols-outlined text-base md:text-lg ${getEventStatus(event) === 'LIVE' ? 'text-yellow-500' : getEventStatus(event) === 'UPCOMING' ? 'text-primary' : 'text-gray-600'}`}>location_on</span>
                       {dateUtils.getLocationCity(event.location)}
                     </span>
                   </div>
@@ -121,21 +132,21 @@ const Events: React.FC<EventsProps> = ({ onNavigate, onNavigateToResult }) => {
 
                 <button
                   onClick={() => {
-                    if (event.status === 'completed') {
+                    if (getEventStatus(event) === 'COMPLETED') {
                       onNavigateToResult(event.id);
                     } else {
                       setCurrentEvent(event);
                       onNavigate('picks');
                     }
                   }}
-                  className={`w-full md:w-auto min-w-[140px] font-condensed font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 ${event.status === 'live' ? 'bg-yellow-600 hover:bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.3)]' :
-                    event.status === 'upcoming' ? 'bg-primary hover:bg-primary-dark text-white shadow-neon' :
+                  className={`w-full md:w-auto min-w-[140px] font-condensed font-bold uppercase tracking-widest py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 ${getEventStatus(event) === 'LIVE' ? 'bg-yellow-600 hover:bg-yellow-500 text-black shadow-[0_0_15px_rgba(234,179,8,0.3)]' :
+                    getEventStatus(event) === 'UPCOMING' ? 'bg-primary hover:bg-primary-dark text-white shadow-neon' :
                       'bg-transparent border border-white/20 hover:bg-white/5 text-white'
                     }`}
                 >
-                  <span className="text-sm md:text-base">{event.status === 'completed' ? 'Resultados' : event.status === 'live' ? 'Acompanhar' : 'Palpitar'}</span>
+                  <span className="text-sm md:text-base">{getEventStatus(event) === 'COMPLETED' ? 'Resultados' : getEventStatus(event) === 'LIVE' ? 'Acompanhar' : 'Palpitar'}</span>
                   <span className="material-symbols-outlined text-lg md:text-xl">
-                    {event.status === 'completed' ? 'visibility' : event.status === 'live' ? 'live_tv' : 'arrow_forward'}
+                    {getEventStatus(event) === 'COMPLETED' ? 'visibility' : getEventStatus(event) === 'LIVE' ? 'live_tv' : 'arrow_forward'}
                   </span>
                 </button>
               </div>

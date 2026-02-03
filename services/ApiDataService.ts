@@ -28,7 +28,9 @@ const adaptFightData = (fight: any) => ({
 export class ApiDataService implements IDataService {
     // Events
     async getEvents(): Promise<Event[]> {
-        const response = await api.get('/events/upcoming');
+        console.log("📡 [API] Buscando todos os eventos em /events...");
+        // Muda de '/events/upcoming' para '/events' para alimentar as abas de Passados/Futuros
+        const response = await api.get('/events');
         return response.data;
     }
 

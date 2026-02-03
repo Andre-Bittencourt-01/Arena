@@ -5,6 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import ResponsiveBanner from '../components/common/ResponsiveBanner';
 import * as dateUtils from '../services/utils/dateUtils';
+import { getEventStatus, getEventEndTime } from '../services/utils/eventStatus';
 
 interface DashboardProps {
   onNavigate: (screen: Screen) => void;
@@ -25,41 +26,44 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [nextEvent, setNextEvent] = useState(events.find(e => e.status === 'SCHEDULED') || null);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
-
-
   useEffect(() => {
-    // Priority: Live > Upcoming (Chronologically nearest)
-    const live = events.find(e => e.status === 'LIVE');
-    if (live) {
-      setNextEvent(live);
-    } else {
-      // Filter for upcoming events and sort them by date (ascending)
-      const upcomingEvents = events
-        .filter(e => e.status === 'SCHEDULED')
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    if (!events.length) return;
 
-      setNextEvent(upcomingEvents[0] || null);
-    }
+    // 1. Filtra apenas eventos ativos (Não completados)
+    const activeEvents = events.filter(e => getEventStatus(e) !== 'COMPLETED');
+
+    // 2. Ordena por data
+    const sorted = activeEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    // 3. Pega o primeiro (pode ser LIVE ou UPCOMING)
+    // Se não tiver ativos, pega o último realizado para exibir algo
+    const selected = sorted[0] || events[events.length - 1];
+
+    setNextEvent(selected);
   }, [events]);
 
   useEffect(() => {
     if (!nextEvent) return;
 
-    const calculateTimeLeft = () => {
-      if (!nextEvent) return null;
-      const targetDate = nextEvent.status === 'live'
-        ? (nextEvent.end_date ? new Date(nextEvent.end_date).getTime() : new Date(nextEvent.date).getTime() + 8 * 60 * 60 * 1000)
-        : new Date(nextEvent.date).getTime();
-
-      return dateUtils.formatTimeLeft(targetDate);
-    };
-
-    // Initial calc
-    setTimeLeft(calculateTimeLeft());
-
-    // Interval
     const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
+      const now = new Date().getTime();
+
+      // MUDANÇA CRÍTICA: Alvo é o FIM do evento (Prazo limite para palpitar)
+      const targetDate = getEventEndTime(nextEvent);
+
+      const difference = targetDate - now;
+
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60),
+        });
+      } else {
+        setTimeLeft(null);
+        clearInterval(timer);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
@@ -210,7 +214,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           {nextEvent ? (
             <div className="relative overflow-hidden rounded-2xl bg-surface-dark border border-white/5 shadow-2xl group min-h-[260px] md:min-h-[400px]">
               <div className="absolute top-3 left-3 z-30">
-                {nextEvent.status === 'LIVE' ? (
+                {getEventStatus(nextEvent) === 'LIVE' ? (
                   <div className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-red-600/90 border border-red-500/50 text-red-100 text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.4)] backdrop-blur-md animate-pulse">
                     <span className="relative flex h-1.5 w-1.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
@@ -253,7 +257,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         </h2>
 
                         <div className="md:hidden mb-2">
-                          <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1.5">Tempo para Palpitar</p>
+                          {getEventStatus(nextEvent) === 'LIVE' ? (
+                            <p className="text-[10px] uppercase tracking-widest text-red-500 font-bold mb-1.5 animate-pulse">Prazo Final</p>
+                          ) : (
+                            <p className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1.5">Tempo para Palpitar</p>
+                          )}
                           {timeLeft ? (
                             <div className="flex gap-1.5 font-condensed">
                               <div className="flex flex-col items-center bg-[#1e1e21]/90 backdrop-blur border border-white/10 p-2 rounded w-12">
@@ -306,7 +314,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
                       {/* Desktop Timer - Hidden on Mobile */}
                       <div className="hidden md:flex flex-col items-center gap-2">
-                        <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Tempo para Palpitar</p>
+                        {getEventStatus(nextEvent) === 'LIVE' ? (
+                          <p className="text-xs uppercase tracking-widest text-red-500 font-bold animate-pulse">Prazo Final</p>
+                        ) : (
+                          <p className="text-xs uppercase tracking-widest text-gray-500 font-bold">Tempo para Palpitar</p>
+                        )}
                         {timeLeft ? (
                           <div className="flex gap-1.5 md:gap-2 font-condensed">
                             <div className="flex flex-col items-center bg-[#1e1e21]/80 backdrop-blur border border-white/5 p-2 md:p-3 rounded-lg w-14 md:w-16 shadow-lg">

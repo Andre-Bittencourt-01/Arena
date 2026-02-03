@@ -17,7 +17,8 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
     currentFights,
     getPicksForEvent,
     submitPicksBatch,
-    refreshData
+    refreshData,
+    loading: dataLoading
   } = useData();
 
   console.log('🔍 [DEBUG] Picks component - currentFights:', currentFights);
@@ -130,7 +131,7 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
         await submitPicksBatch(finalBatch);
 
         alert("Card Finalizado! Seus palpites foram salvos.");
-        onNavigate('ranking');
+        onNavigate('story');
       } catch (error) {
         console.error("Batch submission failed", error);
         alert("Erro ao salvar card. Tente novamente.");
@@ -181,7 +182,7 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
 
       await submitPicksBatch(picksArray);
       alert("Todos os seus palpites foram salvos!");
-      onNavigate('ranking');
+      onNavigate('story');
     } catch (error) {
       console.error("Failed to submit batch picks", error);
       alert("Erro ao enviar palpites. Tente novamente.");
@@ -189,6 +190,28 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
       setIsSubmitting(false);
     }
   };
+
+  // --- NOVO BLOCO: Tratamento de Evento Sem Lutas ---
+  if (currentEvent && currentFights.length === 0 && !dataLoading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[50vh]">
+        <div className="bg-white/5 p-6 rounded-full mb-4 animate-pulse">
+          <span className="material-symbols-outlined text-4xl md:text-6xl text-gray-500">ring_volume</span>
+        </div>
+        <h2 className="text-xl md:text-3xl font-condensed font-bold uppercase text-white mb-2">Card em Definição</h2>
+        <p className="text-gray-400 max-w-md text-sm md:text-base">
+          As lutas deste evento ainda não foram liberadas para palpites. Volte em breve!
+        </p>
+        <button
+          onClick={() => onNavigate('events')}
+          className="mt-8 px-6 py-3 bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-white rounded-lg uppercase font-bold tracking-widest transition-all"
+        >
+          Voltar para Eventos
+        </button>
+      </div>
+    );
+  }
+  // ------------------------------------------------
 
   if (!currentEvent || !activeFight) {
     return (

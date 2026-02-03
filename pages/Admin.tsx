@@ -356,6 +356,123 @@ const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         });
     };
 
+    // --- 🚨 INÍCIO DO CÓDIGO TEMPORÁRIO (APAGAR DEPOIS) ---
+    const [seeding, setSeeding] = useState(false);
+
+    // --- 🛠️ SCRIPT DE SEED (CORRIGIDO) ---
+    // --- 🛠️ SCRIPT DE SEED (CORRIGIDO) ---
+    // --- 🛠️ SCRIPT DE SEED (CORRIGIDO) ---
+    const handleGenerateSeed = async () => {
+        if (!confirm('Isso criará um evento de teste com 30 lutadores novos. Continuar?')) return;
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Erro: Login necessário.');
+            return;
+        }
+
+        setSeeding(true);
+        const API_URL = 'http://localhost:3333';
+
+        // ID único para o evento
+        const UNIQUE_EVENT_ID = `evt_mega_${Date.now()}`;
+
+        const adminFetch = async (endpoint: string, method: string, body?: any) => {
+            const headers: Record<string, string> = {
+                'Authorization': `Bearer ${token}`
+            };
+            const options: RequestInit = { method, headers };
+
+            if (body) {
+                headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
+            }
+
+            const response = await fetch(`${API_URL}/admin${endpoint}`, options);
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`${response.status} em ${endpoint}: ${text}`);
+            }
+            return response.json();
+        };
+
+        try {
+            console.log(`🚀 Iniciando...`);
+
+            // 1. CREATE EVENT
+            await adminFetch('/events', 'POST', {
+                id: UNIQUE_EVENT_ID,
+                title: `UFC MEGA TEST ${new Date().toLocaleTimeString().slice(0, 5)}`,
+                subtitle: "30 Lutadores • 15 Lutas",
+                date: new Date(Date.now() + 172800000).toISOString(),
+                location: "Las Vegas, NV",
+                banner_url: "https://images.unsplash.com/photo-1555597673-b21d5c935865?auto=format&fit=crop&w=1600&q=80",
+                status: "upcoming"
+            });
+
+            const fighterBaseNames = [
+                "Jon Jones", "Stipe Miocic", "Alex Pereira", "Jamahal Hill", "Islam Makhachev",
+                "Charles Oliveira", "Sean O'Malley", "Merab Dvalishvili", "Ilia Topuria", "Alex Volkanovski",
+                "Leon Edwards", "Belal Muhammad", "Dricus Du Plessis", "Israel Adesanya", "Alexandre Pantoja",
+                "Brandon Royval", "Sean Strickland", "Paulo Costa", "Gilbert Burns", "Jack Della Maddalena",
+                "Justin Gaethje", "Max Holloway", "Dustin Poirier", "Benoit Saint Denis", "Robert Whittaker",
+                "Khamzat Chimaev", "Shavkat Rakhmonov", "Colby Covington", "Kamaru Usman", "Conor McGregor"
+            ];
+
+            // 2. CREATE FIGHTERS & FIGHTS
+            // Usamos um sufixo aleatório curto para garantir unicidade no Backend
+            const suffix = Math.floor(Math.random() * 10000);
+
+            for (let i = 0; i < 30; i += 2) {
+                // Truque: Adiciona o sufixo ao nome para o Backend gerar IDs únicos (ex: jon_jones_4521)
+                const nameA = `${fighterBaseNames[i]} ${suffix}`;
+                const nameB = `${fighterBaseNames[i + 1]} ${suffix}`;
+
+                // Cria Lutador A
+                const fA = await adminFetch('/fighters', 'POST', {
+                    name: nameA,
+                    nickname: "Test",
+                    image_url: `https://ui-avatars.com/api/?name=${fighterBaseNames[i].replace(' ', '+')}&background=0D8ABC&color=fff&size=512`,
+                    wins: 10, losses: 2, draws: 0
+                });
+
+                // Cria Lutador B
+                const fB = await adminFetch('/fighters', 'POST', {
+                    name: nameB,
+                    nickname: "Test",
+                    image_url: `https://ui-avatars.com/api/?name=${fighterBaseNames[i + 1].replace(' ', '+')}&background=BC0D0D&color=fff&size=512`,
+                    wins: 10, losses: 2, draws: 0
+                });
+
+                // Cria Luta
+                await adminFetch('/fights', 'POST', {
+                    event_id: UNIQUE_EVENT_ID,
+                    fighter_a_id: fA.id, // O backend retorna o ID gerado (ex: jon_jones_4521)
+                    fighter_b_id: fB.id,
+                    category: i === 0 ? "Main Event" : (i < 10 ? "Main Card" : "Prelim"),
+                    weight_class: "Leve",
+                    rounds: 3,
+                    status: "upcoming",
+                    order: i + 1
+                });
+
+                console.log(`🥊 Luta ${i / 2 + 1} criada`);
+            }
+
+            alert('✅ AGORA VAI! Evento criado com sucesso.\n\nVolte para a Home.');
+            window.location.href = '/';
+
+        } catch (error: any) {
+            console.error(error);
+            alert(`Falha: ${error.message}`);
+        } finally {
+            setSeeding(false);
+        }
+    };
+
+
+    // --- 🚨 FIM DO CÓDIGO TEMPORÁRIO ---
+
     // --- RENDER ---
 
     return (
@@ -410,6 +527,15 @@ const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {/* BOTÃO DE SEED */}
+                    <button
+                        onClick={handleGenerateSeed}
+                        disabled={seeding}
+                        className="bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-500 border border-yellow-500/50 px-3 py-1 rounded text-xs font-bold uppercase tracking-widest transition-all"
+                    >
+                        {seeding ? 'Gerando...' : '⚡ Gerar Mega Card'}
+                    </button>
+
                     <button
                         onClick={navigateToStory}
                         className="bg-zinc-800 hover:bg-zinc-700 text-white/70 hover:text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/5 flex items-center gap-2"

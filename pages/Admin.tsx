@@ -33,7 +33,7 @@ const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
         getFightsForEvent,
         createFighter,
         getAllPicksForEvent,
-        updatePick,
+        submitPick,
         getAdminEvents
     } = useData();
 
@@ -452,7 +452,7 @@ const Admin: React.FC<AdminProps> = ({ onNavigate }) => {
                     fighters={availableFighters}
                     getAllPicksForEvent={getAllPicksForEvent}
                     getFightsForEvent={getFightsForEvent}
-                    updatePick={updatePick}
+                    submitPick={submitPick}
                     onBack={navigateToList}
                 />
             ) : viewMode === 'edit' ? (

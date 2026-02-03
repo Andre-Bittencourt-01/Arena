@@ -22,8 +22,8 @@ interface ProcessResultsParams {
 }
 
 interface FightResult {
-    fightId: string;
-    winnerId: string;
+    fight_id: string;
+    winner_id: string;
     method: string;
     round: string;
 }

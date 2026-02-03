@@ -11,14 +11,14 @@ export interface UserDTO {
     name: string;
     avatar_url: string | null;
     created_at: string; // ISO string from backend
-    isYoutubeMember: boolean;
+    is_youtube_member: boolean;
     points: number;
     monthly_points: number;
     yearly_points: number;
     monthly_rank_delta: number;
     yearly_rank_delta: number;
     youtube_channel_id: string | null;
-    lastYoutubeSync: string | null;
+    last_youtube_sync: string | null;
 }
 
 export interface LeagueDTO {

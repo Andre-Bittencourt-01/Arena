@@ -1,11 +1,11 @@
 import { Fight, Event } from "@prisma/client";
 
 export interface CreateFightDTO {
-    eventId: string;
-    fighterAId: string;
-    fighterBId: string;
+    event_id: string;
+    fighter_a_id: string;
+    fighter_b_id: string;
     rounds: number;
-    isTitle: boolean;
+    is_title: boolean;
     category: string;
 }
 

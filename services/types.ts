@@ -24,7 +24,8 @@ export interface IDataService {
 
     // Picks Management (Admin)
     getAllPicksForEvent: (eventId: string) => Promise<Pick[]>;
-    updatePick: (pick: Pick) => Promise<void>;
+    submitPick: (payload: any) => Promise<void>;
+    submitPicksBatch: (picks: any[]) => Promise<void>;
 
     // Leaderboard
     getLeaderboard: (period?: RankingPeriod, periodId?: string) => Promise<User[]>;
@@ -36,13 +37,13 @@ export interface IDataService {
 
     // Leagues
     getLeagues(): Promise<League[]>;
-    createLeague(name: string, ownerId: string, description?: string, logoUrl?: string): Promise<League>;
-    joinLeague(inviteCode: string, userId: string): Promise<League>;
+    createLeague(name: string, owner_id: string, description?: string, logo_url?: string): Promise<League>;
+    joinLeague(invite_code: string, user_id: string): Promise<League>;
     getLeaguesForUser(userId: string): Promise<League[]>;
     getLeagueByInviteCode(code: string): Promise<League | null>;
     getLeagueById(id: string): Promise<League | null>;
     updateLeague(id: string, data: { name: string, description: string, logo_url?: string }): Promise<League>;
     deleteLeague(id: string): Promise<void>;
     removeMember(leagueId: string, userId: string): Promise<League>;
-    manageAdmin(leagueId: string, userId: string, action: 'promote' | 'demote'): Promise<League>;
+    manageAdmin(leagueId: string, user_id: string, action: 'promote' | 'demote'): Promise<League>;
 }

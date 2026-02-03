@@ -4,7 +4,7 @@ import { League } from "@prisma/client";
 interface CreateLeagueRequest {
     name: string;
     description?: string;
-    ownerId: string;
+    owner_id: string;
 }
 
 export class CreateLeagueUseCase {
@@ -18,7 +18,7 @@ export class CreateLeagueUseCase {
             name: request.name,
             description: request.description,
             inviteCode: inviteCode,
-            ownerId: request.ownerId
+            ownerId: request.owner_id
         });
 
         return league;

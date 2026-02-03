@@ -7,24 +7,52 @@ export class PrismaPickRepository implements IPickRepository {
         return await prisma.pick.upsert({
             where: {
                 user_id_fight_id: {
-                    user_id: data.userId,
-                    fight_id: data.fightId
+                    user_id: data.user_id,
+                    fight_id: data.fight_id
                 }
             },
             create: {
-                user_id: data.userId,
-                fight_id: data.fightId,
-                event_id: data.eventId,
-                fighter_id: data.fighterId,
+                user_id: data.user_id,
+                fight_id: data.fight_id,
+                event_id: data.event_id,
+                fighter_id: data.fighter_id,
                 method: data.method,
                 round: data.round
             },
             update: {
-                fighter_id: data.fighterId,
+                fighter_id: data.fighter_id,
                 method: data.method,
                 round: data.round
             }
         });
+    }
+
+    async saveBatch(data: SavePickDTO[]): Promise<void> {
+        await prisma.$transaction(
+            data.map(pick =>
+                prisma.pick.upsert({
+                    where: {
+                        user_id_fight_id: {
+                            user_id: pick.user_id,
+                            fight_id: pick.fight_id
+                        }
+                    },
+                    create: {
+                        user_id: pick.user_id,
+                        fight_id: pick.fight_id,
+                        event_id: pick.event_id,
+                        fighter_id: pick.fighter_id,
+                        method: pick.method,
+                        round: pick.round
+                    },
+                    update: {
+                        fighter_id: pick.fighter_id,
+                        method: pick.method,
+                        round: pick.round
+                    }
+                })
+            )
+        );
     }
 
     async findByUserAndEvent(userId: string, eventId: string): Promise<Pick[]> {

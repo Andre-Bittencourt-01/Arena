@@ -7,7 +7,7 @@ interface PicksManagerProps {
     fighters: Fighter[];
     getAllPicksForEvent: (eventId: string) => Promise<any[]>;
     getFightsForEvent: (eventId: string) => Promise<Fight[]>;
-    updatePick: (pick: any) => Promise<void>;
+    submitPick: (pick: any) => Promise<void>;
     onBack: () => void;
 }
 
@@ -16,7 +16,7 @@ const PicksManager: React.FC<PicksManagerProps> = ({
     fighters,
     getAllPicksForEvent,
     getFightsForEvent,
-    updatePick,
+    submitPick,
     onBack
 }) => {
     // Picks Management State
@@ -95,7 +95,7 @@ const PicksManager: React.FC<PicksManagerProps> = ({
     const handleUpdatePickPoints = async (pick: any) => {
         if (editPointsValue < 0) return;
 
-        await updatePick({
+        await submitPick({
             ...pick,
             points_earned: editPointsValue,
             admin_note: editNoteValue

@@ -10,9 +10,9 @@ export const mapUserDTOToDomain = (dto: UserDTO): User => ({
     yearlyPoints: dto.yearly_points,
     monthlyRankDelta: dto.monthly_rank_delta,
     yearlyRankDelta: dto.yearly_rank_delta || 0,
-    isYoutubeMember: dto.isYoutubeMember,
+    isYoutubeMember: dto.is_youtube_member,
     createdAt: new Date(dto.created_at),
-    lastSync: dto.lastYoutubeSync ? new Date(dto.lastYoutubeSync) : undefined
+    lastSync: dto.last_youtube_sync ? new Date(dto.last_youtube_sync) : undefined
 });
 
 export const mapLeagueMemberDTOToDomain = (dto: LeagueMemberDTO): LeagueMember => ({

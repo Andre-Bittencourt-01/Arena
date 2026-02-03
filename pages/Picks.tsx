@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Screen } from '../App';
 import Panel from '../components/Panel';
 import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Fight, Pick } from '../types';
 import { getContentLockStatus } from '../services/MockDataService';
 
@@ -10,13 +11,17 @@ interface PicksProps {
 }
 
 const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
+  const { user } = useAuth();
   const {
     currentEvent,
     currentFights,
-    user,
     getPicksForEvent,
-    updatePick
+    submitPicksBatch,
+    refreshData
   } = useData();
+
+  console.log('🔍 [DEBUG] Picks component - currentFights:', currentFights);
+  console.log('🔍 [DEBUG] Picks component - currentEvent:', currentEvent);
 
   const [activeFightId, setActiveFightId] = useState<string | null>(null);
   const [eventPicks, setEventPicks] = useState<Record<string, Pick>>({});
@@ -75,6 +80,11 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
 
   const isLocked = lockInfo.status === 'LOCKED';
 
+  const handleSelectFighter = (fighterId: string) => {
+    console.log('👆 [DEBUG] Clicou no lutador:', activeFight.id, fighterId);
+    setSelectedWinnerId(fighterId);
+  };
+
   const handleConfirm = async () => {
     if (isLocked) return;
     if (!user) {
@@ -88,14 +98,49 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
     }
 
     if (!currentEvent || !activeFight) return;
+    // 1. Objeto do palpite ATUAL
+    const currentPickData = {
+      fight_id: activeFight.id,
+      fighter_id: selectedWinnerId,
+      method: selectedMethod,
+      round: selectedRound,
+      user_id: user.id,
+      event_id: currentEvent.id
+    };
 
-    setIsSubmitting(true);
-    try {
-      const pickId = eventPicks[activeFight.id]?.id || `pick_${user.id}_${activeFight.id}`;
+    // 2. Verifica se é a ÚLTIMA LUTA
+    const currentIndex = currentFights.findIndex(f => f.id === activeFightId);
+    const isLastFight = currentIndex === currentFights.length - 1;
 
+    if (isLastFight) {
+      setIsSubmitting(true);
+      try {
+        const previousPicksArray = (Object.values(eventPicks) as Pick[])
+          .filter(p => !!p && p.fightId !== activeFight.id)
+          .map((p: Pick) => ({
+            fight_id: p.fightId,
+            fighter_id: p.fighterId,
+            method: p.method,
+            round: p.round,
+            user_id: user.id || '',
+            event_id: currentEvent.id
+          }));
+
+        const finalBatch = [...previousPicksArray, currentPickData];
+        await submitPicksBatch(finalBatch);
+
+        alert("Card Finalizado! Seus palpites foram salvos.");
+        onNavigate('ranking');
+      } catch (error) {
+        console.error("Batch submission failed", error);
+        alert("Erro ao salvar card. Tente novamente.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
       const updatedPick: Pick = {
-        id: pickId,
-        userId: user.id,
+        id: eventPicks[activeFight.id]?.id || `pick_${user.id}_${activeFight.id}`,
+        userId: user.id || '',
         eventId: currentEvent.id,
         fightId: activeFight.id,
         fighterId: selectedWinnerId,
@@ -104,38 +149,42 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
         pointsEarned: 0
       };
 
-      await updatePick(updatedPick);
+      setEventPicks(prev => ({ ...prev, [activeFight.id]: updatedPick }));
 
-      // Update local picks state
-      setEventPicks(prev => ({
-        ...prev,
-        [activeFight.id]: updatedPick
+      setTimeout(() => {
+        const nextFight = currentFights[currentIndex + 1];
+        setActiveFightId(nextFight.id);
+
+        if (!eventPicks[nextFight.id]) {
+          setSelectedWinnerId(null);
+          setSelectedMethod(null);
+          setSelectedRound(null);
+        }
+      }, 150);
+    }
+  };
+
+  const handleFinalSubmit = async () => {
+    if (!user || !currentEvent || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      // Prepare batch payload
+      const picksArray = Object.values(eventPicks).map((pick: Pick) => ({
+        fight_id: pick.fightId,
+        fighter_id: pick.fighterId,
+        method: pick.method,
+        round: pick.round,
+        user_id: user.id || '',
+        event_id: currentEvent.id
       }));
 
-      // Small delay to let the user see the visual change in sidebar
-      setTimeout(() => {
-        // Auto-advance to next fight if available
-        const currentIndex = currentFights.findIndex(f => f.id === activeFightId);
-        if (currentIndex < currentFights.length - 1) {
-          const nextFight = currentFights[currentIndex + 1];
-          setActiveFightId(nextFight.id);
-
-          // Reset drafting states for the next fight unless it already has a pick
-          if (!eventPicks[nextFight.id]) {
-            setSelectedWinnerId(null);
-            setSelectedMethod(null);
-            setSelectedRound(null);
-          }
-        } else {
-          // Last fight confirmed
-          alert("Card Completo! Seus palpites foram salvos.");
-          onNavigate('ranking'); // Redirect to ranking to see impact
-        }
-      }, 300);
-
+      await submitPicksBatch(picksArray);
+      alert("Todos os seus palpites foram salvos!");
+      onNavigate('ranking');
     } catch (error) {
-      console.error("Failed to save pick", error);
-      alert("Erro ao salvar palpite. Tente novamente.");
+      console.error("Failed to submit batch picks", error);
+      alert("Erro ao enviar palpites. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -149,9 +198,14 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
     );
   }
 
-  const fighterA = activeFight.fighter_a;
-  const fighterB = activeFight.fighter_b;
-  const progressPercent = (Object.keys(eventPicks).length / currentFights.length) * 100;
+  const fighterA = activeFight.fighter_a || (activeFight as any).fighterA || {};
+  const fighterB = activeFight.fighter_b || (activeFight as any).fighterB || {};
+
+  // Melhore a resolução de IDs para o clique
+  const fighterAId = activeFight.fighter_a_id || (activeFight as any).fighterAId || fighterA.id;
+  const fighterBId = activeFight.fighter_b_id || (activeFight as any).fighterBId || fighterB.id;
+
+  const progressPercent = currentFights.length > 0 ? (Object.keys(eventPicks).length / currentFights.length) * 100 : 0;
   const picksDone = Object.keys(eventPicks).length;
 
   return (
@@ -199,10 +253,10 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
                 {currentEvent.title.split(' ').slice(0, 2).join(' ')}
               </div>
               <p className="text-primary text-[10px] md:text-xs font-black uppercase tracking-widest animate-pulse">
-                {activeFight.is_title ? 'DISPUTA DE CINTURÃO' : activeFight.category}
+                {activeFight.is_title ? 'DISPUTA DE CINTURÃO' : (activeFight.category || 'Fight')}
               </p>
               <h2 className="text-[10px] md:text-xs font-black text-white uppercase italic tracking-wider">
-                {activeFight.weight_class.replace('Peso', '').trim()}
+                {activeFight?.weight_class?.replace('Peso', '')?.trim() || 'Peso Combinado'}
               </h2>
             </div>
 
@@ -217,19 +271,19 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
               {/* Fighter A */}
               <div
                 className={`relative group cursor-pointer overflow-hidden h-full`}
-                onClick={() => setSelectedWinnerId(fighterA.id)}
+                onClick={() => handleSelectFighter(fighterAId)}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent z-10"></div>
                 <div
                   className={`h-full w-full bg-cover bg-center bg-no-repeat transition-all duration-700 ${selectedWinnerId === fighterA.id ? 'scale-110 grayscale-0' : 'grayscale group-hover:grayscale-0'}`}
-                  style={{ backgroundImage: `url('${fighterA.image_url}')` }}
+                  style={{ backgroundImage: `url('${fighterA?.image_url || ''}')` }}
                 ></div>
                 <div className="absolute bottom-0 left-0 w-full p-2 z-10 flex flex-col items-center">
                   <h3 className="text-sm md:text-xl font-condensed font-black text-white text-center leading-none uppercase italic tracking-tighter truncate w-full px-1 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                    {fighterA.name.split(' ').pop()}
+                    {fighterA?.name?.split(' ').pop() || 'Lutador A'}
                   </h3>
                 </div>
-                {selectedWinnerId === fighterA.id && (
+                {selectedWinnerId === fighterAId && (
                   <div className="absolute inset-0 border-2 border-primary z-20 pointer-events-none opacity-100 shadow-[inset_0_0_20px_rgba(236,19,19,0.4)]">
                     <div className="absolute top-1 md:top-2 right-1 md:right-2 bg-primary text-white rounded-full p-0.5 md:p-1 shadow-2xl animate-in zoom-in-50 duration-300">
                       <span className="material-symbols-outlined text-[10px] md:text-sm block font-bold">check</span>
@@ -241,19 +295,19 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
               {/* Fighter B */}
               <div
                 className={`relative group cursor-pointer overflow-hidden h-full`}
-                onClick={() => setSelectedWinnerId(fighterB.id)}
+                onClick={() => handleSelectFighter(fighterBId)}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent z-10"></div>
                 <div
                   className={`h-full w-full bg-cover bg-center bg-no-repeat transition-all duration-700 ${selectedWinnerId === fighterB.id ? 'scale-110 grayscale-0' : 'grayscale group-hover:grayscale-0'}`}
-                  style={{ backgroundImage: `url('${fighterB.image_url}')` }}
+                  style={{ backgroundImage: `url('${fighterB?.image_url || ''}')` }}
                 ></div>
                 <div className="absolute bottom-0 left-0 w-full p-2 z-10 flex flex-col items-center">
                   <h3 className="text-sm md:text-xl font-condensed font-black text-white text-center leading-none uppercase italic tracking-tighter truncate w-full px-1 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-                    {fighterB.name.split(' ').pop()}
+                    {fighterB?.name?.split(' ').pop() || 'Lutador B'}
                   </h3>
                 </div>
-                {selectedWinnerId === fighterB.id && (
+                {selectedWinnerId === fighterBId && (
                   <div className="absolute inset-0 border-2 border-primary z-20 pointer-events-none opacity-100 shadow-[inset_0_0_20px_rgba(236,19,19,0.4)]">
                     <div className="absolute top-1 md:top-2 right-1 md:right-2 bg-primary text-white rounded-full p-0.5 md:p-1 shadow-2xl animate-in zoom-in-50 duration-300">
                       <span className="material-symbols-outlined text-[10px] md:text-sm block font-bold">check</span>
@@ -292,16 +346,16 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => setSelectedWinnerId(fighterA.id)}
-                    className={`relative overflow-hidden rounded-xl py-4 border-2 transition-all active:scale-95 group ${selectedWinnerId === fighterA.id ? 'bg-primary border-primary shadow-[0_0_20px_rgba(236,19,19,0.3)]' : 'bg-[#1a0f0f] border-transparent hover:bg-[#2a1515] hover:border-primary/30'}`}
+                    onClick={() => handleSelectFighter(fighterAId)}
+                    className={`relative overflow-hidden rounded-xl py-4 border-2 transition-all active:scale-95 group ${selectedWinnerId === fighterAId ? 'bg-primary border-primary shadow-[0_0_20px_rgba(236,19,19,0.3)]' : 'bg-[#1a0f0f] border-transparent hover:bg-[#2a1515] hover:border-primary/30'}`}
                   >
-                    <span className={`font-condensed font-black uppercase text-sm md:text-lg italic leading-none tracking-tight block text-center ${selectedWinnerId === fighterA.id ? 'text-white' : 'text-white/40 group-hover:text-white'}`}>{fighterA.name}</span>
+                    <span className={`font-condensed font-black uppercase text-sm md:text-lg italic leading-none tracking-tight block text-center ${selectedWinnerId === fighterAId ? 'text-white' : 'text-white/40 group-hover:text-white'}`}>{fighterA?.name || 'Lutador A'}</span>
                   </button>
                   <button
-                    onClick={() => setSelectedWinnerId(fighterB.id)}
-                    className={`relative overflow-hidden rounded-xl py-4 border-2 transition-all active:scale-95 group ${selectedWinnerId === fighterB.id ? 'bg-primary border-primary shadow-[0_0_20px_rgba(236,19,19,0.3)]' : 'bg-[#1a0f0f] border-transparent hover:bg-[#2a1515] hover:border-primary/30'}`}
+                    onClick={() => handleSelectFighter(fighterBId)}
+                    className={`relative overflow-hidden rounded-xl py-4 border-2 transition-all active:scale-95 group ${selectedWinnerId === fighterBId ? 'bg-primary border-primary shadow-[0_0_20px_rgba(236,19,19,0.3)]' : 'bg-[#1a0f0f] border-transparent hover:bg-[#2a1515] hover:border-primary/30'}`}
                   >
-                    <span className={`font-condensed font-black uppercase text-sm md:text-lg italic leading-none tracking-tight block text-center ${selectedWinnerId === fighterB.id ? 'text-white' : 'text-white/40 group-hover:text-white'}`}>{fighterB.name}</span>
+                    <span className={`font-condensed font-black uppercase text-sm md:text-lg italic leading-none tracking-tight block text-center ${selectedWinnerId === fighterBId ? 'text-white' : 'text-white/40 group-hover:text-white'}`}>{fighterB?.name || 'Lutador B'}</span>
                   </button>
                 </div>
               </div>
@@ -388,13 +442,24 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
                       </>
                     ) : (
                       <>
-                        <span>{eventPicks[activeFight.id!] ? 'Atualizar' : 'Confirmar'}</span>
+                        <span>
+                          {currentFights.findIndex(f => f.id === activeFightId) === currentFights.length - 1
+                            ? (eventPicks[activeFight.id!] ? 'Atualizar & Finalizar' : 'Finalizar Card')
+                            : (eventPicks[activeFight.id!] ? 'Atualizar' : 'Confirmar')
+                          }
+                        </span>
                         <span className="material-symbols-outlined font-black text-base md:text-xl">arrow_forward</span>
                       </>
                     )}
                   </>
                 )}
               </button>
+
+              {!selectedRound && selectedWinnerId && !isLocked && (
+                <p className="text-[10px] md:text-xs text-center mt-2 text-yellow-500/80 font-black uppercase tracking-widest animate-pulse">
+                  Escolha o Método e o Round para confirmar
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -445,7 +510,7 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
                         )}
                       </div>
                       <p className={`text-[9px] md:text-[11px] font-condensed font-black leading-none truncate italic ${isCurrent ? 'text-white' : (hasPick ? 'text-white/80' : 'text-white/40')}`}>
-                        {fight.fighter_a.name.split(' ').pop()} <span className="opacity-20 mx-0.5">VS</span> {fight.fighter_b.name.split(' ').pop()}
+                        {(fight.fighter_a?.name || (fight as any).fighterA?.name || 'Lutador A').split(' ').pop()} <span className="opacity-20 mx-0.5">VS</span> {(fight.fighter_b?.name || (fight as any).fighterB?.name || 'Lutador B').split(' ').pop()}
                       </p>
                     </div>
                   </div>
@@ -515,12 +580,12 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
                             {fight.weight_class}
                           </p>
                           <div className={`text-base font-condensed font-black leading-none truncate italic ${isCurrent ? 'text-white' : 'text-white/90'}`}>
-                            {fight.fighter_a.name.split(' ').pop()} <span className="opacity-40 italic font-black mx-1">VS</span> {fight.fighter_b.name.split(' ').pop()}
+                            {(fight.fighter_a?.name || (fight as any).fighterA?.name || 'Lutador A').split(' ').pop()} <span className="opacity-40 italic font-black mx-1">VS</span> {(fight.fighter_b?.name || (fight as any).fighterB?.name || 'Lutador B').split(' ').pop()}
                           </div>
                           {hasPick && !isCurrent && (
                             <p className="text-[10px] text-green-500 font-bold uppercase mt-1 flex items-center gap-1">
                               <span className="w-1 h-1 bg-green-500 rounded-full" />
-                              {selectedFighter?.name.split(' ').pop()} por {pick.method}
+                              {(selectedFighter?.name || 'Lutador').split(' ').pop()} por {pick.method}
                             </p>
                           )}
                         </div>
@@ -538,10 +603,15 @@ const Picks: React.FC<PicksProps> = ({ onNavigate }) => {
 
               <div className="p-6 flex-shrink-0 bg-black/40 border-t border-white/10">
                 <button
-                  onClick={() => setIsCardDrawerOpen(false)}
-                  className="w-full py-4 bg-primary text-white font-condensed font-black text-xl uppercase tracking-widest rounded-2xl shadow-neon transition-transform active:scale-95"
+                  onClick={picksDone === currentFights.length ? handleFinalSubmit : () => setIsCardDrawerOpen(false)}
+                  disabled={isSubmitting}
+                  className={`w-full py-4 text-white font-condensed font-black text-xl uppercase tracking-widest rounded-2xl shadow-neon transition-transform active:scale-95 ${picksDone === currentFights.length ? 'bg-primary' : 'bg-surface-highlight hover:bg-white/10'}`}
                 >
-                  Continuar Palpitando
+                  {isSubmitting ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>
+                  ) : (
+                    picksDone === currentFights.length ? 'Enviar Palpites' : 'Voltar e Completar'
+                  )}
                 </button>
               </div>
             </div>

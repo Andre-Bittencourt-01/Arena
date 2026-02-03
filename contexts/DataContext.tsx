@@ -4,6 +4,7 @@ import { Event, Fight, Fighter, User, Pick, League } from '../types';
 import { IDataService, RankingPeriod } from '../services/types';
 import { MockDataService } from '../services/MockDataService';
 import { ApiDataService } from '../services/ApiDataService';
+import { useAuth } from './AuthContext';
 
 interface DataContextType {
     events: Event[];
@@ -33,7 +34,8 @@ interface DataContextType {
 
     // Picks Management
     getAllPicksForEvent: (eventId: string) => Promise<Pick[]>;
-    updatePick: (pick: Pick) => Promise<void>;
+    submitPick: (payload: any) => Promise<void>;
+    submitPicksBatch: (picks: any[]) => Promise<void>;
 
     // Leaderboard
     leaderboard: User[];
@@ -78,6 +80,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const { user, loading: authLoading } = useAuth();
+
     const refreshData = useCallback(async () => {
         setLoading(true);
         try {
@@ -119,9 +123,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [rankingFilter, selectedPeriodId, currentEvent]); // Removed user dependency
 
     useEffect(() => {
+        if (authLoading) return;
         setSelectedPeriodId(null); // Reset specific period when switching filters
         refreshData();
-    }, [rankingFilter]); // Refresh when filter changes
+    }, [rankingFilter, authLoading, user]); // Refresh when filter changes or auth state changes
 
     useEffect(() => {
         const fetchFights = async () => {
@@ -134,8 +139,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [currentEvent]);
 
     useEffect(() => {
+        if (authLoading) return;
         refreshData();
-    }, [selectedPeriodId]);
+    }, [selectedPeriodId, authLoading, user]);
 
     // Auth retired from here
 
@@ -200,9 +206,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await refreshData();
     }, [refreshData]);
 
-    const updatePick = useCallback(async (pick: Pick) => {
-        await dataService.updatePick(pick);
+    const submitPick = useCallback(async (payload: any) => {
+        await dataService.submitPick(payload);
         await refreshData();
+    }, [refreshData]);
+
+    const submitPicksBatch = useCallback(async (picks: any[]) => {
+        setLoading(true);
+        try {
+            await dataService.submitPicksBatch(picks);
+            await refreshData();
+        } finally {
+            setLoading(false);
+        }
     }, [refreshData]);
 
     const value = useMemo(() => ({
@@ -225,7 +241,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         createFighter,
         getPicksForEvent: (eventId: string) => dataService.getPicksForEvent(eventId),
         getAllPicksForEvent: (eventId: string) => dataService.getAllPicksForEvent(eventId),
-        updatePick,
+        submitPick,
+        submitPicksBatch,
         leaderboard,
         rankingFilter,
         setRankingFilter,
@@ -250,7 +267,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         events, currentEvent, currentFights, loading, refreshData, createEvent,
         updateEvent, deleteEvent, getFightsForEvent, createFight, updateFight,
-        deleteFight, fighters, createFighter, updatePick, leaderboard,
+        deleteFight, fighters, createFighter, submitPick, leaderboard,
         rankingFilter, selectedPeriodId, getAdminEvents
     ]);
 

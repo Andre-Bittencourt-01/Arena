@@ -2,8 +2,8 @@ import { IUserRepository } from '../../repositories/IUserRepository.js';
 import { IYouTubeProvider } from '../../providers/IYouTubeProvider.js';
 
 interface SyncYoutubeStatusRequest {
-    userId: string;
-    googleToken: string;
+    user_id: string;
+    google_token: string;
 }
 
 export class SyncYoutubeStatusUseCase {
@@ -12,7 +12,7 @@ export class SyncYoutubeStatusUseCase {
         private youtubeProvider: IYouTubeProvider
     ) { }
 
-    async execute({ userId, googleToken }: SyncYoutubeStatusRequest): Promise<void> {
+    async execute({ user_id: userId, google_token: googleToken }: SyncYoutubeStatusRequest): Promise<void> {
         const user = await this.userRepository.findById(userId);
 
         if (!user) {

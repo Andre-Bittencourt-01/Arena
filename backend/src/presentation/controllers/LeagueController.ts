@@ -16,11 +16,11 @@ const listLeaguesUseCase = new ListLeaguesUseCase(leagueRepository);
 interface CreateLeagueBody {
     name: string;
     description?: string;
-    ownerId: string;
+    owner_id: string;
 }
 
 interface JoinLeagueBody {
-    userId: string;
+    user_id: string;
 }
 
 interface LeagueParams {
@@ -51,16 +51,16 @@ export class LeagueController {
 
     async create(request: FastifyRequest<{ Body: CreateLeagueBody }>, reply: FastifyReply) {
         try {
-            const { name, description, ownerId } = request.body;
+            const { name, description, owner_id } = request.body;
 
-            if (!name || !ownerId) {
-                return reply.status(400).send({ error: "Name and ownerId are required" });
+            if (!name || !owner_id) {
+                return reply.status(400).send({ error: "Name and owner_id are required" });
             }
 
             const league = await createLeagueUseCase.execute({
                 name,
                 description,
-                ownerId
+                owner_id
             });
 
             return reply.status(201).send(league);
@@ -73,15 +73,15 @@ export class LeagueController {
     async join(request: FastifyRequest<{ Body: JoinLeagueBody, Params: LeagueParams }>, reply: FastifyReply) {
         try {
             const { id } = request.params;
-            const { userId } = request.body;
+            const { user_id } = request.body;
 
-            if (!id || !userId) {
-                return reply.status(400).send({ error: "League ID and userId are required" });
+            if (!id || !user_id) {
+                return reply.status(400).send({ error: "League ID and user_id are required" });
             }
 
             const membership = await joinLeagueUseCase.execute({
-                leagueId: id,
-                userId
+                league_id: id,
+                user_id
             });
 
             return reply.status(200).send(membership);

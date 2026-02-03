@@ -1,5 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { SavePickUseCase } from '../../domain/useCases/pick/SavePickUseCase.js';
+import { SaveBatchPicksUseCase } from '../../domain/useCases/pick/SaveBatchPicksUseCase.js';
 import { GetUserPicksUseCase } from '../../domain/useCases/pick/GetUserPicksUseCase.js';
 import { PrismaPickRepository } from '../../infra/database/repositories/PrismaPickRepository.js';
 import { PrismaFightRepository } from '../../infra/database/repositories/PrismaFightRepository.js';
@@ -8,29 +9,30 @@ const pickRepository = new PrismaPickRepository();
 const fightRepository = new PrismaFightRepository();
 const savePickUseCase = new SavePickUseCase(pickRepository, fightRepository);
 const getUserPicksUseCase = new GetUserPicksUseCase(pickRepository);
+const saveBatchPicksUseCase = new SaveBatchPicksUseCase(pickRepository, fightRepository);
 
 interface SavePickBody {
-    userId: string;
-    fightId: string;
-    eventId: string;
-    fighterId: string;
+    user_id: string;
+    fight_id: string;
+    event_id: string;
+    fighter_id: string;
     method: string;
     round: string;
 }
 
 interface UserPicksParams {
-    eventId: string;
+    eventId: string; // URL param usually follows route definition, let's see routes next
 }
 
 interface UserPicksQuery {
-    userId: string;
+    user_id: string;
 }
 
 export class PickController {
     async getUserPicks(request: FastifyRequest<{ Params: UserPicksParams, Querystring: UserPicksQuery }>, reply: FastifyReply) {
         try {
             const { eventId } = request.params;
-            const { userId } = request.query;
+            const { user_id: userId } = request.query;
 
             const picks = await getUserPicksUseCase.execute({ userId, eventId });
             return reply.status(200).send(picks);
@@ -44,6 +46,17 @@ export class PickController {
         try {
             const pick = await savePickUseCase.execute(request.body);
             return reply.status(201).send(pick);
+        } catch (error: any) {
+            const status = error.message.includes("closed") ? 403 : 400;
+            return reply.status(status).send({ error: error.message });
+        }
+    }
+
+    async saveBatch(request: FastifyRequest<{ Body: { picks: SavePickBody[] } }>, reply: FastifyReply) {
+        try {
+            const { picks } = request.body;
+            await saveBatchPicksUseCase.execute(picks);
+            return reply.status(201).send({ message: "Picks saved successfully" });
         } catch (error: any) {
             const status = error.message.includes("closed") ? 403 : 400;
             return reply.status(status).send({ error: error.message });

@@ -9,7 +9,7 @@ export class SavePickUseCase {
     ) { }
 
     async execute(data: SavePickDTO): Promise<Pick> {
-        const fightWithEvent = await this.fightRepository.findByIdWithEvent(data.fightId);
+        const fightWithEvent = await this.fightRepository.findByIdWithEvent(data.fight_id);
 
         if (!fightWithEvent) {
             throw new Error("Fight not found");

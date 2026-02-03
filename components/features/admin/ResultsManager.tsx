@@ -48,20 +48,22 @@ const ResultsManager: React.FC<ResultsManagerProps> = ({
         else if (fight.result === 'draw') setResultType('DRAW');
         else if (methodUpper.includes('DEC')) setResultType('DEC');
         else if (methodUpper.includes('SUB')) setResultType('SUB');
-        else if (methodUpper.includes('KO') || methodUpper.includes('TKO')) setResultType('KO/TKO');
+        else if (methodUpper.includes('KO')) setResultType('KO');
         else setResultType('');
 
         setResultWinnerId(fight.winner_id || '');
 
         // 2. Determine Detail (Round or Dec Type)
-        if (methodUpper.includes('DEC') || fight.result === 'draw') {
-            if (methodUpper.includes('UNA') || methodUpper.includes('UNI')) setResultDetail('Unânime');
-            else if (methodUpper.includes('SPLIT') || methodUpper.includes('DIV')) setResultDetail('Dividida');
-            else if (methodUpper.includes('MAJ')) setResultDetail('Majoritária');
-            else if (methodUpper.includes('TEC')) setResultDetail('Técnica');
+        const roundEndUpper = (fight.round_end || '').toUpperCase();
+
+        if (resultType === 'DEC' || resultType === 'DRAW') {
+            if (methodUpper.includes('UNA') || methodUpper.includes('UNI') || roundEndUpper.includes('UNA') || roundEndUpper.includes('UNI')) setResultDetail('Unânime');
+            else if (methodUpper.includes('SPLIT') || methodUpper.includes('DIV') || roundEndUpper.includes('SPLIT') || roundEndUpper.includes('DIV')) setResultDetail('Dividida');
+            else if (methodUpper.includes('MAJ') || roundEndUpper.includes('MAJ')) setResultDetail('Majoritária');
+            else if (methodUpper.includes('TEC') || roundEndUpper.includes('TEC')) setResultDetail('Técnica');
             else setResultDetail('');
         } else {
-            // Extract Round Number
+            // Extract Round Number - Only if not DEC/DRAW to avoid mapping "Unânime" to ""
             setResultDetail(fight.round_end ? fight.round_end.replace('R', '') : '');
         }
 
@@ -76,22 +78,22 @@ const ResultsManager: React.FC<ResultsManagerProps> = ({
 
         if (resultType === 'NC') {
             finalResult = 'nc';
-            finalMethod = 'NC';
+            finalMethod = 'Sem Resultado';
             finalWinnerId = undefined as any;
             finalRoundEnd = '';
         } else if (resultType === 'DRAW') {
             finalResult = 'draw';
-            finalMethod = `Draw (${resultDetail})`;
-            finalRoundEnd = resultDetail === 'Técnica' ? `R${fight.rounds}` : 'DEC';
+            finalMethod = 'Empate';
             finalWinnerId = undefined as any;
+            finalRoundEnd = resultDetail; // "Unânime", "Dividida", etc.
         } else if (resultType === 'DEC') {
             finalResult = 'win';
-            finalMethod = `DEC (${resultDetail})`;
-            finalRoundEnd = 'DEC';
+            finalMethod = 'Decisão';
+            finalRoundEnd = resultDetail;
         } else {
-            // KO/TKO or SUB
+            // KO or SUB
             finalResult = 'win';
-            finalMethod = resultType === 'KO/TKO' ? 'KO/TKO' : 'SUB';
+            finalMethod = resultType === 'KO' ? 'KO' : 'SUB';
             finalRoundEnd = `R${resultDetail}`;
         }
 
@@ -158,14 +160,16 @@ const ResultsManager: React.FC<ResultsManagerProps> = ({
                                             {/* Fight Header Info */}
                                             <div className="flex justify-between items-center mb-4">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="text-right">
-                                                        <p className={`font-bold uppercase ${fight.winner_id === fight.fighter_a_id ? 'text-green-500' : 'text-white'}`}>
+                                                    <div className={`text-right p-2 rounded transition-colors ${fight.winner_id && fight.fighter_a_id && fight.winner_id === fight.fighter_a_id ? 'bg-green-500/10 border border-green-500/50' : ''}`}>
+                                                        <p className={`font-bold uppercase ${fight.winner_id && fight.fighter_a_id && fight.winner_id === fight.fighter_a_id ? 'text-green-500' : 'text-white'}`}>
                                                             {fight?.fighter_a?.name || 'Unknown A'}
+                                                            {fight.winner_id && fight.fighter_a_id && fight.winner_id === fight.fighter_a_id && <span className="ml-1 text-[10px]">🏆</span>}
                                                         </p>
                                                     </div>
                                                     <span className="text-xs text-gray-500 font-bold">VS</span>
-                                                    <div className="text-left">
-                                                        <p className={`font-bold uppercase ${fight.winner_id === fight.fighter_b_id ? 'text-green-500' : 'text-white'}`}>
+                                                    <div className={`text-left p-2 rounded transition-colors ${fight.winner_id && fight.fighter_b_id && fight.winner_id === fight.fighter_b_id ? 'bg-green-500/10 border border-green-500/50' : ''}`}>
+                                                        <p className={`font-bold uppercase ${fight.winner_id && fight.fighter_b_id && fight.winner_id === fight.fighter_b_id ? 'text-green-500' : 'text-white'}`}>
+                                                            {fight.winner_id && fight.fighter_b_id && fight.winner_id === fight.fighter_b_id && <span className="mr-1 text-[10px]">🏆</span>}
                                                             {fight?.fighter_b?.name || 'Unknown B'}
                                                         </p>
                                                     </div>
@@ -178,7 +182,9 @@ const ResultsManager: React.FC<ResultsManagerProps> = ({
                                                             <p className="text-xs font-mono text-white">{fight.method || '-'}</p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-[10px] text-gray-400 uppercase font-bold">Round</p>
+                                                            <p className="text-[10px] text-gray-400 uppercase font-bold">
+                                                                {(fight.method === 'Decisão' || fight.method === 'Empate') ? 'Tipo' : 'Round'}
+                                                            </p>
                                                             <p className="text-xs font-mono text-white">{fight.round_end || '-'}</p>
                                                         </div>
                                                         <button
@@ -209,22 +215,22 @@ const ResultsManager: React.FC<ResultsManagerProps> = ({
                                                             className="admin-input"
                                                         >
                                                             <option value="">Selecione...</option>
-                                                            <option value="KO/TKO">KO / TKO</option>
-                                                            <option value="SUB">Finalização (SUB)</option>
-                                                            <option value="DEC">Decisão (DEC)</option>
+                                                            <option value="KO">KO (Nocaute)</option>
+                                                            <option value="SUB">SUB (Finalização)</option>
+                                                            <option value="DEC">Decisão</option>
                                                             <option value="DRAW">Empate</option>
-                                                            <option value="NC">No Contest (NC)</option>
+                                                            <option value="NC">Sem Resultado (NC)</option>
                                                         </select>
                                                     </div>
 
-                                                    {/* 2. Winner (Conditional: KO/TKO, SUB, DEC) */}
-                                                    {(resultType === 'KO/TKO' || resultType === 'SUB' || resultType === 'DEC') && (
+                                                    {/* 2. Winner (Conditional) */}
+                                                    {(resultType === 'KO' || resultType === 'SUB' || resultType === 'DEC') && (
                                                         <div>
-                                                            <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Vencedor</label>
+                                                            <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">Vencedor 🏆</label>
                                                             <select
                                                                 value={resultWinnerId}
                                                                 onChange={e => setResultWinnerId(e.target.value)}
-                                                                className="admin-input"
+                                                                className={`admin-input ${resultWinnerId ? 'border-green-500 bg-green-500/5' : ''}`}
                                                             >
                                                                 <option value="">Selecione...</option>
                                                                 <option value={fight.fighter_a_id}>{fight?.fighter_a?.name || 'Fighter A'}</option>
@@ -237,7 +243,7 @@ const ResultsManager: React.FC<ResultsManagerProps> = ({
                                                     {resultType !== 'NC' && resultType !== '' && (
                                                         <div>
                                                             <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1">
-                                                                {(resultType === 'DEC' || resultType === 'DRAW') ? 'Tipo de Decisão' : 'Round do Término'}
+                                                                {(resultType === 'DEC' || resultType === 'DRAW') ? 'Tipo' : 'Round'}
                                                             </label>
                                                             <select
                                                                 value={resultDetail}
@@ -247,15 +253,15 @@ const ResultsManager: React.FC<ResultsManagerProps> = ({
                                                                 <option value="">Selecione...</option>
                                                                 {(resultType === 'DEC' || resultType === 'DRAW') ? (
                                                                     <>
-                                                                        <option value="Unanimous">Unânime</option>
-                                                                        <option value="Split">Dividida</option>
-                                                                        <option value="Majority">Majoritária</option>
-                                                                        <option value="Technical">Técnica</option>
+                                                                        <option value="Unânime">Unânime</option>
+                                                                        <option value="Dividida">Dividida</option>
+                                                                        <option value="Majoritária">Majoritária</option>
+                                                                        <option value="Técnica">Técnica</option>
                                                                     </>
                                                                 ) : (
                                                                     // Generate Rounds based on fight duration
                                                                     Array.from({ length: fight.rounds || 3 }).map((_, i) => (
-                                                                        <option key={i + 1} value={String(i + 1)}>Round {i + 1}</option>
+                                                                        <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
                                                                     ))
                                                                 )}
                                                             </select>

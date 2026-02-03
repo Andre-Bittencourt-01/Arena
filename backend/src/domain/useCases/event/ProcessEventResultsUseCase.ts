@@ -4,8 +4,8 @@ import { IUserRepository } from '../../repositories/IUserRepository.js';
 import { ScoringService } from '../../services/ScoringService.js';
 
 interface FightResult {
-    fightId: string;
-    winnerId: string;
+    fight_id: string;
+    winner_id: string;
     method: string;
     round: string;
 }
@@ -26,11 +26,9 @@ export class ProcessEventResultsUseCase {
     async execute(request: ProcessEventResultsRequest): Promise<void> {
         // 1. Update all fights with official results
         for (const result of request.results) {
-            await this.fightRepository.update(result.fightId, {
-                winner_id: result.winnerId,
+            await this.fightRepository.update(result.fight_id, {
+                winner_id: result.winner_id,
                 method: result.method,
-                // Assuming schema might need round_end or similar, 
-                // but let's stick to what we have or Partial<Fight>
             });
         }
 
@@ -40,14 +38,13 @@ export class ProcessEventResultsUseCase {
         // 3. Process each pick
         for (const pick of picks) {
             // Find the fight details for this pick to calculate score
-            const fightResult = request.results.find(r => r.fightId === pick.fight_id);
+            const fightResult = request.results.find(r => r.fight_id === pick.fight_id);
             if (!fightResult) continue;
 
             // We need a Fight object for the ScoringService. 
-            // We can create a mock/partial one from the result since we just updated it.
             const mockFight: any = {
-                id: fightResult.fightId,
-                winner_id: fightResult.winnerId,
+                id: fightResult.fight_id,
+                winner_id: fightResult.winner_id,
                 method: fightResult.method
             };
 

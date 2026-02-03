@@ -166,8 +166,14 @@ export class ApiDataService implements IDataService {
         return (data as PickDTO[]).map(mapPickDTOToDomain);
     }
 
-    async updatePick(pick: Pick): Promise<void> {
-        await api.post('/picks', pick);
+    async submitPick(data: any): Promise<void> {
+        console.log('🚀 [DEBUG] Enviando palpite (Borda Snake Case):', data);
+        await api.post('/picks', data);
+    }
+
+    async submitPicksBatch(picks: any[]): Promise<void> {
+        console.log('🚀 [DEBUG] Enviando lote final:', picks.length);
+        await api.post('/picks/batch', { picks });
     }
 
     // Leaderboard
@@ -227,13 +233,13 @@ export class ApiDataService implements IDataService {
     }
 
     // Leagues
-    async createLeague(name: string, ownerId: string, description?: string, logoUrl?: string): Promise<League> {
-        const response = await api.post('/leagues', { name, description, ownerId, logo_url: logoUrl });
+    async createLeague(name: string, owner_id: string, description?: string, logo_url?: string): Promise<League> {
+        const response = await api.post('/leagues', { name, description, owner_id, logo_url });
         return mapLeagueDTOToDomain(response.data as LeagueDTO);
     }
 
-    async joinLeague(inviteCode: string, userId: string): Promise<League> {
-        const response = await api.post(`/leagues/join`, { inviteCode, userId });
+    async joinLeague(invite_code: string, user_id: string): Promise<League> {
+        const response = await api.post(`/leagues/join`, { invite_code, user_id });
         return mapLeagueDTOToDomain(response.data as LeagueDTO);
     }
 
@@ -266,8 +272,8 @@ export class ApiDataService implements IDataService {
         return response.data;
     }
 
-    async manageAdmin(leagueId: string, userId: string, action: 'promote' | 'demote'): Promise<League> {
-        const response = await api.post(`/leagues/${leagueId}/admins`, { userId, action });
+    async manageAdmin(leagueId: string, user_id: string, action: 'promote' | 'demote'): Promise<League> {
+        const response = await api.post(`/leagues/${leagueId}/admins`, { user_id, action });
         return response.data;
     }
 }

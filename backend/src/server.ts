@@ -41,8 +41,11 @@ server.register(userRoutes);
 // Admin Routes
 import { adminRoutes } from './infrastructure/http/routes/adminRoutes.js';
 import { eventRoutes } from './infrastructure/http/routes/eventRoutes.js';
+import { pickRoutes } from './infrastructure/http/routes/pickRoutes.js';
+
 server.register(eventRoutes, { prefix: 'events' });
 server.register(adminRoutes, { prefix: 'admin' });
+server.register(pickRoutes, { prefix: 'picks' });
 
 const start = async () => {
     try {

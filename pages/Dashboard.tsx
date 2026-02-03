@@ -12,21 +12,30 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { events, leaderboard, setCurrentEvent, getAllPicksForEvent, getFightsForEvent } = useData();
-  const { user } = useAuth();
-  const [nextEvent, setNextEvent] = useState(events.find(e => e.status === 'upcoming') || null);
+  const { user, loading: authLoading } = useAuth();
+
+  if (authLoading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+        <p className="text-gray-400 font-condensed font-bold uppercase tracking-widest animate-pulse">Carregando Arena...</p>
+      </div>
+    );
+  }
+  const [nextEvent, setNextEvent] = useState(events.find(e => e.status === 'SCHEDULED') || null);
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
 
 
   useEffect(() => {
     // Priority: Live > Upcoming (Chronologically nearest)
-    const live = events.find(e => e.status === 'live');
+    const live = events.find(e => e.status === 'LIVE');
     if (live) {
       setNextEvent(live);
     } else {
       // Filter for upcoming events and sort them by date (ascending)
       const upcomingEvents = events
-        .filter(e => e.status === 'upcoming')
+        .filter(e => e.status === 'SCHEDULED')
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       setNextEvent(upcomingEvents[0] || null);
@@ -81,7 +90,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         const monthlyEvents = events.filter(event => {
           const eventDate = new Date(event.date);
-          return event.status === 'completed' &&
+          return event.status === 'COMPLETED' &&
             eventDate.getMonth() === currentMonth &&
             eventDate.getFullYear() === currentYear;
         });
@@ -201,7 +210,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           {nextEvent ? (
             <div className="relative overflow-hidden rounded-2xl bg-surface-dark border border-white/5 shadow-2xl group min-h-[260px] md:min-h-[400px]">
               <div className="absolute top-3 left-3 z-30">
-                {nextEvent.status === 'live' ? (
+                {nextEvent.status === 'LIVE' ? (
                   <div className="inline-flex items-center gap-2 px-2 py-0.5 rounded bg-red-600/90 border border-red-500/50 text-red-100 text-[10px] md:text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.4)] backdrop-blur-md animate-pulse">
                     <span className="relative flex h-1.5 w-1.5">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>

@@ -328,76 +328,87 @@ const FightManager: React.FC<FightManagerProps> = ({
                         <div className="p-2 space-y-2 max-h-[500px] overflow-y-auto">
                             <div className="p-2 space-y-2 max-h-[500px] overflow-y-auto">
                                 {(currentEventFights || []).length > 0 ? (
-                                    (currentEventFights || []).map((fight, i) => (
-                                        <div
-                                            key={fight.id || i}
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, i)}
-                                            onDragOver={(e) => handleDragOver(e, i)}
-                                            onDragEnd={handleDragEnd}
-                                            className={`bg-white/5 border border-white/5 rounded p-3 relative group transition-transform ${draggedFightIndex === i ? 'opacity-50 scale-95 border-primary' : 'hover:border-white/20'}`}
-                                        >
-                                            <div className="flex items-center gap-1 absolute left-2 top-1/2 -translate-y-1/2 text-gray-600 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing">
-                                                <span className="material-symbols-outlined">drag_indicator</span>
-                                            </div>
-                                            <div className="pl-6">
-                                                <div className="flex justify-between items-center text-[10px] uppercase font-bold text-gray-500 mb-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={fight?.order === currentEventFights.length ? "text-primary" : ""}>Order #{fight?.order}</span>
-                                                        {i === 0 && <span className="text-[8px] bg-white/10 px-1 rounded text-white/50">Main Event?</span>}
+                                    (currentEventFights || []).map((fight, i) => {
+                                        // Normalização de Exibição
+                                        const displayRound = fight.round_end || '';
+                                        const displayTime = fight.time || '';
+                                        const hasResultInfo = displayRound || displayTime;
+
+                                        console.log('Fight Render:', fight.id, { round_end: fight.round_end, roundEnd: (fight as any).roundEnd });
+
+                                        return (
+                                            <div
+                                                key={fight.id || i}
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, i)}
+                                                onDragOver={(e) => handleDragOver(e, i)}
+                                                onDragEnd={handleDragEnd}
+                                                className={`bg-white/5 border border-white/5 rounded p-3 relative group transition-transform ${draggedFightIndex === i ? 'opacity-50 scale-95 border-primary' : 'hover:border-white/20'}`}
+                                            >
+                                                <div className="flex items-center gap-1 absolute left-2 top-1/2 -translate-y-1/2 text-gray-600 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing">
+                                                    <span className="material-symbols-outlined">drag_indicator</span>
+                                                </div>
+                                                <div className="pl-6">
+                                                    <div className="flex justify-between items-center text-[10px] uppercase font-bold text-gray-500 mb-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={fight?.order === currentEventFights.length ? "text-primary" : ""}>Order #{fight?.order}</span>
+                                                            {i === 0 && <span className="text-[8px] bg-white/10 px-1 rounded text-white/50">Main Event?</span>}
+                                                        </div>
+                                                        {fight?.is_title && <span className="text-yellow-500 flex items-center gap-0.5"><span className="material-symbols-outlined text-[10px]">emoji_events</span> Belt</span>}
+                                                        <span>{fight?.weight_class}</span>
+
+                                                        {/* Bloco de Resultado (Round/Tempo) */}
+                                                        {hasResultInfo && (
+                                                            <div className="flex items-center text-[10px] text-gray-500 border-l border-white/10 pl-2 ml-2 font-mono">
+                                                                {displayRound && <span className="font-bold text-gray-400">{displayRound}</span>}
+                                                                {displayTime && <span className="ml-1 opacity-70">- {displayTime}</span>}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    {fight?.is_title && <span className="text-yellow-500 flex items-center gap-0.5"><span className="material-symbols-outlined text-[10px]">emoji_events</span> Belt</span>}
-                                                    <span>{fight?.weight_class}</span>
-                                                    {(fight?.round_end || fight?.time) && (
-                                                        <span className="text-gray-600 border-l border-white/10 pl-2 ml-2 flex gap-1">
-                                                            {fight?.round_end && <span>{fight.round_end}</span>}
-                                                            {fight?.time && <span>- {fight.time}</span>}
+                                                    <div className="flex items-center justify-between gap-1 mb-2">
+                                                        <span className={`text-xs font-bold truncate w-20 ${fight?.winner_id === fight?.fighter_a_id ? 'text-green-500' : 'text-white'}`}>
+                                                            {fight?.fighter_a?.name?.split(' ').pop() || 'Unknown'}
+                                                            {fight?.winner_id === fight?.fighter_a_id && <span className="ml-1 text-[8px] align-top">🏆</span>}
                                                         </span>
+                                                        <span className="text-[10px] text-primary font-bold">VS</span>
+                                                        <span className={`text-xs font-bold truncate w-20 text-right ${fight?.winner_id === fight?.fighter_b_id ? 'text-green-500' : 'text-white'}`}>
+                                                            {fight?.winner_id === fight?.fighter_b_id && <span className="mr-1 text-[8px] align-top">🏆</span>}
+                                                            {fight?.fighter_b?.name?.split(' ').pop() || 'Unknown'}
+                                                        </span>
+                                                    </div>
+
+                                                    {fight?.result && (
+                                                        <div className="flex justify-between items-center border-t border-white/5 pt-2 mt-1">
+                                                            <div className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${fight?.result === 'win' ? 'bg-green-500/10 text-green-500' :
+                                                                fight?.result === 'draw' ? 'bg-yellow-500/10 text-yellow-500' :
+                                                                    'bg-gray-500/10 text-gray-400'
+                                                                }`}>
+                                                                {fight?.result === 'win' ? 'Vitória' : fight?.result === 'draw' ? 'Empate' : 'No Contest'}
+                                                            </div>
+                                                            <div className="text-[9px] text-gray-400 truncate max-w-[120px]">
+                                                                {fight?.method}
+                                                            </div>
+                                                        </div>
                                                     )}
-                                                </div>
-                                                <div className="flex items-center justify-between gap-1 mb-2">
-                                                    <span className={`text-xs font-bold truncate w-20 ${fight?.winner_id === fight?.fighter_a_id ? 'text-green-500' : 'text-white'}`}>
-                                                        {fight?.fighter_a?.name?.split(' ').pop() || 'Unknown'}
-                                                        {fight?.winner_id === fight?.fighter_a_id && <span className="ml-1 text-[8px] align-top">🏆</span>}
-                                                    </span>
-                                                    <span className="text-[10px] text-primary font-bold">VS</span>
-                                                    <span className={`text-xs font-bold truncate w-20 text-right ${fight?.winner_id === fight?.fighter_b_id ? 'text-green-500' : 'text-white'}`}>
-                                                        {fight?.winner_id === fight?.fighter_b_id && <span className="mr-1 text-[8px] align-top">🏆</span>}
-                                                        {fight?.fighter_b?.name?.split(' ').pop() || 'Unknown'}
-                                                    </span>
-                                                </div>
 
-                                                {fight?.result && (
-                                                    <div className="flex justify-between items-center border-t border-white/5 pt-2 mt-1">
-                                                        <div className={`text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ${fight?.result === 'win' ? 'bg-green-500/10 text-green-500' :
-                                                            fight?.result === 'draw' ? 'bg-yellow-500/10 text-yellow-500' :
-                                                                'bg-gray-500/10 text-gray-400'
-                                                            }`}>
-                                                            {fight?.result === 'win' ? 'Vitória' : fight?.result === 'draw' ? 'Empate' : 'No Contest'}
+                                                    {eventLockStatus === 'cascade' && cascadeStartTime && (
+                                                        <div className="mt-2 text-[9px] font-mono text-gray-500 flex items-center gap-1 border-t border-white/5 pt-1">
+                                                            <span className="material-symbols-outlined text-[10px]">lock_clock</span>
+                                                            <span className="text-gray-400">
+                                                                Fecha em: {new Date(new Date(cascadeStartTime).getTime() + ((fight?.order || (i + 1)) - 1) * 30 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                            {fight?.order && <span className="opacity-50">(Ord: {fight?.order})</span>}
                                                         </div>
-                                                        <div className="text-[9px] text-gray-400 truncate max-w-[120px]">
-                                                            {fight?.method}
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                    )}
 
-                                                {eventLockStatus === 'cascade' && cascadeStartTime && (
-                                                    <div className="mt-2 text-[9px] font-mono text-gray-500 flex items-center gap-1 border-t border-white/5 pt-1">
-                                                        <span className="material-symbols-outlined text-[10px]">lock_clock</span>
-                                                        <span className="text-gray-400">
-                                                            Fecha em: {new Date(new Date(cascadeStartTime).getTime() + ((fight?.order || (i + 1)) - 1) * 30 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
-                                                        {fight?.order && <span className="opacity-50">(Ord: {fight?.order})</span>}
+                                                    <div className="absolute inset-0 bg-black/90 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity rounded">
+                                                        <button onClick={() => handleEditFight(fight)} className="text-blue-400 hover:text-white"><span className="material-symbols-outlined">edit</span></button>
+                                                        <button onClick={() => handleDeleteFight(fight.id)} className="text-red-500 hover:text-white"><span className="material-symbols-outlined">delete</span></button>
                                                     </div>
-                                                )}
-
-                                                <div className="absolute inset-0 bg-black/90 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity rounded">
-                                                    <button onClick={() => handleEditFight(fight)} className="text-blue-400 hover:text-white"><span className="material-symbols-outlined">edit</span></button>
-                                                    <button onClick={() => handleDeleteFight(fight.id)} className="text-red-500 hover:text-white"><span className="material-symbols-outlined">delete</span></button>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <p className="text-center text-gray-500 py-4 text-xs uppercase font-bold">Nenhuma luta cadastrada</p>
                                 )}

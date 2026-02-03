@@ -581,6 +581,11 @@ export class MockDataService implements IDataService {
         this.fights = this.fights.filter(f => f.event_id !== id);
     }
 
+    async getAdminEvents(): Promise<Event[]> {
+        await this.delay();
+        return this.events;
+    }
+
     async getFights(eventId: string): Promise<Fight[]> {
         await this.delay();
         return this.fights.filter(f => f.event_id === eventId);
@@ -722,18 +727,40 @@ export class MockDataService implements IDataService {
         return this.picks.filter(p => p.eventId === eventId);
     }
 
-    async updatePick(updatedPick: Pick): Promise<void> {
+    async submitPick(data: any): Promise<void> {
         await this.delay();
-        const index = this.picks.findIndex(p => p.id === updatedPick.id);
+
+        // Se receber o payload simplificado (snake_case), converter para objeto Pick do domínio
+        const userId = data.userId || data.user_id;
+        const fightId = data.fightId || data.fight_id;
+        const pick: Pick = {
+            id: data.id || `pick_${userId}_${fightId}`,
+            userId: userId,
+            eventId: data.eventId || data.event_id || 'evt_ufc325',
+            fightId: fightId,
+            fighterId: data.fighterId || data.fighter_id,
+            method: data.method,
+            round: data.round,
+            pointsEarned: data.pointsEarned || 0
+        };
+
+        const index = this.picks.findIndex(p => p.id === pick.id);
         if (index !== -1) {
-            this.picks[index] = updatedPick;
+            this.picks[index] = pick;
         } else {
-            this.picks.push(updatedPick);
+            this.picks.push(pick);
         }
-        await this.recalculateUserPointsInternal(updatedPick.userId);
+        await this.recalculateUserPointsInternal(pick.userId);
         this.recalculateRanks();
         this.saveData('arena_picks', this.picks);
         this.saveData('arena_users', this.users);
+    }
+
+    async submitPicksBatch(picks: any[]): Promise<void> {
+        await this.delay();
+        for (const pickData of picks) {
+            await this.submitPick(pickData);
+        }
     }
 
     private async recalculateUserPointsInternal(userId: string): Promise<void> {
@@ -874,11 +901,11 @@ export class MockDataService implements IDataService {
         return this.leagues;
     }
 
-    async createLeague(name: string, ownerId: string, description?: string, logoUrl?: string): Promise<League> {
+    async createLeague(name: string, owner_id: string, description?: string, logo_url?: string): Promise<League> {
         await this.delay();
 
         // Validate limit (max 5 created leagues)
-        const ownedLeagues = this.leagues.filter(l => l.ownerId === ownerId);
+        const ownedLeagues = this.leagues.filter(l => l.ownerId === owner_id);
         if (ownedLeagues.length >= 5) {
             throw new Error("Você já criou o limite máximo de 5 ligas.");
         }
@@ -887,10 +914,10 @@ export class MockDataService implements IDataService {
             id: `league_${Date.now()}`,
             name,
             description: description || '',
-            logo: logoUrl || 'https://github.com/shadcn.png',
-            ownerId: ownerId,
+            logo: logo_url || 'https://github.com/shadcn.png',
+            ownerId: owner_id,
             admins: [], // Start with no admins, only owner
-            members: [ownerId], // Owner is automatically a member
+            members: [owner_id], // Owner is automatically a member
             inviteCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
             membersCount: 1,
             createdAt: new Date()
@@ -902,24 +929,24 @@ export class MockDataService implements IDataService {
     }
 
 
-    async joinLeague(inviteCode: string, userId: string): Promise<League> {
+    async joinLeague(invite_code: string, user_id: string): Promise<League> {
         await this.delay();
 
-        const leagueIndex = this.leagues.findIndex(l => l.inviteCode === inviteCode);
+        const leagueIndex = this.leagues.findIndex(l => l.inviteCode === invite_code);
         if (leagueIndex === -1) {
             throw new Error("Código de convite inválido.");
         }
 
         const league = this.leagues[leagueIndex];
 
-        if (league.members.includes(userId)) {
+        if (league.members.includes(user_id)) {
             return league; // User already in league, just return it
         }
 
         // Create updated league object
         const updatedLeague = {
             ...league,
-            members: [...league.members, userId],
+            members: [...league.members, user_id],
             membersCount: league.membersCount + 1
         };
 
@@ -986,7 +1013,7 @@ export class MockDataService implements IDataService {
         return updatedLeague;
     }
 
-    async manageAdmin(leagueId: string, userId: string, action: 'promote' | 'demote'): Promise<League> {
+    async manageAdmin(leagueId: string, user_id: string, action: 'promote' | 'demote'): Promise<League> {
         await this.delay();
         const leagueIndex = this.leagues.findIndex(l => l.id === leagueId);
         if (leagueIndex === -1) throw new Error("Liga não encontrada.");
@@ -995,9 +1022,9 @@ export class MockDataService implements IDataService {
         let updatedAdmins = [...league.admins];
 
         if (action === 'promote') {
-            if (!updatedAdmins.includes(userId)) updatedAdmins.push(userId);
+            if (!updatedAdmins.includes(user_id)) updatedAdmins.push(user_id);
         } else {
-            updatedAdmins = updatedAdmins.filter(id => id !== userId);
+            updatedAdmins = updatedAdmins.filter(id => id !== user_id);
         }
 
         const updatedLeague = {

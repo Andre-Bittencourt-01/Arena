@@ -2,16 +2,16 @@ import { IFightRepository } from "../../../domain/repositories/IFightRepository.
 
 interface UpdateFightRequest {
     id: string;
-    eventId: string;
-    fighterAId: string;
-    fighterBId: string;
+    event_id: string;
+    fighter_a_id: string;
+    fighter_b_id: string;
     rounds: number;
-    isTitle: boolean;
+    is_title: boolean;
     category: string;
-    winnerId?: string | null;
+    winner_id?: string | null;
     result?: string | null;
     method?: string | null;
-    roundEnd?: number | null;
+    round_end?: number | null;
     time?: string | null;
     status?: string;
     order?: number;
@@ -27,21 +27,19 @@ export class UpdateFightUseCase {
             throw new Error("Fight not found");
         }
 
-        // Map domain fields (camelCase) to DB fields (snake_case)
+        // Map domain fields (snake_case) to DB fields (snake_case)
         await this.fightRepository.update(data.id, {
-            event_id: data.eventId,
-            fighter_a_id: data.fighterAId,
-            fighter_b_id: data.fighterBId,
+            event_id: data.event_id,
+            fighter_a_id: data.fighter_a_id,
+            fighter_b_id: data.fighter_b_id,
             rounds: data.rounds,
-            is_title: data.isTitle,
+            is_title: data.is_title,
             category: data.category,
-            winner_id: data.winnerId || null,
+            winner_id: data.winner_id || null,
             result: (data.result as any) || null,
             method: data.method || null,
-            round_end: data.roundEnd ? String(data.roundEnd) : null,
-            time: data.time || null,
-            status: (data.status as any) || "SCHEDULED",
-            order: data.order
+            round_end: data.round_end ? String(data.round_end) : null,
+            time: data.time || null
         });
     }
 }

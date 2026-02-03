@@ -16,8 +16,7 @@ export class PrismaFightRepository implements IFightRepository {
             id,
             winnerId: data.winner_id,
             roundEnd: data.round_end,
-            result: data.result,
-            status: data.status // Should be undefined or removed
+            result: data.result
         });
 
         // Construct payload using 'connect' for relations to satisfy Prisma Client validation
@@ -30,7 +29,6 @@ export class PrismaFightRepository implements IFightRepository {
             method: data.method,
             round_end: data.round_end,
             time: data.time,
-            order: data.order,
 
             // 'status' column verification - mapped to lock_status if available
             lock_status: (data as any).lockStatus || (data as any).lock_status || undefined
@@ -66,11 +64,11 @@ export class PrismaFightRepository implements IFightRepository {
         await prisma.fight.create({
             data: {
                 id: randomUUID(),
-                event_id: data.eventId,
-                fighter_a_id: data.fighterAId,
-                fighter_b_id: data.fighterBId,
+                event_id: data.event_id,
+                fighter_a_id: data.fighter_a_id,
+                fighter_b_id: data.fighter_b_id,
                 rounds: data.rounds,
-                is_title: data.isTitle,
+                is_title: data.is_title,
                 category: data.category,
             }
         });
@@ -88,28 +86,35 @@ export class PrismaFightRepository implements IFightRepository {
 
         return fights.map(f => ({
             id: f.id,
-            eventId: f.event_id,
-            fighterA: {
-                ...f.fighter_a,
-                imageUrl: f.fighter_a.image_url || ''
-            },
-            fighterB: {
-                ...f.fighter_b,
-                imageUrl: f.fighter_b.image_url || ''
-            },
+            event_id: f.event_id,
+            fighter_a_id: f.fighter_a_id,
+            fighter_b_id: f.fighter_b_id,
             rounds: f.rounds,
-            isTitle: f.is_title,
+            is_title: f.is_title,
             category: f.category,
-            winnerId: f.winner_id,
+            winner_id: f.winner_id,
             winner: f.winner ? {
                 id: f.winner.id,
                 name: f.winner.name,
                 nickname: f.winner.nickname,
-                imageUrl: f.winner.image_url || ''
+                image_url: f.winner.image_url || ''
             } : null,
             method: f.method,
-            roundEnd: f.round_end,
-            time: f.time
+            round_end: f.round_end,
+            time: f.time,
+            status: f.result ? 'COMPLETED' : 'SCHEDULED', // Campo Derivado
+            fighter_a: {
+                id: f.fighter_a.id,
+                name: f.fighter_a.name,
+                nickname: f.fighter_a.nickname,
+                image_url: f.fighter_a.image_url || ''
+            },
+            fighter_b: {
+                id: f.fighter_b.id,
+                name: f.fighter_b.name,
+                nickname: f.fighter_b.nickname,
+                image_url: f.fighter_b.image_url || ''
+            }
         }));
     }
 }

@@ -10,7 +10,7 @@ const authService = new JwtAuthService();
 const syncYoutubeStatusUseCase = new SyncYoutubeStatusUseCase(userRepository, youtubeProvider);
 
 interface SyncBody {
-    googleToken: string;
+    google_token: string;
 }
 
 interface LoginBody {
@@ -23,11 +23,11 @@ export class AuthController {
     async syncYoutube(request: FastifyRequest<{ Body: SyncBody }>, reply: FastifyReply) {
         try {
             const user = (request as any).user;
-            const { googleToken } = request.body;
+            const { google_token: googleToken } = request.body;
 
             await syncYoutubeStatusUseCase.execute({
-                userId: user.id,
-                googleToken
+                user_id: user.id,
+                google_token: googleToken
             });
 
             return reply.status(200).send({ message: "Sync successful" });

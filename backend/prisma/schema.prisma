@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // --- DOMÍNIO DE ACESSO & USUÁRIO ---
@@ -133,6 +134,13 @@ model Fight {
   method        String?      // KO, SUB, DEC
   round_end     String?      // R1, R2...
   time          String?
+
+  // --- New Betting & Admin Fields ---
+  order            Int?      @default(0)
+  points           Int?      @default(10)
+  lock_status      String?   @default("OPEN")
+  custom_lock_time DateTime?
+  video_url        String?
 
   event     Event   @relation(fields: [event_id], references: [id])
   fighter_a Fighter @relation("FighterA", fields: [fighter_a_id], references: [id])

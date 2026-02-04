@@ -29,7 +29,9 @@ const Admin: React.FC<AdminProps> = ({ on_navigate }) => {
         create_fighter,
         get_all_picks_for_event,
         submit_pick,
-        get_admin_events
+
+        get_admin_events,
+        refresh_data
     } = useData();
 
     const [available_fighters, set_available_fighters] = useState<Fighter[]>([]);
@@ -297,85 +299,99 @@ const Admin: React.FC<AdminProps> = ({ on_navigate }) => {
     const [is_seeding, set_is_seeding] = useState(false);
 
     const handle_generate_seed = async () => {
-        if (!confirm('SEED 2.0: Gerar evento completo para teste do Story Creator?')) return;
-        set_is_seeding(true);
         try {
-            const suffix = Math.floor(Math.random() * 1000);
+            // 1. User Input for Count
+            const countInput = prompt("Quantas lutas deseja gerar neste evento?", "12");
+            if (!countInput) return; // User cancelled
+            const fightCount = parseInt(countInput, 10);
 
-            // 1. Create Event via Context (Tests Service Layer)
+            if (isNaN(fightCount) || fightCount < 1) {
+                alert("Por favor, insira um número válido.");
+                return;
+            }
+
+            set_is_seeding(true);
+
+            // GENERATE A UNIQUE BATCH ID
+            const seedId = Math.floor(Math.random() * 10000);
+
+            // 2. Create Future Event
+            // We set it 7 days in the future to ensure it passes any backend date validation constraints for now.
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 7);
+
             const evt = await create_event({
-                title: `UFC Victory ${suffix}`,
-                subtitle: "Zero-Translation Card",
-                date: new Date(Date.now() + 172800000).toISOString(),
-                location: "Rio de Janeiro, BR",
-                banner_url: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=1600&auto=format&fit=crop",
-                status: "upcoming"
+                title: `UFC Seed ${seedId}`,
+                subtitle: `Card com ${fightCount} Lutas`,
+                date: futureDate.toISOString(),
+                location: "Las Vegas, NV (Seed Arena)",
+                banner_url: "https://images.unsplash.com/photo-1555597673-b21d5c935865?q=80&w=1600&auto=format&fit=crop",
+                status: 'upcoming'
+                // Note: CreateEventUseCase default sets lock_status: 'OPEN', so this should accept picks.
             });
 
-            console.log(`✅ Event Created: ${evt.id}`);
+            if (!evt) throw new Error("Event creation failed");
+            console.log(`✅ Event Created: ${evt.title} (${evt.id})`);
 
-            // 2. Create Fighters & Fights
-            const names = ["Anderson Silva", "Chael Sonnen", "Vitor Belfort", "Wanderlei Silva"];
-            const imgs = [
-                "https://randomuser.me/api/portraits/men/1.jpg",
-                "https://randomuser.me/api/portraits/men/2.jpg",
-                "https://randomuser.me/api/portraits/men/3.jpg",
-                "https://randomuser.me/api/portraits/men/4.jpg"
-            ];
+            // 3. Mock Data Arrays
+            const weightClasses = ["Pesado", "Meio-Pesado", "Médio", "Meio-Médio", "Leve", "Pena", "Galo", "Mosca"];
+            const nicknames = ["The Rock", "Bones", "Spider", "Eagle", "Pitbull", "Phenom", "Assassin", "Machine", "Chaos", "Showtime"];
 
-            // Main Event
-            const f1 = await create_fighter({ name: `${names[0]} ${suffix}`, nickname: "Spider", image_url: imgs[0], wins: 34, losses: 11, draws: 0, nc: 1 });
-            const f2 = await create_fighter({ name: `${names[1]} ${suffix}`, nickname: "Gangster", image_url: imgs[1], wins: 31, losses: 17, draws: 1, nc: 0 });
+            // Loop to create requested number of fights
+            for (let i = 0; i < fightCount; i++) {
+                const isMainCard = i < 5;
+                const isMainEvent = i === 0;
 
-            const fight1 = await create_fight({
-                event_id: evt.id,
-                fighter_a_id: f1.id,
-                fighter_b_id: f2.id,
-                category: "Main Event",
-                weight_class: "Médio",
-                rounds: 5,
-                points: 100,
-                order: 1
-            });
+                // Better Images: Using randomuser.me for realistic faces
+                // Using IDs to ensure consistent but distinct faces
+                const imgA = `https://randomuser.me/api/portraits/men/${(i * 2) % 99}.jpg`;
+                const imgB = `https://randomuser.me/api/portraits/men/${(i * 2 + 1) % 99}.jpg`;
 
-            // Co-Main
-            const f3 = await create_fighter({ name: `${names[2]} ${suffix}`, nickname: "Phenom", image_url: imgs[2], wins: 26, losses: 14, draws: 0, nc: 1 });
-            const f4 = await create_fighter({ name: `${names[3]} ${suffix}`, nickname: "Axe Murderer", image_url: imgs[3], wins: 35, losses: 14, draws: 1, nc: 1 });
+                // CRITICAL FIX: Add seedId to name to ensure Unique ID in backend
+                const fA = await create_fighter({
+                    name: `Lutador A-${i + 1} (S${seedId})`,
+                    nickname: nicknames[i % nicknames.length],
+                    image_url: imgA,
+                    wins: 10 + Math.floor(Math.random() * 15),
+                    losses: Math.floor(Math.random() * 5),
+                    draws: 0,
+                    nc: 0
+                });
 
-            const fight2 = await create_fight({
-                event_id: evt.id,
-                fighter_a_id: f3.id,
-                fighter_b_id: f4.id,
-                category: "Co-Main",
-                weight_class: "M. Pesado",
-                rounds: 3,
-                points: 50,
-                order: 2
-            });
+                const fB = await create_fighter({
+                    name: `Lutador B-${i + 1} (S${seedId})`,
+                    nickname: "Challenger",
+                    image_url: imgB,
+                    wins: 8 + Math.floor(Math.random() * 10),
+                    losses: Math.floor(Math.random() * 8),
+                    draws: 0,
+                    nc: 0
+                });
 
-            // 3. Submit Picks (The Final Test)
-            // Simulating picks via API Service directly to batch it
-            const picks = [
-                { fight_id: fight1.id, fighter_id: f1.id, method: "KO", round: "R2", event_id: evt.id }, // Correct snake_case
-                { fight_id: fight2.id, fighter_id: f4.id, method: "DEC", round: "R3", event_id: evt.id }
-            ];
+                // Create Fight
+                await create_fight({
+                    event_id: evt.id,
+                    fighter_a_id: fA.id,
+                    fighter_b_id: fB.id,
+                    category: isMainCard ? "Main Card" : "Prelims",
+                    weight_class: weightClasses[i % weightClasses.length] as any,
+                    rounds: isMainEvent ? 5 : 3,
+                    status: 'SCHEDULED',
+                    order: i + 1,
+                    video_url: null
+                });
 
-            // We use the service method from Context if available, or direct api fetch
-            // Assuming submit_pick is single, we loop:
-            await submit_pick(picks[0]);
-            await submit_pick(picks[1]);
+                console.log(`🥊 Fight ${i + 1}/${fightCount} Created`);
+            }
 
-            alert("🏆 SEED 2.0 SUCESSO! \n\nO sistema está 100% operacional.\nVá para o Dashboard e gere seu Story!");
-            window.location.href = '/';
+            alert(`🏆 SUCESSO! Evento "UFC Seed ${seedId}" criado.`);
+            await refresh_data(); // Refresh UI
 
-        } catch (err: any) {
-            console.error(err);
-            alert(`Erro no Seed: ${err.message}`);
+        } catch (error) {
+            console.error("Seed Failed:", error);
+            alert("Erro no Seed: " + (error as any).message);
         } finally {
             set_is_seeding(false);
-            // load_global_data is defined inside useEffect, so we can't call it here directly. 
-            // Triggering a re-fetch via get_admin_events which is available from context
-            get_admin_events();
         }
     };
 

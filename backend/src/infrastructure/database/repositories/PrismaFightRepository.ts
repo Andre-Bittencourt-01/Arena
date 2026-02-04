@@ -1,5 +1,5 @@
 import { Fight, Event } from "@prisma/client";
-import { IFightRepository, CreateFightDTO } from '../../../domain/repositories/IFightRepository.js';
+import { IFightRepository, CreateFightDTO, UpdateFightDTO } from '../../../domain/repositories/IFightRepository.js';
 import { prisma } from '../client.js';
 import { randomUUID } from 'node:crypto';
 
@@ -11,57 +11,56 @@ export class PrismaFightRepository implements IFightRepository {
         });
     }
 
-    async update(id: string, data: Partial<Fight>): Promise<void> {
-        console.log('[DEBUG REPO] Dados finais para o Prisma:', {
-            id,
-            winnerId: data.winner_id,
-            roundEnd: data.round_end,
-            result: data.result
-        });
+    async update(id: string, data: UpdateFightDTO): Promise<Fight> {
+        console.log('[DEBUG REPO] Recebido para update:', data);
 
-        // Construct payload using 'connect' for relations to satisfy Prisma Client validation
-        const payload: any = {
-            rounds: data.rounds,
-            is_title: data.is_title,
-            category: data.category,
-            // Ensure Enums are UPPERCASE
-            result: data.result ? (data.result as string).toUpperCase() : null,
-            method: data.method,
-            round_end: data.round_end,
-            time: data.time,
+        // Map DTO to Prisma Schema
+        // We explicitly map fields to ensure undefined ones don't overwrite existing data with nulls (unless intended)
+        const updateData: any = {
+            // Administrative Details
+            ...(data.event_id && { event_id: data.event_id }),
+            ...(data.fighter_a_id && { fighter_a_id: data.fighter_a_id }),
+            ...(data.fighter_b_id && { fighter_b_id: data.fighter_b_id }),
+            ...(data.category && { category: data.category }),
+            ...(data.weight_class && { weight_class: data.weight_class }),
+            ...(data.rounds && { rounds: Number(data.rounds) }), // Ensure number
+            ...(data.status && { status: data.status }),
+            ...(data.order !== undefined && { order: Number(data.order) }),
+            ...(data.video_url !== undefined && { video_url: data.video_url }),
+            ...(data.is_title !== undefined && { is_title: Boolean(data.is_title) }),
 
-            // 'status' column verification - mapped to lock_status if available
-            lock_status: (data as any).lockStatus || (data as any).lock_status || undefined
+            // Results & Outcome
+            ...(data.winner_id !== undefined && { winner_id: data.winner_id }), // can be null
+            ...(data.method !== undefined && { method: data.method }),
+            ...(data.round_end !== undefined && { round_end: data.round_end }),
+            ...(data.time !== undefined && { time: data.time }), // Changed to data.time
+
+            // Betting Logic
+            ...(data.points !== undefined && { points: Number(data.points) }),
+            ...(data.lock_status && { lock_status: data.lock_status }),
+            ...(data.custom_lock_time !== undefined && { custom_lock_time: data.custom_lock_time }),
+
+            // Legacy Result (ensure Uppercase if provided)
+            ...(data.result && { result: data.result.toUpperCase() }),
         };
 
-        // Relations - Use connect syntax
-        // UseCase sends snake_case keys: event_id, fighter_a_id, fighter_b_id
-        if (data.event_id) {
-            payload.event = { connect: { id: data.event_id } };
-        }
-        if (data.fighter_a_id) {
-            payload.fighter_a = { connect: { id: data.fighter_a_id } };
-        }
-        if (data.fighter_b_id) {
-            payload.fighter_b = { connect: { id: data.fighter_b_id } };
-        }
+        console.log('[DEBUG REPO] Dados finais para o Prisma:', updateData);
 
-        // Winner (Optional)
-        // If winner_id is explicit null, disconnect. If value, connect.
-        if (data.winner_id) {
-            payload.winner = { connect: { id: data.winner_id } };
-        } else if (data.winner_id === null) {
-            payload.winner = { disconnect: true };
-        }
-
-        await prisma.fight.update({
+        const fight = await prisma.fight.update({
             where: { id },
-            data: payload
+            data: updateData,
+            include: {
+                fighter_a: true,
+                fighter_b: true,
+                event: true
+            }
         });
+
+        return fight;
     }
 
-    async create(data: CreateFightDTO): Promise<void> {
-        await prisma.fight.create({
+    async create(data: CreateFightDTO): Promise<Fight> {
+        const fight = await prisma.fight.create({
             data: {
                 id: randomUUID(),
                 event_id: data.event_id,
@@ -72,6 +71,7 @@ export class PrismaFightRepository implements IFightRepository {
                 category: data.category,
             }
         });
+        return fight;
     }
     async findByEventId(eventId: string): Promise<any[]> {
         const fights = await prisma.fight.findMany({
@@ -84,6 +84,8 @@ export class PrismaFightRepository implements IFightRepository {
             orderBy: { id: 'asc' }
         });
 
+        // This mapping logic seems to be creating a custom view model. 
+        // We should ensure it maps correctly, but for now we are just fixing the update logic errors.
         return fights.map(f => ({
             id: f.id,
             event_id: f.event_id,

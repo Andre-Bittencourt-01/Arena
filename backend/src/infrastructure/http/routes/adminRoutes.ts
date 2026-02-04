@@ -10,6 +10,8 @@ import { GetAllEventsController } from "../../../presentation/controllers/GetAll
 import { verifyJwt } from "../../../infrastructure/http/middlewares/verifyJwt.js";
 import { verifyAdmin, verifyAdminSecret } from "../../../infrastructure/http/middlewares/verifyAdmin.js";
 
+import { DeleteEventController } from "../../../presentation/controllers/DeleteEventController.js";
+
 const adminEventController = new AdminEventController();
 const createFighterController = new CreateFighterController();
 const createEventController = new CreateEventController();
@@ -18,6 +20,7 @@ const getFightersController = new GetFightersController();
 const updateEventController = new UpdateEventController();
 const updateFightController = new UpdateFightController();
 const getAllEventsController = new GetAllEventsController();
+const deleteEventController = new DeleteEventController();
 
 export async function adminRoutes(server: FastifyInstance) {
     // All routes in this file require JWT and Admin role
@@ -28,6 +31,8 @@ export async function adminRoutes(server: FastifyInstance) {
     server.post('/events', (req, reply) => createEventController.handle(req, reply));
     server.get('/events', (req, reply) => getAllEventsController.handle(req, reply));
     server.put('/events/:id', (req, reply) => updateEventController.handle(req, reply));
+    server.delete('/events/:id', (req, reply) => deleteEventController.handle(req, reply));
+
     server.post('/fighters', (req, reply) => createFighterController.handle(req, reply));
     server.get('/fighters', (req, reply) => getFightersController.handle(req, reply));
     server.post('/fights', (req, reply) => createFightController.handle(req, reply));

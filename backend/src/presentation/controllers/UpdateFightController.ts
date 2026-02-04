@@ -10,20 +10,32 @@ export class UpdateFightController {
 
             console.log(`[DEBUG API] Atualizando luta ID: ${id}`, body);
 
-            // System wide unification: Use snake_case
+            // FIX: Including ALL fields to match the new Database Schema
             const fight_data = {
                 id,
+                // Administrative / Structure
                 event_id: body.event_id,
                 fighter_a_id: body.fighter_a_id,
                 fighter_b_id: body.fighter_b_id,
-                rounds: body.rounds,
-                is_title: body.is_title,
                 category: body.category,
+                weight_class: body.weight_class,
+                rounds: body.rounds,
+                status: body.status,
+                order: body.order,          // <--- RECUPERADO
+                video_url: body.video_url,
+                is_title: body.is_title,
+
+                // Results
                 winner_id: body.winner_id,
-                result: body.result,
                 method: body.method,
+                result: body.result,
                 round_end: body.round_end,
-                time: body.time
+                time: body.time || body.time_end,
+
+                // Betting / System
+                points: body.points,            // <--- RECUPERADO
+                lock_status: body.lock_status,  // <--- RECUPERADO
+                custom_lock_time: body.custom_lock_time
             };
 
             const repository = new PrismaFightRepository();
@@ -35,7 +47,7 @@ export class UpdateFightController {
 
         } catch (error: any) {
             console.error('[UpdateFight] Error:', error);
-            return reply.status(400).send({ error: error.message });
+            return reply.status(500).send({ error: error.message });
         }
     }
 }

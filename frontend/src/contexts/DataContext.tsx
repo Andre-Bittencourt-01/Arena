@@ -125,16 +125,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Events
         create_event: async (event_data) => {
             try {
-                const res = await data_service.create_event(event_data);
-                await refresh_data();
-                return res;
+                const res = await data_service.create_event(event_data); // 1. Capture result
+                await refresh_data(); // 2. Refresh list
+                return res; // 3. RETURN THE OBJECT (Critical!)
             } catch (error) {
                 console.error("Create Event Failed:", error);
                 throw error;
             }
         },
         update_event: (event) => data_service.update_event(event),
-        delete_event: (id) => data_service.delete_event(id),
+        delete_event: async (id) => {
+            await data_service.delete_event(id);
+            await refresh_data();
+        },
         get_event: (id) => data_service.get_event(id),
         get_admin_events: async () => {
             const evts = await data_service.get_admin_events();
@@ -143,21 +146,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Fights
         get_fights_for_event: (event_id) => data_service.get_fights(event_id),
-        create_fight: async (fight) => {
-            const res = await data_service.create_fight(fight);
-            if (current_event && fight.event_id === current_event.id) {
-                const fights = await data_service.get_fights(current_event.id);
-                set_current_fights(fights);
+        create_fight: async (fight_data) => {
+            try {
+                const res = await data_service.create_fight(fight_data); // 1. Capture result
+
+                // Refresh logic (keep existing behavior)
+                if (current_event && fight_data.event_id === current_event.id) {
+                    const fights = await data_service.get_fights(current_event.id);
+                    set_current_fights(fights);
+                }
+                return res; // 2. RETURN THE OBJECT
+            } catch (error) {
+                console.error("Create Fight Failed:", error);
+                throw error;
             }
-            return res;
         },
         update_fight: (fight) => data_service.update_fight(fight),
         delete_fight: (id) => data_service.delete_fight(id),
 
         // Fighters
         create_fighter: async (fighter_data) => {
-            const res = await data_service.create_fighter(fighter_data);
-            return res;
+            // Direct return is fine here as it doesn't need global refresh
+            return await data_service.create_fighter(fighter_data);
         },
         get_picks_for_event: (event_id) => data_service.get_picks_for_event(event_id),
 

@@ -64,7 +64,10 @@ export class ApiDataService implements IDataService {
     }
 
     async delete_event(id: string): Promise<void> {
-        return this.fetch<void>(`/admin/events/${id}`, { method: 'DELETE' });
+        return this.fetch<void>(`/admin/events/${id}`, {
+            method: 'DELETE',
+            body: JSON.stringify({})
+        });
     }
 
     // --- FIGHTS ---
@@ -87,7 +90,10 @@ export class ApiDataService implements IDataService {
     }
 
     async delete_fight(id: string): Promise<void> {
-        return this.fetch<void>(`/admin/fights/${id}`, { method: 'DELETE' });
+        return this.fetch<void>(`/admin/fights/${id}`, {
+            method: 'DELETE',
+            body: JSON.stringify({})
+        });
     }
 
     // --- FIGHTERS ---
@@ -196,11 +202,17 @@ export class ApiDataService implements IDataService {
     }
 
     async delete_league(id: string): Promise<void> {
-        return this.fetch<void>(`/leagues/${id}`, { method: 'DELETE' });
+        return this.fetch<void>(`/leagues/${id}`, {
+            method: 'DELETE',
+            body: JSON.stringify({})
+        });
     }
 
     async remove_member(league_id: string, user_id: string): Promise<League> {
-        return this.fetch<League>(`/leagues/${league_id}/members/${user_id}`, { method: 'DELETE' });
+        return this.fetch<League>(`/leagues/${league_id}/members/${user_id}`, {
+            method: 'DELETE',
+            body: JSON.stringify({})
+        });
     }
 
     async manage_admin(league_id: string, user_id: string, action: 'promote' | 'demote'): Promise<League> {

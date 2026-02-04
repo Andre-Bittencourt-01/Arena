@@ -4,7 +4,7 @@ import { GetEventFightsController } from "../../../presentation/controllers/GetE
 import { EventController } from "../../../presentation/controllers/EventController.js";
 
 import { PickController } from "../../../presentation/controllers/PickController.js";
-import { verifyJwt } from "../../../infra/http/middlewares/verifyJwt.js";
+import { verifyJwt } from "../../../infrastructure/http/middlewares/verifyJwt.js";
 
 const getEventFightsController = new GetEventFightsController();
 const eventController = new EventController();

@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { GetUserLeaguesUseCase } from "../../../domain/useCases/league/GetUserLeaguesUseCase.js";
-import { PrismaLeagueRepository } from "../../../infra/database/repositories/PrismaLeagueRepository.js";
+import { PrismaLeagueRepository } from "../../../infrastructure/database/repositories/PrismaLeagueRepository.js";
 
 const leagueRepository = new PrismaLeagueRepository();
 const getUserLeaguesUseCase = new GetUserLeaguesUseCase(leagueRepository);

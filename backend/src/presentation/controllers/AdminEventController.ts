@@ -1,8 +1,8 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { ProcessEventResultsUseCase } from '../../domain/useCases/event/ProcessEventResultsUseCase.js';
-import { PrismaFightRepository } from '../../infra/database/repositories/PrismaFightRepository.js';
-import { PrismaPickRepository } from '../../infra/database/repositories/PrismaPickRepository.js';
-import { PrismaUserRepository } from '../../infra/database/repositories/PrismaUserRepository.js';
+import { PrismaFightRepository } from '../../infrastructure/database/repositories/PrismaFightRepository.js';
+import { PrismaPickRepository } from '../../infrastructure/database/repositories/PrismaPickRepository.js';
+import { PrismaUserRepository } from '../../infrastructure/database/repositories/PrismaUserRepository.js';
 import { ScoringService } from '../../domain/services/ScoringService.js';
 
 const fightRepository = new PrismaFightRepository();

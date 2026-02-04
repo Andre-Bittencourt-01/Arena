@@ -5,11 +5,7 @@ import { PickController } from './presentation/controllers/PickController.js';
 import { AdminEventController } from './presentation/controllers/AdminEventController.js';
 import { EventController } from './presentation/controllers/EventController.js';
 import { AuthController } from './presentation/controllers/AuthController.js';
-import { verifyJwt } from './infra/http/middlewares/verifyJwt.js';
-import { leagueRoutes } from './infrastructure/http/routes/leagueRoutes.js';
-
-import { authRoutes } from './infrastructure/http/routes/authRoutes.js';
-import { userRoutes } from './infrastructure/http/routes/userRoutes.js';
+import { verifyJwt } from './infrastructure/http/middlewares/verifyJwt.js';
 
 const server = Fastify({
     logger: true
@@ -32,20 +28,27 @@ server.get('/', async (request, reply) => {
 });
 
 // League Routes
+import { leagueRoutes } from './infrastructure/http/routes/leagueRoutes.js';
 server.register(leagueRoutes);
 
 // Auth Routes
-server.register(authRoutes);
+import { authRoutes } from './infrastructure/http/routes/authRoutes.js';
+server.register(authRoutes, { prefix: 'auth' });
+
+// User Routes
+import { userRoutes } from './infrastructure/http/routes/userRoutes.js';
 server.register(userRoutes);
 
-// Admin Routes
+// Admin & Event Routes
 import { adminRoutes } from './infrastructure/http/routes/adminRoutes.js';
 import { eventRoutes } from './infrastructure/http/routes/eventRoutes.js';
 import { pickRoutes } from './infrastructure/http/routes/pickRoutes.js';
+import { fighterRoutes } from './infrastructure/http/routes/fighterRoutes.js';
 
 server.register(eventRoutes, { prefix: 'events' });
 server.register(adminRoutes, { prefix: 'admin' });
 server.register(pickRoutes, { prefix: 'picks' });
+server.register(fighterRoutes, { prefix: 'fighters' });
 
 const start = async () => {
     try {

@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { AuthenticateUserUseCase } from "../../../application/use-cases/auth/AuthenticateUserUseCase.js";
-import { PrismaUserRepository } from "../../../infra/database/repositories/PrismaUserRepository.js";
-import { JwtAuthService } from "../../../infra/auth/JwtAuthService.js";
+import { PrismaUserRepository } from "../../../infrastructure/database/repositories/PrismaUserRepository.js";
+import { JwtAuthService } from "../../../infrastructure/auth/JwtAuthService.js";
 
 const userRepository = new PrismaUserRepository();
 const authService = new JwtAuthService();

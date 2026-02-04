@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { UpdateEventUseCase } from "../../application/use-cases/admin/UpdateEventUseCase.js";
-import { PrismaEventRepository } from "../../infra/database/repositories/PrismaEventRepository.js";
+import { PrismaEventRepository } from "../../infrastructure/database/repositories/PrismaEventRepository.js";
 
 export class UpdateEventController {
     async handle(request: FastifyRequest, reply: FastifyReply) {

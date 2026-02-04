@@ -7,8 +7,8 @@ import { CreateFightController } from "../../../presentation/controllers/CreateF
 import { UpdateFightController } from "../../../presentation/controllers/UpdateFightController.js";
 import { GetFightersController } from "../../../presentation/controllers/GetFightersController.js";
 import { GetAllEventsController } from "../../../presentation/controllers/GetAllEventsController.js";
-import { verifyJwt } from "../../../infra/http/middlewares/verifyJwt.js";
-import { verifyAdmin, verifyAdminSecret } from "../../../infra/http/middlewares/verifyAdmin.js";
+import { verifyJwt } from "../../../infrastructure/http/middlewares/verifyJwt.js";
+import { verifyAdmin, verifyAdminSecret } from "../../../infrastructure/http/middlewares/verifyAdmin.js";
 
 const adminEventController = new AdminEventController();
 const createFighterController = new CreateFighterController();

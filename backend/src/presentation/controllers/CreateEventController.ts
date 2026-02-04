@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { CreateEventUseCase } from "../../application/use-cases/admin/CreateEventUseCase.js";
-import { PrismaEventRepository } from "../../infra/database/repositories/PrismaEventRepository.js";
+import { PrismaEventRepository } from "../../infrastructure/database/repositories/PrismaEventRepository.js";
 
 export class CreateEventController {
     async handle(request: FastifyRequest, reply: FastifyReply) {
@@ -40,6 +40,7 @@ export class CreateEventController {
             });
 
             console.log("🚀 [DEBUG ADMIN] Evento criado com sucesso:", event.id);
+            // Ensuring response body is returned for frontend usage
             return reply.status(201).send(event);
         } catch (error: any) {
             console.error("🚨 [DEBUG ADMIN] Erro fatal na criação de evento:", error.message);

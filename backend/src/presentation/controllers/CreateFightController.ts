@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { CreateFightUseCase } from "../../application/use-cases/admin/CreateFightUseCase.js";
-import { PrismaFightRepository } from "../../infra/database/repositories/PrismaFightRepository.js";
+import { PrismaFightRepository } from "../../infrastructure/database/repositories/PrismaFightRepository.js";
 import { CreateFightDTO } from "../../domain/repositories/IFightRepository.js";
 
 export class CreateFightController {
@@ -37,6 +37,7 @@ export class CreateFightController {
 
             const createdFight = await useCase.execute(createFightDTO);
 
+            // Ensuring response body is returned for frontend usage
             return reply.status(201).send(createdFight);
         } catch (error: any) {
             console.error(error);

@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { GetEventFightsUseCase } from "../../application/use-cases/events/GetEventFightsUseCase.js";
-import { PrismaFightRepository } from "../../infra/database/repositories/PrismaFightRepository.js";
+import { PrismaFightRepository } from "../../infrastructure/database/repositories/PrismaFightRepository.js";
 
 export class GetEventFightsController {
     async handle(request: FastifyRequest, reply: FastifyReply) {

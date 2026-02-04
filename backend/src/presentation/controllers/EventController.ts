@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { GetUpcomingEventsUseCase } from '../../domain/useCases/event/GetUpcomingEventsUseCase.js';
-import { PrismaEventRepository } from '../../infra/database/repositories/PrismaEventRepository.js';
+import { PrismaEventRepository } from '../../infrastructure/database/repositories/PrismaEventRepository.js';
 import { ListEventsUseCase } from '../../domain/useCases/event/ListEventsUseCase.js';
 
 const eventRepository = new PrismaEventRepository();

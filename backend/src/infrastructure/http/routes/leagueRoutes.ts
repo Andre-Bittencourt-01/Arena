@@ -3,7 +3,7 @@ import { ListLeaguesController } from "../../../interface/controllers/league/Lis
 import { GetLeagueController } from "../../../interface/controllers/league/GetLeagueController.js";
 import { UpdateLeagueController } from "../../../interface/controllers/league/UpdateLeagueController.js";
 import { LeagueController } from "../../../presentation/controllers/LeagueController.js";
-import { verifyJwt } from "../../../infra/http/middlewares/verifyJwt.js";
+import { verifyJwt } from "../../../infrastructure/http/middlewares/verifyJwt.js";
 
 const listLeaguesController = new ListLeaguesController();
 const getLeagueController = new GetLeagueController();

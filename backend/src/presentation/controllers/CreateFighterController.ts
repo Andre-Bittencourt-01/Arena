@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { CreateFighterUseCase } from "../../application/use-cases/admin/CreateFighterUseCase.js";
-import { PrismaFighterRepository } from "../../infra/database/repositories/PrismaFighterRepository.js";
+import { PrismaFighterRepository } from "../../infrastructure/database/repositories/PrismaFighterRepository.js";
 
 export class CreateFighterController {
     async handle(request: FastifyRequest, reply: FastifyReply) {

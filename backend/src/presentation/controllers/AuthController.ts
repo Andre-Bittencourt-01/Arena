@@ -1,8 +1,8 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { SyncYoutubeStatusUseCase } from '../../domain/useCases/auth/SyncYoutubeStatusUseCase.js';
-import { PrismaUserRepository } from '../../infra/database/repositories/PrismaUserRepository.js';
-import { GoogleYouTubeProvider } from '../../infra/providers/GoogleYouTubeProvider.js';
-import { JwtAuthService } from '../../infra/auth/JwtAuthService.js';
+import { PrismaUserRepository } from '../../infrastructure/database/repositories/PrismaUserRepository.js';
+import { GoogleYouTubeProvider } from '../../infrastructure/providers/GoogleYouTubeProvider.js';
+import { JwtAuthService } from '../../infrastructure/auth/JwtAuthService.js';
 
 const userRepository = new PrismaUserRepository();
 const youtubeProvider = new GoogleYouTubeProvider();

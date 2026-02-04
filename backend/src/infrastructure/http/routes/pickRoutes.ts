@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { PickController } from "../../../presentation/controllers/PickController.js";
-import { verifyJwt } from "../../../infra/http/middlewares/verifyJwt.js";
+import { verifyJwt } from "../../../infrastructure/http/middlewares/verifyJwt.js";
 
 const pickController = new PickController();
 

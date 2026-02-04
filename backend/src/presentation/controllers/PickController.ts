@@ -2,8 +2,8 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { SavePickUseCase } from '../../domain/useCases/pick/SavePickUseCase.js';
 import { SaveBatchPicksUseCase } from '../../domain/useCases/pick/SaveBatchPicksUseCase.js';
 import { GetUserPicksUseCase } from '../../domain/useCases/pick/GetUserPicksUseCase.js';
-import { PrismaPickRepository } from '../../infra/database/repositories/PrismaPickRepository.js';
-import { PrismaFightRepository } from '../../infra/database/repositories/PrismaFightRepository.js';
+import { PrismaPickRepository } from '../../infrastructure/database/repositories/PrismaPickRepository.js';
+import { PrismaFightRepository } from '../../infrastructure/database/repositories/PrismaFightRepository.js';
 
 const pickRepository = new PrismaPickRepository();
 const fightRepository = new PrismaFightRepository();
@@ -44,7 +44,9 @@ export class PickController {
 
     async save(request: FastifyRequest<{ Body: SavePickBody }>, reply: FastifyReply) {
         try {
-            const pick = await savePickUseCase.execute(request.body);
+            const user_id = (request as any).user.id;
+            const pickData = { ...request.body, user_id };
+            const pick = await savePickUseCase.execute(pickData);
             return reply.status(201).send(pick);
         } catch (error: any) {
             const status = error.message.includes("closed") ? 403 : 400;
@@ -52,10 +54,17 @@ export class PickController {
         }
     }
 
-    async saveBatch(request: FastifyRequest<{ Body: { picks: SavePickBody[] } }>, reply: FastifyReply) {
+    async saveBatch(request: FastifyRequest<{ Body: { picks: Omit<SavePickBody, 'user_id'>[] } }>, reply: FastifyReply) {
         try {
+            const user_id = (request as any).user.id;
             const { picks } = request.body;
-            await saveBatchPicksUseCase.execute(picks);
+
+            const picksWithUser = picks.map(p => ({
+                ...p,
+                user_id
+            }));
+
+            await saveBatchPicksUseCase.execute(picksWithUser as any);
             return reply.status(201).send({ message: "Picks saved successfully" });
         } catch (error: any) {
             const status = error.message.includes("closed") ? 403 : 400;

@@ -4,7 +4,7 @@ import { JoinLeagueUseCase } from '../../domain/useCases/league/JoinLeagueUseCas
 import { GetLeagueLeaderboardUseCase } from '../../domain/useCases/league/GetLeagueLeaderboardUseCase.js';
 import { GetUserLeaguesUseCase } from '../../domain/useCases/league/GetUserLeaguesUseCase.js';
 import { ListLeaguesUseCase } from '../../domain/useCases/league/ListLeaguesUseCase.js';
-import { PrismaLeagueRepository } from '../../infra/database/repositories/PrismaLeagueRepository.js';
+import { PrismaLeagueRepository } from '../../infrastructure/database/repositories/PrismaLeagueRepository.js';
 
 const leagueRepository = new PrismaLeagueRepository();
 const createLeagueUseCase = new CreateLeagueUseCase(leagueRepository);

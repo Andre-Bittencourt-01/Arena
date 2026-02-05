@@ -15,6 +15,7 @@ interface LoginBody {
 export class AuthenticateUserController {
     async handle(request: FastifyRequest<{ Body: LoginBody }>, reply: FastifyReply) {
         try {
+            console.log("Recebendo tentativa de login de:", request.ip);
             const { email, password } = request.body;
 
             const result = await authenticateUserUseCase.execute({

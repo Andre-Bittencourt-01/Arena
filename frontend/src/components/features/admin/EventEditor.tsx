@@ -1,5 +1,5 @@
 import React from 'react';
-import { BannerConfig, Event as UFCEvent } from '../../../frontend/src/types';
+import { BannerConfig, Event as UFCEvent } from '../../../types';
 import Panel from '../../Panel';
 import BannerPositionEditor from './BannerPositionEditor';
 

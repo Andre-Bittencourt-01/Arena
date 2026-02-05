@@ -20,6 +20,7 @@ import JoinLeague from './pages/JoinLeague';
 import EditLeague from './pages/EditLeague';
 import { DataProvider } from './contexts/DataContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { NavigationProvider } from './contexts/NavigationContext';
 
 
 // Define available screens
@@ -75,54 +76,56 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <DataProvider>
-        {currentScreen === 'login' ? (
-          <Login on_login={() => handleNavigate('dashboard')} on_navigate={handleNavigate} />
-        ) : currentScreen === 'register' ? (
-          <Register on_register={() => handleNavigate('dashboard')} on_navigate={handleNavigate} />
-        ) : currentScreen === 'forgot-password' ? (
-          <ForgotPassword onNavigate={handleNavigate} />
-        ) : (
-          <Layout currentScreen={currentScreen} onNavigate={handleNavigate}>
-            {currentScreen === 'dashboard' && <Dashboard on_navigate={handleNavigate} />}
-            {currentScreen === 'events' && <Events onNavigate={handleNavigate} onNavigateToResult={handleNavigateToResult} />}
-            {currentScreen === 'event-results' && selected_event_id && <EventResults onNavigate={handleNavigate} eventId={selected_event_id} />}
-            {currentScreen === 'picks' && <Picks on_navigate={handleNavigate} />}
-            {currentScreen === 'ranking' && <Ranking />}
-            {currentScreen === 'profile' && <Profile onNavigate={handleNavigate} />}
-            {currentScreen === 'story' && <StoryCreator onNavigate={handleNavigate} />}
-            {currentScreen === 'summary' && <CardSummary on_navigate={handleNavigate} />}
+        <NavigationProvider onNavigate={handleNavigate}>
+          {currentScreen === 'login' ? (
+            <Login on_login={() => handleNavigate('dashboard')} on_navigate={handleNavigate} />
+          ) : currentScreen === 'register' ? (
+            <Register on_register={() => handleNavigate('dashboard')} on_navigate={handleNavigate} />
+          ) : currentScreen === 'forgot-password' ? (
+            <ForgotPassword onNavigate={handleNavigate} />
+          ) : (
+            <Layout currentScreen={currentScreen} onNavigate={handleNavigate}>
+              {currentScreen === 'dashboard' && <Dashboard on_navigate={handleNavigate} />}
+              {currentScreen === 'events' && <Events onNavigate={handleNavigate} onNavigateToResult={handleNavigateToResult} />}
+              {currentScreen === 'event-results' && selected_event_id && <EventResults onNavigate={handleNavigate} eventId={selected_event_id} />}
+              {currentScreen === 'picks' && <Picks on_navigate={handleNavigate} />}
+              {currentScreen === 'ranking' && <Ranking />}
+              {currentScreen === 'profile' && <Profile onNavigate={handleNavigate} />}
+              {currentScreen === 'story' && <StoryCreator onNavigate={handleNavigate} />}
+              {currentScreen === 'summary' && <CardSummary on_navigate={handleNavigate} />}
 
-            {currentScreen === 'admin' && <Admin onNavigate={handleNavigate} />}
-            {currentScreen === 'leagues' && (
-              <Leagues
-                on_navigate={handleNavigate}
-                on_select_league={handleSelectLeague}
-                on_edit_league={handleEditLeague}
-              />
-            )}
-            {currentScreen === 'league-details' && (
-              <LeagueDetails
-                league_id={selected_league_id || ''}
-                onNavigate={handleNavigate}
-                onBack={() => handleNavigate('leagues')}
-              />
-            )}
-            {currentScreen === 'join-league' && (
-              <JoinLeague
-                invite_code={invite_code}
-                onNavigate={handleNavigate}
-                onJoinSuccess={handleJoinSuccess}
-              />
-            )}
-            {currentScreen === 'edit-league' && selected_league_id && (
-              <EditLeague
-                league_id={selected_league_id}
-                onBack={() => handleNavigate('leagues')}
-              />
-            )}
+              {currentScreen === 'admin' && <Admin onNavigate={handleNavigate} />}
+              {currentScreen === 'leagues' && (
+                <Leagues
+                  on_navigate={handleNavigate}
+                  on_select_league={handleSelectLeague}
+                  on_edit_league={handleEditLeague}
+                />
+              )}
+              {currentScreen === 'league-details' && (
+                <LeagueDetails
+                  league_id={selected_league_id || ''}
+                  onNavigate={handleNavigate}
+                  onBack={() => handleNavigate('leagues')}
+                />
+              )}
+              {currentScreen === 'join-league' && (
+                <JoinLeague
+                  invite_code={invite_code}
+                  onNavigate={handleNavigate}
+                  onJoinSuccess={handleJoinSuccess}
+                />
+              )}
+              {currentScreen === 'edit-league' && selected_league_id && (
+                <EditLeague
+                  league_id={selected_league_id}
+                  onBack={() => handleNavigate('leagues')}
+                />
+              )}
 
-          </Layout>
-        )}
+            </Layout>
+          )}
+        </NavigationProvider>
       </DataProvider>
     </AuthProvider>
   );

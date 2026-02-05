@@ -53,7 +53,8 @@ server.register(fighterRoutes, { prefix: 'fighters' });
 const start = async () => {
     try {
         const port = process.env.PORT ? parseInt(process.env.PORT) : 3333;
-        await server.listen({ port, host: '0.0.0.0' });
+        const host = process.env.HOST || '0.0.0.0';
+        await server.listen({ port, host });
         console.log(`Backend server is running on http://localhost:${port}`);
     } catch (err) {
         server.log.error(err);

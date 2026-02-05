@@ -1,5 +1,5 @@
 import React from 'react';
-import { Event as UFCEvent, Fighter } from '../../../frontend/src/types';
+import { Event as UFCEvent, Fighter } from '../../../types';
 import Panel from '../../Panel';
 import FighterBank from './FighterBank';
 

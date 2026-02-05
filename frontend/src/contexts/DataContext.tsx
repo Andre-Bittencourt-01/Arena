@@ -74,7 +74,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [ranking_filter, set_ranking_filter] = useState<RankingPeriod>('ALL_TIME');
     const [selected_period_id, set_selected_period_id] = useState<string | null>(null);
 
-    const refresh_data = useCallback(async () => {
+    const refresh_data = useCallback(async (retry_count = 0) => {
         set_loading(true);
         try {
             const events_data = await data_service.get_events();
@@ -96,9 +96,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const initial_event = upcoming || last_completed || events_data[0];
                 console.log('[DataContext] Selected initial event:', initial_event);
                 set_current_event(initial_event);
+            } else {
+                // Auto-Revalidation: If events list is empty (cold start?), try once more
+                if (retry_count === 0) {
+                    console.warn('[DataContext] Events list is empty. Auto-revalidating in 3s...');
+                    setTimeout(() => refresh_data(1), 3000);
+                }
             }
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
+            // Auto-Retry Logic for Initial Load
+            if (retry_count < 3) {
+                console.warn(`[DataContext] Retrying refresh in 2s... (${retry_count + 1}/3)`);
+                setTimeout(() => refresh_data(retry_count + 1), 2000);
+            }
         } finally {
             set_loading(false);
         }
@@ -119,7 +130,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [current_event]);
 
     useEffect(() => {
-        refresh_data();
+        // Initial delay to ensure backend is ready
+        const timer = setTimeout(() => {
+            refresh_data();
+        }, 500); // 500ms initial delay
+        return () => clearTimeout(timer);
     }, [refresh_data]);
 
     const value: DataContextType = {

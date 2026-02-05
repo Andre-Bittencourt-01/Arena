@@ -1,7 +1,7 @@
 import React from 'react';
 import Panel from '../../Panel';
 import FighterForm from './FighterForm';
-import { Fighter } from '../../../frontend/src/types';
+import { Fighter } from '../../../types';
 
 interface FighterBankProps {
     fighters: Fighter[];

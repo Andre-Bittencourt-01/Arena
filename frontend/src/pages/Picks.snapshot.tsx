@@ -5,8 +5,6 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Fight, Pick, Event } from '../types';
 import { get_content_lock_status } from '../services/MockDataService';
-import { useNavigation } from '../contexts/NavigationContext';
-import SuccessOverlay from '../components/SuccessOverlay';
 
 interface PicksProps {
   on_navigate: (screen: Screen) => void;
@@ -28,15 +26,6 @@ const safe_get_lock_status = (event: Event | null, fight: Fight | null) => {
   }
 };
 
-// Helper for deep comparison of picks
-const is_pick_modified = (p1: Pick | undefined, p2: Pick | undefined) => {
-  if (!p1 && !p2) return false;
-  if (!p1 || !p2) return true;
-  return p1.fighter_id !== p2.fighter_id ||
-    p1.method !== p2.method ||
-    p1.round !== p2.round;
-};
-
 const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
   const { user } = useAuth();
   const {
@@ -51,18 +40,11 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
   // 1. All Hooks & State moved to top (Rules of Hooks Fix)
   const [active_fight_id, set_active_fight_id] = useState<string | null>(null);
   const [event_picks, set_event_picks] = useState<Record<string, Pick>>({});
-  const [original_picks, set_original_picks] = useState<Record<string, Pick>>({});
   const [selected_winner_id, set_selected_winner_id] = useState<string | null>(null);
   const [selected_method, set_selected_method] = useState<'KO/TKO' | 'SUB' | 'DEC' | null>(null);
   const [selected_round, set_selected_round] = useState<string | null>(null);
   const [is_submitting, set_is_submitting] = useState(false);
-
-
-  // Navigation Guard State
-  const [show_unsaved_modal, set_show_unsaved_modal] = useState(false);
-  const [show_success_summary, set_show_success_summary] = useState(false);
-  const [pending_destination, set_pending_destination] = useState<Screen | null>(null);
-  const { setBlocker, removeBlocker } = useNavigation();
+  const [is_card_drawer_open, set_is_card_drawer_open] = useState(false);
 
   // 2. Derived State & Memoization
   const active_fight = useMemo(() =>
@@ -79,13 +61,6 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
   }, [current_event, active_fight]);
 
   const is_locked = lock_info.status === 'LOCKED';
-
-  // Dirty Check: Compare current picks with original picks using robust field check
-  const is_dirty = useMemo(() => {
-    // Check if any pick in event_picks differs from original_picks
-    const keys = Array.from(new Set([...Object.keys(event_picks), ...Object.keys(original_picks)]));
-    return keys.some(key => is_pick_modified(event_picks[key], original_picks[key]));
-  }, [event_picks, original_picks]);
 
   const has_closed_fights = current_event ? current_fights.some(f => {
     const info = safe_get_lock_status(current_event, f);
@@ -113,7 +88,6 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
         set_active_fight_id(null);
         const picks = await get_picks_for_event(current_event.id);
         set_event_picks(picks);
-        set_original_picks(JSON.parse(JSON.stringify(picks))); // Deep copy for comparison
 
         if (current_fights.length > 0 && current_fights[0].event_id === current_event.id) {
           const first_pending = current_fights.find(f => !picks[f.id]) || current_fights[0];
@@ -138,75 +112,13 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
     }
   }, [active_fight_id, event_picks]);
 
-  // Browser Refresh/Close Guard
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (is_dirty) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [is_dirty]);
-
-  // Global Navigation Guard (Navbar)
-  useEffect(() => {
-    if (is_dirty) {
-      setBlocker((target: Screen) => {
-        set_pending_destination(target);
-        set_show_unsaved_modal(true);
-        return true; // Block navigation
-      });
-    } else {
-      removeBlocker();
-    }
-    return () => removeBlocker();
-  }, [is_dirty, setBlocker, removeBlocker]);
-
-  // 4. Handlers
-  // Real-time update helper
-  const update_live_pick = (changes: Partial<Pick>) => {
-    if (!active_fight || !user || !current_event) return;
-
-    set_event_picks(prev => {
-      const current_pick = prev[active_fight.id] || {
-        id: `pick_${user.id}_${active_fight.id}`,
-        user_id: user.id || '',
-        event_id: current_event.id,
-        fight_id: active_fight.id,
-        fighter_id: null,
-        method: null,
-        round: null,
-        points_earned: 0
-      };
-
-      return {
-        ...prev,
-        [active_fight.id]: { ...current_pick, ...changes }
-      };
-    });
-  };
-
   // 4. Handlers
   const handle_select_fighter = (fighter_id: string) => {
     set_selected_winner_id(fighter_id);
-    update_live_pick({ fighter_id });
   };
 
-  const handle_select_method = (method: string) => {
-    set_selected_method(method as any);
-    update_live_pick({ method: method as any });
-  };
-
-  const handle_select_round = (round: string) => {
-    set_selected_round(round);
-    update_live_pick({ round });
-  };
-
-  const handle_final_submit = async (target_screen?: Screen) => {
-    if (!user || !current_event || is_submitting) return false;
+  const handle_final_submit = async () => {
+    if (!user || !current_event || is_submitting) return;
 
     set_is_submitting(true);
     try {
@@ -220,47 +132,15 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
       }));
 
       await submit_picks_batch(picks_array);
-
-      // Update original picks to match current state (Clean State)
-      set_original_picks(JSON.parse(JSON.stringify(event_picks)));
-      set_show_unsaved_modal(false);
-
-      if (target_screen) {
-        on_navigate(target_screen);
-      } else {
-        // Show success summary instead of alert
-        set_show_success_summary(true);
-      }
-      return true;
-
+      alert("Todos os seus palpites foram salvos!");
+      on_navigate('story');
     } catch (error) {
       console.error("Failed to submit batch picks", error);
       alert("Erro ao enviar palpites. Tente novamente.");
-      return false;
     } finally {
       set_is_submitting(false);
     }
   };
-
-  // Navigation Guard Interceptor
-  const handle_safe_exit = (target: Screen) => {
-    if (is_dirty) {
-      set_pending_destination(target);
-      set_show_unsaved_modal(true);
-    } else {
-      on_navigate(target);
-    }
-  };
-
-  const handle_discard_and_navigate = () => {
-    set_show_unsaved_modal(false);
-    if (pending_destination) {
-      on_navigate(pending_destination);
-    }
-  };
-
-  // Progress Count Helper
-  const picking_progress_count = completed_picks_count;
 
   const handle_confirm = async () => {
     if (is_locked) return;
@@ -306,15 +186,8 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
         const final_batch = [...previous_picks_array, current_pick_payload];
         await submit_picks_batch(final_batch);
 
-        // Update original to match current (clean state)
-        const new_picks_map = { ...event_picks, [active_fight.id]: current_pick_payload };
-        // We need to fetch or reconstruct the full record, but locally modifying original_picks is faster for UI sync
-        // However, standard flow relies on submit_picks_batch success
-        set_original_picks(JSON.parse(JSON.stringify(new_picks_map))); // Rough sync to prevent guard
-
-        // Show Success Overlay
-        set_show_success_summary(true);
-
+        alert("Card Finalizado! Seus palpites foram salvos.");
+        on_navigate('story');
       } catch (error) {
         console.error("Batch submission failed", error);
         alert("Erro ao salvar card. Tente novamente.");
@@ -322,12 +195,29 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
         set_is_submitting(false);
       }
     } else {
-      // Just Navigation now, as state is updated in real-time
+      // Local Update
+      const updated_pick: Pick = {
+        id: event_picks[active_fight.id]?.id || `pick_${user.id}_${active_fight.id}`,
+        user_id: user.id || '',
+        event_id: current_event.id,
+        fight_id: active_fight.id,
+        fighter_id: selected_winner_id,
+        method: selected_method,
+        round: selected_round,
+        points_earned: 0
+      };
+
+      set_event_picks(prev => ({ ...prev, [active_fight.id]: updated_pick }));
+
       setTimeout(() => {
         const next_fight = current_fights[current_index + 1];
         set_active_fight_id(next_fight.id);
 
-        // State loop for next fight will handle local state sync via useEffect
+        if (!event_picks[next_fight.id]) {
+          set_selected_winner_id(null);
+          set_selected_method(null);
+          set_selected_round(null);
+        }
       }, 150);
     }
   };
@@ -350,7 +240,7 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
           As lutas deste evento ainda não foram liberadas para palpites. Volte em breve!
         </p>
         <button
-          onClick={() => handle_safe_exit('events')}
+          onClick={() => on_navigate('events')}
           className="mt-8 px-6 py-3 bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-white rounded-lg uppercase font-bold tracking-widest transition-all"
         >
           Voltar para Eventos
@@ -398,21 +288,16 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
               </div>
             </div>
 
-            {/* Header Action: SAVE (Only shows if picks > 0) */}
-            {/* Header Action: SAVE (Only shows if picks > 0) */}
-            {picks_done > 0 && (
-              <button
-                onClick={() => handle_final_submit()}
-                disabled={!is_dirty}
-                className={`flex items-center gap-2 border rounded-xl px-4 py-2 transition-all active:scale-95 group max-h-[42px] animate-in fade-in slide-in-from-top-2 ${is_dirty
-                  ? 'bg-[#2a0a0a] hover:bg-primary/20 border-primary/30 text-primary shadow-[0_0_15px_rgba(236,19,19,0.3)] cursor-pointer'
-                  : 'bg-transparent border-white/5 text-white/40 opacity-40 pointer-events-none'
-                  }`}
-              >
-                <span className={`material-symbols-outlined text-xl transition-transform ${is_dirty ? 'group-hover:scale-110' : ''}`}>cloud_upload</span>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${is_dirty ? 'text-primary' : 'text-white/40'}`}>SALVAR</span>
-              </button>
-            )}
+            <button
+              onClick={() => set_is_card_drawer_open(true)}
+              className="flex items-center gap-2 bg-[#2a0a0a] hover:bg-primary/20 border border-primary/30 text-primary rounded-xl px-3 py-1.5 transition-all active:scale-95 shadow-[0_0_15px_rgba(236,19,19,0.1)] group max-h-[42px]"
+            >
+              <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">view_list</span>
+              <div className="flex flex-col items-end leading-none">
+                <span className="text-[8px] font-black uppercase tracking-wider text-primary/70">CARD</span>
+                <span className="text-[9px] font-black uppercase tracking-wider text-primary">COMPLETO</span>
+              </div>
+            </button>
           </div>
 
           {/* Fight Card Header */}
@@ -542,7 +427,7 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
                   ].map(method => (
                     <button
                       key={method.id}
-                      onClick={() => handle_select_method(method.id)}
+                      onClick={() => set_selected_method(method.id as any)}
                       className={`flex flex-col items-center justify-center gap-1 rounded-xl border p-2 h-14 md:h-16 transition-all active:scale-95 group ${selected_method === method.id ? 'bg-primary border-primary shadow-neon' : 'bg-[#1a0f0f] border-transparent hover:bg-[#2a1515] hover:border-primary/30'}`}
                     >
                       <span className={`material-symbols-outlined text-xl md:text-2xl ${selected_method === method.id ? 'text-white' : 'text-text-muted group-hover:text-primary'}`}>{method.icon}</span>
@@ -565,7 +450,7 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
                     ['UNÂNIME', 'DIVIDIDA', 'MAJORIT.'].map((dec) => (
                       <button
                         key={dec}
-                        onClick={() => handle_select_round(dec)}
+                        onClick={() => set_selected_round(dec)}
                         className={`min-h-[36px] md:min-h-[44px] flex items-center justify-center rounded-xl border font-black text-[9px] tracking-tight transition-all active:scale-95 px-1 ${selected_round === dec ? 'bg-primary border-primary text-white shadow-neon' : 'bg-[#1a0f0f] border-transparent text-text-muted hover:border-primary/20 hover:text-white'}`}
                       >
                         {dec}
@@ -575,7 +460,7 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
                     Array.from({ length: active_fight.rounds }).map((_, i) => (
                       <button
                         key={i}
-                        onClick={() => handle_select_round(`R${i + 1}`)}
+                        onClick={() => set_selected_round(`R${i + 1}`)}
                         className={`h-10 md:h-12 flex items-center justify-center rounded-xl border font-condensed font-black text-lg md:text-xl transition-all active:scale-95 ${selected_round === `R${i + 1}` ? 'bg-primary border-primary text-white shadow-neon' : 'bg-[#1a0f0f] border-transparent text-text-muted hover:border-primary/20'}`}
                       >
                         {i + 1}
@@ -586,7 +471,7 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
               </div>
             </div>
 
-            {/* Main Footer Action: NEXT */}
+            {/* Action Button - Moved into Flow */}
             <div className="mt-2 md:mt-4 w-full z-30">
               <button
                 onClick={handle_confirm}
@@ -610,8 +495,8 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
                       <>
                         <span>
                           {current_fights.findIndex(f => f.id === active_fight_id) === current_fights.length - 1
-                            ? 'FINALIZAR PALPITES'
-                            : 'AVANÇAR LUTA'
+                            ? (event_picks[active_fight.id!] ? 'Atualizar & Finalizar' : 'Finalizar Card')
+                            : (event_picks[active_fight.id!] ? 'Atualizar' : 'Confirmar')
                           }
                         </span>
                         <span className="material-symbols-outlined font-black text-xl">arrow_forward</span>
@@ -682,81 +567,115 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
           </Panel>
         </aside>
 
+        {/* Mobile Fight Card Drawer */}
+        {is_card_drawer_open && (
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] animate-in fade-in duration-300 lg:hidden"
+            onClick={() => set_is_card_drawer_open(false)}
+          >
+            <div
+              className="absolute bottom-0 left-0 w-full bg-surface-dark border-t border-white/10 rounded-t-[2.5rem] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom duration-500 max-h-[85vh] flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mt-4 mb-2 flex-shrink-0" />
 
-
-
-
-
-
-        {/* Navigation Guard Modal */}
-        {show_unsaved_modal && (
-          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-surface-dark border border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-              <div className="p-6 text-center">
-                <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4 border border-red-500/20">
-                  <span className="material-symbols-outlined text-3xl text-red-500">warning</span>
+              <div className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b border-white/5">
+                <div>
+                  <h3 className="text-xl font-condensed font-black text-white uppercase italic tracking-tighter">Card Completo</h3>
+                  <p className="text-[10px] text-primary font-black uppercase tracking-widest">{picks_done} de {current_fights.length} lutas palpitadas</p>
                 </div>
-                <h3 className="text-xl font-condensed font-black text-white uppercase italic tracking-tighter mb-2">
-                  Alterações não salvas
-                </h3>
-                <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                  Seus palpites ainda não foram salvos. Você preencheu <strong className="text-white">{picking_progress_count}</strong> de <strong className="text-white">{current_fights.length}</strong> palpites possíveis.
-                </p>
+                <button
+                  onClick={() => set_is_card_drawer_open(false)}
+                  className="w-10 h-10 rounded-full bg-surface-highlight flex items-center justify-center text-white"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
 
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => handle_final_submit(pending_destination || 'events')}
-                    disabled={is_submitting}
-                    className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-neon flex items-center justify-center gap-2"
-                  >
-                    {is_submitting ? (
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    ) : (
-                      <>
-                        <span>SALVAR E SAIR</span>
-                        <span className="material-symbols-outlined text-lg">save</span>
-                      </>
-                    )}
-                  </button>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                <div className="grid grid-cols-1 gap-2">
+                  {current_fights.map((fight, i) => {
+                    if (!fight) return null;
+                    const is_current = fight.id === active_fight_id;
+                    const has_pick = !!event_picks[fight.id];
+                    const pick = event_picks[fight.id];
+                    const selected_fighter = pick ? (fight.fighter_a_id === pick.fighter_id ? fight.fighter_a : fight.fighter_b) : null;
 
-                  <button
-                    onClick={handle_discard_and_navigate}
-                    disabled={is_submitting}
-                    className="w-full py-3 bg-white/5 hover:bg-white/10 text-white border border-white/5 font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95"
-                  >
-                    SAIR SEM SALVAR
-                  </button>
+                    return (
+                      <div
+                        key={fight.id}
+                        onClick={() => {
+                          set_active_fight_id(fight.id);
+                          set_is_card_drawer_open(false);
+                        }}
+                        className={`group relative flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 ${is_current ? 'bg-primary border-transparent shadow-[0_0_20px_rgba(236,19,19,0.3)]' : 'bg-surface-highlight/40 border border-white/5'}`}
+                      >
+                        <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all ${is_current ? 'bg-white text-primary border-white' : (has_pick ? 'bg-green-500/20 text-green-500 border-green-500/50' : 'bg-black/40 text-white/20 border-white/10')}`}>
+                          {has_pick ? (
+                            <span className="material-symbols-outlined text-sm font-bold italic">check</span>
+                          ) : (
+                            <span className="text-[10px] font-black italic">{i + 1}</span>
+                          )}
+                        </div>
 
-                  <button
-                    onClick={() => set_show_unsaved_modal(false)}
-                    disabled={is_submitting}
-                    className="mt-2 text-xs text-gray-400 hover:text-white font-bold uppercase tracking-widest transition-colors"
-                  >
-                    VOLTAR
-                  </button>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${is_current ? 'text-white/70' : 'text-text-muted'}`}>
+                            {fight.weight_class}
+                          </p>
+                          <div className={`text-base font-condensed font-black leading-none truncate italic ${is_current ? 'text-white' : 'text-white/90'}`}>
+                            {(fight.fighter_a?.name || 'Lutador A').split(' ').pop()} <span className="opacity-40 italic font-black mx-1">VS</span> {(fight.fighter_b?.name || 'Lutador B').split(' ').pop()}
+                          </div>
+                          {has_pick && !is_current && (
+                            <p className="text-[10px] text-green-500 font-bold uppercase mt-1 flex items-center gap-1">
+                              <span className="w-1 h-1 bg-green-500 rounded-full" />
+                              {(selected_fighter?.name || 'Lutador').split(' ').pop()} por {pick.method}
+                            </p>
+                          )}
+                        </div>
+
+                        {is_current && (
+                          <div className="text-white">
+                            <span className="material-symbols-outlined animate-bounce-x">arrow_forward</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Drawer Footer (Standard Submit when viewing list) */}
+              <div className="p-6 flex-shrink-0 bg-black/40 border-t border-white/10">
+                <button
+                  onClick={picks_done > 0 ? handle_final_submit : () => set_is_card_drawer_open(false)}
+                  disabled={is_submitting}
+                  className={`w-full py-4 text-white font-condensed font-black text-xl uppercase tracking-widest rounded-2xl shadow-neon transition-transform active:scale-95 ${picks_done === current_fights.length ? 'bg-primary' : 'bg-surface-highlight hover:bg-white/10'}`}
+                >
+                  {is_submitting ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>
+                  ) : (
+                    picks_done === current_fights.length ? 'Enviar Palpites' :
+                      picks_done > 0 ? `Enviar ${picks_done} Palpites` :
+                        'Voltar e Completar'
+                  )}
+                </button>
+              </div>
+
             </div>
           </div>
         )}
 
-        {/* Success Overlay Logic */}
-        {show_success_summary && current_event && (
-          <SuccessOverlay
-            event={current_event}
-            fights={current_fights}
-            picks={event_picks} // Use current state to reflect latest
-            user={user}
-            pendingDestination={pending_destination}
-            onClose={() => set_show_success_summary(false)}
-            onExit={(target: Screen) => {
-              set_show_success_summary(false);
-              // Explicitly remove blocker to allow safe exit via button
-              removeBlocker();
-              on_navigate(target);
-            }}
-          />
+        {/* Partial Submit FAB */}
+        {picks_done > 0 && !is_card_drawer_open && (
+          <button
+            onClick={() => set_is_card_drawer_open(true)}
+            className="fixed bottom-[85px] right-6 h-14 w-14 bg-primary rounded-full shadow-neon flex items-center justify-center z-[100] animate-in zoom-in duration-300 hover:scale-110 transition-transform active:scale-95"
+          >
+            <span className="material-symbols-outlined text-white text-2xl font-bold">send</span>
+          </button>
         )}
+
+
 
       </div>
     </div>

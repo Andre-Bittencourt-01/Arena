@@ -625,6 +625,18 @@ export class MockDataService implements IDataService {
         this.fights = this.fights.filter(f => f.id !== id);
     }
 
+    async reorder_fights(orders: { id: string, order: number }[]): Promise<void> {
+        await this.delay();
+        orders.forEach(o => {
+            const fight = this.fights.find(f => f.id === o.id);
+            if (fight) {
+                fight.order = o.order;
+            }
+        });
+        // Sort fights by order for consistency in mock
+        this.fights.sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+
     async get_fighters(): Promise<Fighter[]> {
         await this.delay();
         return Object.values(this.fighters);

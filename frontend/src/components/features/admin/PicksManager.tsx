@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Panel from '../../Panel';
-import { Fight, Event as UFCEvent, Fighter, Pick } from '../../../frontend/src/types';
+import { Fight, Event as UFCEvent, Fighter, Pick } from '../../../types';
 
 interface PicksManagerProps {
     events: UFCEvent[];

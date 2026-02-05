@@ -1,7 +1,7 @@
 import { IDataService, RankingPeriod } from '../types'; // Import from the NEW unified types
 import { Event, Fight, Fighter, User, Pick, League } from '../types';
 
-const API_URL = 'http://localhost:3333'; // Adjust if using ENV
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
 
 export class ApiDataService implements IDataService {
     private getHeaders() {
@@ -12,24 +12,35 @@ export class ApiDataService implements IDataService {
         };
     }
 
-    private async fetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
-        const res = await fetch(`${API_URL}${endpoint}`, {
-            ...options,
-            headers: {
-                ...this.getHeaders(),
-                ...options?.headers
+    private async fetch<T>(endpoint: string, options?: RequestInit, retries = 3): Promise<T> {
+        try {
+            const res = await fetch(`${API_URL}${endpoint}`, {
+                ...options,
+                headers: {
+                    ...this.getHeaders(),
+                    ...options?.headers
+                }
+            });
+
+            if (!res.ok) {
+                const errorBody = await res.text();
+                throw new Error(`API Error ${res.status}: ${errorBody}`);
             }
-        });
 
-        if (!res.ok) {
-            const errorBody = await res.text();
-            throw new Error(`API Error ${res.status}: ${errorBody}`);
+            // ZERO-TRANSLATION: Return raw JSON directly
+            // The Backend JSON MUST match the Frontend Interfaces (snake_case)
+            const text = await res.text();
+            return text ? JSON.parse(text) : null;
+
+        } catch (error: any) {
+            // Se for erro de rede (refused, timeout, offline) e ainda tiver tentativas
+            if (retries > 0 && (error instanceof TypeError || error.name === 'TypeError')) {
+                console.warn(`[API Connectivity] Tentando reconectar a ${endpoint}... (${retries} tentativas restantes)`);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                return this.fetch(endpoint, options, retries - 1);
+            }
+            throw error;
         }
-
-        // ZERO-TRANSLATION: Return raw JSON directly
-        // The Backend JSON MUST match the Frontend Interfaces (snake_case)
-        const text = await res.text();
-        return text ? JSON.parse(text) : null;
     }
 
     // --- EVENTS ---

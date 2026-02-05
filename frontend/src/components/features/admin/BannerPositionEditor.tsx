@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { BannerConfig, Event as UFCEvent } from '../../../frontend/src/types';
+import { BannerConfig, Event as UFCEvent } from '../../../types';
 
 interface BannerPositionEditorProps {
     banner_url: string;

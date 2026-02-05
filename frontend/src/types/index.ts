@@ -153,6 +153,7 @@ export interface IDataService {
     create_fight(fight: Fight): Promise<Fight>;
     update_fight(fight: Fight): Promise<Fight>;
     delete_fight(id: string): Promise<void>;
+    reorder_fights?(orders: { id: string, order: number }[]): Promise<void>; // Marked optional initially to avoid breaking other implementations if any
 
     // Fighters
     get_fighters(): Promise<Fighter[]>;

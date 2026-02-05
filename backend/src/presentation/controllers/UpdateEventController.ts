@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { UpdateEventUseCase } from "../../application/use-cases/admin/UpdateEventUseCase.js";
 import { PrismaEventRepository } from "../../infrastructure/database/repositories/PrismaEventRepository.js";
+import { PrismaFightRepository } from "../../infrastructure/database/repositories/PrismaFightRepository.js";
 
 export class UpdateEventController {
     async handle(req: FastifyRequest, reply: FastifyReply) {
@@ -38,7 +39,8 @@ export class UpdateEventController {
             }
 
             const repository = new PrismaEventRepository();
-            const useCase = new UpdateEventUseCase(repository);
+            const fightRepository = new PrismaFightRepository(); // Inject Fight Repo
+            const useCase = new UpdateEventUseCase(repository, fightRepository);
 
             // CORRECTED: UseCase expects a single object { id, ...data }
             const event = await useCase.execute({

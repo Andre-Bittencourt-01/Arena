@@ -14,34 +14,40 @@ export class PrismaFightRepository implements IFightRepository {
     async update(id: string, data: UpdateFightDTO): Promise<Fight> {
         console.log('[DEBUG REPO] Recebido para update:', data);
 
-        // Map DTO to Prisma Schema
-        // We explicitly map fields to ensure undefined ones don't overwrite existing data with nulls (unless intended)
         const updateData: any = {
-            // Administrative Details
-            ...(data.event_id && { event_id: data.event_id }),
-            ...(data.fighter_a_id && { fighter_a_id: data.fighter_a_id }),
-            ...(data.fighter_b_id && { fighter_b_id: data.fighter_b_id }),
+            // Scalar Fields
             ...(data.category && { category: data.category }),
             ...(data.weight_class && { weight_class: data.weight_class }),
-            ...(data.rounds && { rounds: Number(data.rounds) }), // Ensure number
+            ...(data.rounds && { rounds: Number(data.rounds) }),
             ...(data.status && { status: data.status }),
             ...(data.order !== undefined && { order: Number(data.order) }),
             ...(data.video_url !== undefined && { video_url: data.video_url }),
             ...(data.is_title !== undefined && { is_title: Boolean(data.is_title) }),
 
-            // Results & Outcome
-            ...(data.winner_id !== undefined && { winner_id: data.winner_id }), // can be null
-            ...(data.method !== undefined && { method: data.method }),
-            ...(data.round_end !== undefined && { round_end: data.round_end }),
-            ...(data.time !== undefined && { time: data.time }), // Changed to data.time
-
-            // Betting Logic
+            // Betting / Admin
             ...(data.points !== undefined && { points: Number(data.points) }),
             ...(data.lock_status && { lock_status: data.lock_status }),
-            ...(data.custom_lock_time !== undefined && { custom_lock_time: data.custom_lock_time }),
+            custom_lock_time: (data.custom_lock_time && data.custom_lock_time !== "")
+                ? new Date(data.custom_lock_time)
+                : null,
 
-            // Legacy Result (ensure Uppercase if provided)
-            ...(data.result && { result: data.result.toUpperCase() }),
+            // Results (Scalars)
+            ...(data.method !== undefined && { method: data.method }),
+            ...(data.result !== undefined && { result: data.result }),
+            ...(data.round_end !== undefined && {
+                round_end: data.round_end ? String(data.round_end) : null
+            }),
+            ...(data.time !== undefined && { time: data.time }),
+
+            // RELATIONS (Standard)
+            ...(data.event_id && { event: { connect: { id: data.event_id } } }),
+            ...(data.fighter_a_id && { fighter_a: { connect: { id: data.fighter_a_id } } }),
+            ...(data.fighter_b_id && { fighter_b: { connect: { id: data.fighter_b_id } } }),
+
+            // RELATION (Winner - Special Handling)
+            // If ID exists -> Connect. If strictly null -> Disconnect.
+            ...(data.winner_id ? { winner: { connect: { id: data.winner_id } } } : {}),
+            ...(data.winner_id === null ? { winner: { disconnect: true } } : {}),
         };
 
         console.log('[DEBUG REPO] Dados finais para o Prisma:', updateData);
@@ -81,11 +87,13 @@ export class PrismaFightRepository implements IFightRepository {
                 fighter_b: true,
                 winner: true
             },
-            orderBy: { id: 'asc' }
+            // FIX 1: Sort by user-defined 'order' first, then 'id'
+            orderBy: [
+                { order: 'asc' },
+                { id: 'asc' }
+            ]
         });
 
-        // This mapping logic seems to be creating a custom view model. 
-        // We should ensure it maps correctly, but for now we are just fixing the update logic errors.
         return fights.map(f => ({
             id: f.id,
             event_id: f.event_id,
@@ -94,6 +102,14 @@ export class PrismaFightRepository implements IFightRepository {
             rounds: f.rounds,
             is_title: f.is_title,
             category: f.category,
+
+            // FIX 2: Include Betting / Admin Fields in the response
+            points: f.points,
+            order: f.order,
+            lock_status: f.lock_status,
+            custom_lock_time: f.custom_lock_time,
+
+            // Relations & Results
             winner_id: f.winner_id,
             winner: f.winner ? {
                 id: f.winner.id,
@@ -104,7 +120,7 @@ export class PrismaFightRepository implements IFightRepository {
             method: f.method,
             round_end: f.round_end,
             time: f.time,
-            status: f.result ? 'COMPLETED' : 'SCHEDULED', // Campo Derivado
+            status: f.result ? 'COMPLETED' : 'SCHEDULED',
             fighter_a: {
                 id: f.fighter_a.id,
                 name: f.fighter_a.name,

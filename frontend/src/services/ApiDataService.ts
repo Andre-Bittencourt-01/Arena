@@ -96,6 +96,14 @@ export class ApiDataService implements IDataService {
         });
     }
 
+    async reorder_fights(orders: { id: string, order: number }[]): Promise<void> {
+        console.log('[API] Enviando reordenação em lote...', orders);
+        return this.fetch<void>('/admin/fights/reorder', {
+            method: 'PATCH',
+            body: JSON.stringify({ orders })
+        });
+    }
+
     // --- FIGHTERS ---
     async get_fighters(): Promise<Fighter[]> {
         return this.fetch<Fighter[]>('/fighters');

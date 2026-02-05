@@ -3,8 +3,8 @@ import { IFightRepository, CreateFightDTO } from "../../../domain/repositories/I
 export class CreateFightUseCase {
     constructor(private fightRepository: IFightRepository) { }
 
-    // FIX: Removed Promise<void> to allow returning the object
     async execute(data: CreateFightDTO) {
+        // FIX: Return the created object so the Controller sends it back
         return await this.fightRepository.create(data);
     }
 }

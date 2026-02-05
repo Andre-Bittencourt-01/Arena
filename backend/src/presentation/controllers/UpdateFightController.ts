@@ -8,12 +8,13 @@ export class UpdateFightController {
             const { id } = request.params as { id: string };
             const body = request.body as any;
 
-            console.log(`[DEBUG API] Atualizando luta ID: ${id}`, body);
+            console.log(`[DEBUG API] Updating Fight Lock/Info ID: ${id}`, {
+                lock_status: body.lock_status,
+                order: body.order
+            });
 
-            // FIX: Including ALL fields to match the new Database Schema
             const fight_data = {
                 id,
-                // Administrative / Structure
                 event_id: body.event_id,
                 fighter_a_id: body.fighter_a_id,
                 fighter_b_id: body.fighter_b_id,
@@ -21,20 +22,18 @@ export class UpdateFightController {
                 weight_class: body.weight_class,
                 rounds: body.rounds,
                 status: body.status,
-                order: body.order,          // <--- RECUPERADO
+                order: body.order,
                 video_url: body.video_url,
                 is_title: body.is_title,
-
-                // Results
                 winner_id: body.winner_id,
                 method: body.method,
                 result: body.result,
                 round_end: body.round_end,
                 time: body.time || body.time_end,
 
-                // Betting / System
-                points: body.points,            // <--- RECUPERADO
-                lock_status: body.lock_status,  // <--- RECUPERADO
+                // Betting Lock Fields (Required for the UI feature)
+                points: body.points,
+                lock_status: body.lock_status,
                 custom_lock_time: body.custom_lock_time
             };
 

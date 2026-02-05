@@ -8,25 +8,25 @@ import { Event, Fight, Fighter, User, Pick, League, LeagueMember, LeagueRole } f
 export const get_content_lock_status = (event: Event, fight: Fight): { status: 'LOCKED' | 'OPEN', reason?: 'EVENT_CLOSED' | 'FIGHT_CLOSED' | 'CASCADE' | 'MANUAL' } => {
     const now = new Date();
 
+    const evStatus = (event.lock_status || '').toUpperCase();
+    const fightStatus = (fight.lock_status || '').toUpperCase();
+
     // 1. Check Event Level
-    if (event.lock_status === 'locked') return { status: 'LOCKED', reason: 'EVENT_CLOSED' };
-    if (event.lock_status === 'scheduled' && event.lock_time && now > new Date(event.lock_time)) {
+    if (evStatus === 'LOCKED' || evStatus === 'CLOSED') return { status: 'LOCKED', reason: 'EVENT_CLOSED' };
+    if (evStatus === 'SCHEDULED' && event.lock_time && now > new Date(event.lock_time)) {
         return { status: 'LOCKED', reason: 'EVENT_CLOSED' };
     }
 
     // 2. Check Fight Level
-    if (fight.lock_status === 'locked') return { status: 'LOCKED', reason: 'MANUAL' };
+    if (fightStatus === 'LOCKED' || fightStatus === 'CLOSED') return { status: 'LOCKED', reason: 'MANUAL' };
     if (fight.custom_lock_time && now > new Date(fight.custom_lock_time)) {
         return { status: 'LOCKED', reason: 'FIGHT_CLOSED' };
     }
 
     // 3. Check Cascade
-    if (event.lock_status === 'cascade' && event.cascade_start_time && fight.order !== undefined) {
+    if (evStatus === 'CASCADE' && event.cascade_start_time && fight.order !== undefined) {
         const cascadeBase = new Date(event.cascade_start_time).getTime();
         // Assume 30 mins per fight order (order 1 = start time, order 2 = start + 30m)
-        // Adjust logic: Order 1 closes at start time? Or starts closing? 
-        // User request: "fechar a cada meia hora". 
-        // Let's say Order 1 closes at cascade_start_time. Order 2 at cascade_start_time + 30m.
         const fightLockTime = cascadeBase + ((fight.order - 1) * 30 * 60 * 1000);
 
         if (now.getTime() > fightLockTime) {

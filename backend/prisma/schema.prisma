@@ -135,10 +135,10 @@ model Fight {
   round_end     String?      // R1, R2...
   time          String?
 
-  // --- New Betting & Admin Fields ---
+  // --- Betting & Admin Fields (Must be present) ---
   order            Int?      @default(0)
   points           Int?      @default(10)
-  lock_status      String?   @default("OPEN")
+  lock_status      String?   @default("OPEN") // Values: OPEN, LOCKED, CLOSED
   custom_lock_time DateTime?
   video_url        String?
 
@@ -207,6 +207,9 @@ enum EventStatus {
 enum LockStatus {
   OPEN
   CLOSED
+  LOCKED
+  SCHEDULED
+  CASCADE
 }
 
 enum FightResult {

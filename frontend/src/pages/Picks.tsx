@@ -3,12 +3,23 @@ import { Screen } from '../App';
 import Panel from '../components/Panel';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { Fight, Pick } from '../types';
+import { Fight, Pick, Event } from '../types';
 import { get_content_lock_status } from '../services/MockDataService';
 
 interface PicksProps {
   on_navigate: (screen: Screen) => void;
 }
+
+// Safe wrapper defined outside to avoid stale closures/deps
+const safe_get_lock_status = (event: Event | null, fight: Fight | null) => {
+  if (!event || !fight) return { status: 'OPEN' as const, reason: undefined };
+  try {
+    return get_content_lock_status(event, fight);
+  } catch (e) {
+    console.error("Error calculating lock status", e);
+    return { status: 'OPEN' as const, reason: undefined };
+  }
+};
 
 const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
   const { user } = useAuth();
@@ -17,18 +28,53 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
     current_fights,
     get_picks_for_event,
     submit_picks_batch,
+    get_fights_for_event,
     loading: data_loading
   } = useData();
 
+  // 1. All Hooks & State moved to top (Rules of Hooks Fix)
   const [active_fight_id, set_active_fight_id] = useState<string | null>(null);
   const [event_picks, set_event_picks] = useState<Record<string, Pick>>({});
-
-  // Selection Draft States
   const [selected_winner_id, set_selected_winner_id] = useState<string | null>(null);
   const [selected_method, set_selected_method] = useState<'KO/TKO' | 'SUB' | 'DEC' | null>(null);
   const [selected_round, set_selected_round] = useState<string | null>(null);
   const [is_submitting, set_is_submitting] = useState(false);
   const [is_card_drawer_open, set_is_card_drawer_open] = useState(false);
+
+  // 2. Derived State & Memoization
+  const active_fight = useMemo(() =>
+    current_fights.find(f => f.id === active_fight_id) || null
+    , [active_fight_id, current_fights]);
+
+  const completed_picks_count = useMemo(() => Object.keys(event_picks).length, [event_picks]);
+  const picks_done = completed_picks_count;
+
+  const progress_percent = current_fights.length > 0 ? (completed_picks_count / current_fights.length) * 100 : 0;
+
+  const lock_info = useMemo(() => {
+    return safe_get_lock_status(current_event, active_fight);
+  }, [current_event, active_fight]);
+
+  const is_locked = lock_info.status === 'LOCKED';
+
+  const has_closed_fights = current_event ? current_fights.some(f => {
+    const info = safe_get_lock_status(current_event, f);
+    return info.status === 'LOCKED';
+  }) : false;
+
+  const all_fights_closed = current_event ? current_fights.every(f => {
+    const info = safe_get_lock_status(current_event, f);
+    return info.status === 'LOCKED';
+  }) : false;
+
+  // 3. Effects
+  // Defensive Fetch: Ensure fights are loaded if we have an event but no fights
+  useEffect(() => {
+    if (current_event && current_fights.length === 0 && !data_loading) {
+      console.warn("Defensive Fetch: Current fights empty for event", current_event.id);
+      get_fights_for_event(current_event.id);
+    }
+  }, [current_event, current_fights, data_loading, get_fights_for_event]);
 
   // Load initial data
   useEffect(() => {
@@ -61,20 +107,34 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
     }
   }, [active_fight_id, event_picks]);
 
-  const active_fight = useMemo(() =>
-    current_fights.find(f => f.id === active_fight_id) || null
-    , [active_fight_id, current_fights]);
-
-  // Lock Calculation
-  const lock_info = useMemo(() => {
-    if (!current_event || !active_fight) return { status: 'OPEN', reason: undefined };
-    return get_content_lock_status(current_event, active_fight);
-  }, [current_event, active_fight]);
-
-  const is_locked = lock_info.status === 'LOCKED';
-
+  // 4. Handlers
   const handle_select_fighter = (fighter_id: string) => {
     set_selected_winner_id(fighter_id);
+  };
+
+  const handle_final_submit = async () => {
+    if (!user || !current_event || is_submitting) return;
+
+    set_is_submitting(true);
+    try {
+      const picks_array = Object.values(event_picks).map((pick: any) => ({
+        fight_id: pick.fight_id as string,
+        fighter_id: pick.fighter_id as string,
+        method: pick.method as any,
+        round: pick.round as string,
+        user_id: user.id || '',
+        event_id: current_event.id
+      }));
+
+      await submit_picks_batch(picks_array);
+      alert("Todos os seus palpites foram salvos!");
+      on_navigate('story');
+    } catch (error) {
+      console.error("Failed to submit batch picks", error);
+      alert("Erro ao enviar palpites. Tente novamente.");
+    } finally {
+      set_is_submitting(false);
+    }
   };
 
   const handle_confirm = async () => {
@@ -157,31 +217,13 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
     }
   };
 
-  const handle_final_submit = async () => {
-    if (!user || !current_event || is_submitting) return;
+  // Safe accessors for rendering
+  const fighter_a = active_fight?.fighter_a;
+  const fighter_b = active_fight?.fighter_b;
+  const fighter_a_id = active_fight?.fighter_a_id;
+  const fighter_b_id = active_fight?.fighter_b_id;
 
-    set_is_submitting(true);
-    try {
-      const picks_array = Object.values(event_picks).map((pick: any) => ({
-        fight_id: pick.fight_id as string,
-        fighter_id: pick.fighter_id as string,
-        method: pick.method as any,
-        round: pick.round as string,
-        user_id: user.id || '',
-        event_id: current_event.id
-      }));
-
-      await submit_picks_batch(picks_array);
-      alert("Todos os seus palpites foram salvos!");
-      on_navigate('story');
-    } catch (error) {
-      console.error("Failed to submit batch picks", error);
-      alert("Erro ao enviar palpites. Tente novamente.");
-    } finally {
-      set_is_submitting(false);
-    }
-  };
-
+  // 5. Conditional Renders (Guards) - Moved to bottom
   if (current_event && current_fights.length === 0 && !data_loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[50vh]">
@@ -203,23 +245,22 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
   }
 
   if (!current_event || !active_fight) {
+    if (data_loading) {
+      return (
+        <div className="flex-1 flex items-center justify-center p-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
     return (
-      <div className="flex-1 flex items-center justify-center p-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex-1 flex items-center justify-center p-20 text-white">
+        <p>Nenhuma luta encontrada.</p>
       </div>
     );
   }
 
-  const fighter_a = active_fight.fighter_a;
-  const fighter_b = active_fight.fighter_b;
-  const fighter_a_id = active_fight.fighter_a_id;
-  const fighter_b_id = active_fight.fighter_b_id;
-
-  const progress_percent = current_fights.length > 0 ? (Object.keys(event_picks).length / current_fights.length) * 100 : 0;
-  const picks_done = Object.keys(event_picks).length;
-
   return (
-    <div className="flex flex-col h-full font-display animate-in fade-in duration-500 overflow-hidden bg-background-dark pb-16 md:pb-0">
+    <div className="flex flex-col h-full font-display animate-in fade-in duration-500 overflow-hidden bg-background-dark pb-[120px] md:pb-0">
       <div className="mx-auto max-w-7xl w-full flex flex-col lg:flex-row gap-2 md:gap-4 items-start justify-start h-full p-2 md:p-4 overflow-hidden">
 
         {/* Main Selection Area */}
@@ -337,7 +378,7 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
             </div>
 
             {/* Selection Steps */}
-            <div className={`flex-1 overflow-hidden px-3 py-1.5 md:p-4 flex flex-col justify-evenly bg-surface-dark relative ${is_locked ? 'pointer-events-none opacity-50 grayscale' : ''}`}>
+            <div className={`flex-1 overflow-hidden px-3 py-1.5 md:p-4 flex flex-col justify-evenly bg-surface-dark relative z-20 ${is_locked ? 'pointer-events-none opacity-50 grayscale' : ''}`}>
               <div className="absolute left-7 top-0 bottom-0 w-px border-l border-dashed border-border-dark hidden md:block opacity-20"></div>
 
               {/* Step 1: Winner */}
@@ -425,24 +466,24 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
               </div>
             </div>
 
-            {/* Fixed Footer Button */}
-            <div className="p-2 md:p-4 border-t border-white/10 bg-surface-dark/95 backdrop-blur-md flex flex-col flex-shrink-0">
+            {/* Desktop-only Footer Button (Hidden on Mobile) */}
+            <div className="p-4 border-t border-white/10 bg-surface-dark/95 backdrop-blur-md flex flex-col flex-shrink-0">
               <button
                 onClick={handle_confirm}
                 disabled={!selected_winner_id || !selected_method || !selected_round || is_submitting || is_locked}
-                className={`w-full rounded-xl md:rounded-2xl py-2.5 md:py-6 text-white font-condensed font-black text-base md:text-2xl uppercase tracking-widest flex items-center justify-center gap-2 md:gap-3 transition-all ${is_locked ? 'bg-white/5 text-white/20 cursor-not-allowed border-none shadow-none' :
+                className={`w-full rounded-2xl py-6 text-white font-condensed font-black text-2xl uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${is_locked ? 'bg-white/5 text-white/20 cursor-not-allowed border-none shadow-none' :
                   selected_winner_id && selected_method && selected_round
                     ? 'bg-primary hover:bg-primary-hover active:scale-[0.98] shadow-neon'
                     : 'bg-surface-highlight text-white/10 cursor-not-allowed'
                   }`}
               >
                 {is_submitting ? (
-                  <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-white"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
                 ) : (
                   <>
                     {is_locked ? (
                       <>
-                        <span className="material-symbols-outlined font-black text-base md:text-xl">lock</span>
+                        <span className="material-symbols-outlined font-black text-xl">lock</span>
                         <span>Palpites Encerrados</span>
                       </>
                     ) : (
@@ -453,13 +494,15 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
                             : (event_picks[active_fight.id!] ? 'Atualizar' : 'Confirmar')
                           }
                         </span>
-                        <span className="material-symbols-outlined font-black text-base md:text-xl">arrow_forward</span>
+                        <span className="material-symbols-outlined font-black text-xl">arrow_forward</span>
                       </>
                     )}
                   </>
                 )}
               </button>
             </div>
+
+
           </div>
         </div>
 
@@ -477,9 +520,10 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
           >
             <div className="flex-1 overflow-y-auto mt-2 pr-1 space-y-1.5 custom-scrollbar pb-2">
               {current_fights.map((fight, i) => {
+                if (!fight || !current_event) return null;
                 const is_current = fight.id === active_fight_id;
                 const has_pick = !!event_picks[fight.id];
-                const fight_lock_info = get_content_lock_status(current_event, fight);
+                const fight_lock_info = safe_get_lock_status(current_event, fight);
                 const is_fight_locked = fight_lock_info.status === 'LOCKED';
 
                 return (
@@ -541,6 +585,7 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
               <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                 <div className="grid grid-cols-1 gap-2">
                   {current_fights.map((fight, i) => {
+                    if (!fight) return null;
                     const is_current = fight.id === active_fight_id;
                     const has_pick = !!event_picks[fight.id];
                     const pick = event_picks[fight.id];
@@ -589,6 +634,7 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
                 </div>
               </div>
 
+              {/* Drawer Footer (Standard Submit when viewing list) */}
               <div className="p-6 flex-shrink-0 bg-black/40 border-t border-white/10">
                 <button
                   onClick={picks_done === current_fights.length ? handle_final_submit : () => set_is_card_drawer_open(false)}
@@ -602,9 +648,13 @@ const Picks: React.FC<PicksProps> = ({ on_navigate }) => {
                   )}
                 </button>
               </div>
+
             </div>
           </div>
         )}
+
+
+
       </div>
     </div>
   );

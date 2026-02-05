@@ -66,21 +66,20 @@ export class PrismaEventRepository implements IEventRepository {
         });
     }
 
-    async update(id: string, data: Partial<Event>): Promise<Event> {
-        const statusMap: Record<string, EventStatus> = {
-            'upcoming': 'SCHEDULED',
-            'live': 'LIVE',
-            'completed': 'COMPLETED'
-        };
-
-        const lockMap: Record<string, LockStatus> = {
-            'open': 'OPEN',
-            'closed': 'CLOSED'
-        };
-
+    async update(id: string, data: any): Promise<Event> {
         const mappedData: any = { ...data };
+
+        // Mappers
+        const statusMap: Record<string, any> = { 'upcoming': 'SCHEDULED', 'live': 'LIVE', 'completed': 'COMPLETED' };
+        const lockMap: Record<string, any> = { 'open': 'OPEN', 'closed': 'CLOSED', 'cascade': 'OPEN' };
+
         if (data.status) mappedData.status = statusMap[data.status] || data.status;
         if (data.lock_status) mappedData.lock_status = lockMap[data.lock_status] || data.lock_status;
+
+        // FIX: Persist cascade start time
+        if (data.cascade_start_time) {
+            mappedData.cascade_start_time = new Date(data.cascade_start_time);
+        }
 
         return await prisma.event.update({
             where: { id },

@@ -13,7 +13,7 @@ const server = Fastify({
 
 await server.register(cors, {
     origin: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH']
 });
 
 const leagueController = new LeagueController();

@@ -23,7 +23,9 @@ interface DataContextType {
     get_fights_for_event: (event_id: string) => Promise<Fight[]>;
     create_fight: (fight: Fight) => Promise<Fight>;
     update_fight: (fight: Fight) => Promise<Fight>;
+
     delete_fight: (id: string) => Promise<void>;
+    reorder_fights: (orders: { id: string, order: number }[]) => Promise<void>;
 
     // Fighters
     fighters: Fighter[];
@@ -76,12 +78,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         set_loading(true);
         try {
             const events_data = await data_service.get_events();
+            console.log('[DataContext] Loaded events:', events_data);
             set_events(events_data);
 
             if (events_data.length > 0) {
-                const upcoming = events_data.find(e => e.status === 'upcoming');
-                const last_completed = [...events_data].reverse().find(e => e.status === 'completed');
+                // Backend may return uppercase/lowercase mismatch vs Types
+                // We normalize checks here using (status as string)
+                const upcoming = events_data.find(e => {
+                    const s = (e.status as string || '').toUpperCase();
+                    return s === 'UPCOMING' || s === 'SCHEDULED' || s === 'OPEN';
+                });
+                const last_completed = [...events_data].reverse().find(e => {
+                    const s = (e.status as string || '').toUpperCase();
+                    return s === 'COMPLETED' || s === 'FINISHED';
+                });
+
                 const initial_event = upcoming || last_completed || events_data[0];
+                console.log('[DataContext] Selected initial event:', initial_event);
                 set_current_event(initial_event);
             }
         } catch (error) {
@@ -163,6 +176,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         update_fight: (fight) => data_service.update_fight(fight),
         delete_fight: (id) => data_service.delete_fight(id),
+        reorder_fights: (orders) => data_service.reorder_fights(orders),
 
         // Fighters
         create_fighter: async (fighter_data) => {

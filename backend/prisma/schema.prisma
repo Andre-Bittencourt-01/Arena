@@ -96,6 +96,8 @@ model Event {
   lock_time          DateTime?
   cascade_start_time DateTime?
 
+  is_calculating_points Boolean     @default(false)
+
   fights Fight[]
   picks  Pick[]
 }

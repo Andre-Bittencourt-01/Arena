@@ -64,7 +64,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 const data_service: IDataService = new ApiDataService();
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { token } = useAuth();
+    const { user } = useAuth(); // Fix: use 'user' instead of 'token' which doesn't exist on context
     const [events, set_events] = useState<Event[]>([]);
     const [current_event, set_current_event] = useState<Event | null>(null);
     const [current_fights, set_current_fights] = useState<Fight[]>([]);
@@ -96,6 +96,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const initial_event = upcoming || last_completed || events_data[0];
                 console.log('[DataContext] Selected initial event:', initial_event);
                 set_current_event(initial_event);
+
+                // Note: Polling logic moved to dedicated useEffect monitoring `current_event?.is_calculating_points`
             } else {
                 // Auto-Revalidation: If events list is empty (cold start?), try once more
                 if (retry_count === 0) {
@@ -115,6 +117,61 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
+    // Reactive Polling for Calculation Lock
+    useEffect(() => {
+        let interval_id: NodeJS.Timeout;
+
+        if (current_event && current_event.is_calculating_points) {
+            console.warn('[DataContext] 🔒 Calculation in progress. Starting fast poll...');
+
+            interval_id = setInterval(async () => {
+                try {
+                    // Fetch only the specific event to save bandwidth
+                    const updated_event = await data_service.get_event(current_event.id);
+
+                    if (updated_event && !updated_event.is_calculating_points) {
+                        console.log('[DataContext] 🔓 Calculation finished! Refreshing Leaderboard...');
+
+                        // 1. Update Current Event State
+                        set_current_event(prev => updated_event);
+
+                        // 2. Update Events List State
+                        set_events(prev => prev.map(e => e.id === updated_event.id ? updated_event : e));
+
+                        // 3. Trigger Leaderboard Refresh
+                        get_leaderboard(ranking_filter, selected_period_id || undefined);
+
+                        // Stop polling
+                        clearInterval(interval_id);
+                    }
+                } catch (err) {
+                    console.error('Polling error:', err);
+                }
+            }, 3000); // 3 seconds interval
+        }
+
+        return () => {
+            if (interval_id) clearInterval(interval_id);
+        };
+    }, [current_event?.id, current_event?.is_calculating_points, ranking_filter, selected_period_id]);
+
+    // Session Management: Reset/Refresh on User Change
+    useEffect(() => {
+        if (user) {
+            console.log('[DataContext] User Logged In/Changed. Refreshing Data...');
+            refresh_data();
+        } else {
+            console.log('[DataContext] User Logged Out. Clearing Data...');
+            // Optional: Clear sensitive data if strictly required, 
+            // but keeping events/fights (public data) is usually better UX than blank screen.
+            // If we must clean per prompt:
+            // set_events([]); 
+            // set_current_event(null);
+            // set_current_fights([]);
+            // For now, assume keeping public data is fine, but re-fetching ensures no "user-specific" pollution.
+        }
+    }, [user, refresh_data]);
+
     useEffect(() => {
         const load_fights = async () => {
             if (current_event) {
@@ -129,13 +186,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         load_fights();
     }, [current_event]);
 
+    // Initial Load (Deprecated by User Effect, but kept for Guest Mode support if needed)
     useEffect(() => {
-        // Initial delay to ensure backend is ready
-        const timer = setTimeout(() => {
-            refresh_data();
-        }, 500); // 500ms initial delay
-        return () => clearTimeout(timer);
-    }, [refresh_data]);
+        // Only trigger if no user is present (Guest), otherwise user effect handles it
+        if (!user) {
+            const timer = setTimeout(() => {
+                refresh_data();
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [refresh_data, user === null]);
 
     const value: DataContextType = {
         events,

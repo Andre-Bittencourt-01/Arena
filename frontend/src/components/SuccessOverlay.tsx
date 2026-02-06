@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Event, Fight, Pick, User } from '../types';
 import StoryCard from './StoryCard';
 import { Screen } from '../App';
-import { toPng } from 'html-to-image';
+import { toBlob } from 'html-to-image';
 
 interface SuccessOverlayProps {
     event: Event;
@@ -26,16 +26,34 @@ const SuccessOverlay: React.FC<SuccessOverlayProps> = ({
     const cardRef = useRef<HTMLDivElement>(null);
     const [isSharing, setIsSharing] = useState(false);
 
-    // Calculate stats (even if minimal for now)
+    // Calculate stats
     let total_points = 0;
     let correct_picks = 0;
+
+    // Scoring Logic Mirror (Ideally should be shared util)
+    const calculate_potential = (fight: Fight, pick: Pick) => {
+        let pts = 30;
+        if (fight.is_title) pts += 60;
+        else if (fight.category === 'Main Event') pts += 30;
+        if (pick.method) pts += 20;
+        if (pick.round) pts += 10;
+        // Mock Mitada check (would need pick pct here too, skipping for potential aggregate to avoid over-promising)
+        return pts;
+    };
+
     fights.forEach(f => {
         const pick = picks[f.id];
         if (pick) {
-            total_points += pick.points_earned || 0;
-            if (f.winner_id && pick.fighter_id === f.winner_id) correct_picks++;
+            if (event.status === 'completed') {
+                total_points += pick.points_earned || 0;
+                if (f.winner_id && pick.fighter_id === f.winner_id) correct_picks++;
+            } else {
+                // Potential Points
+                total_points += calculate_potential(f, pick);
+            }
         }
     });
+
     const accuracy = fights.length > 0 ? Math.round((correct_picks / fights.length) * 100) : 0;
 
     const handleShare = async () => {
@@ -81,11 +99,11 @@ const SuccessOverlay: React.FC<SuccessOverlayProps> = ({
 
             {/* Header */}
             <div className="w-full text-center pt-8 pb-4 shrink-0 relative z-20">
-                <h2 className="text-2xl md:text-3xl font-condensed font-black text-white uppercase italic tracking-tighter drop-shadow-lg">
-                    Resumo dos seus Palpites
+                <h2 className="text-xl md:text-2xl font-condensed font-black text-white uppercase italic tracking-tighter drop-shadow-lg">
+                    Card Confirmado
                 </h2>
-                <p className="text-primary text-xs font-bold uppercase tracking-widest mt-1 animate-pulse">
-                    Salvo com Sucesso!
+                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">
+                    Pronto para compartilhar
                 </p>
             </div>
 

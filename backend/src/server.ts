@@ -39,6 +39,10 @@ server.register(authRoutes, { prefix: 'auth' });
 import { userRoutes } from './infrastructure/http/routes/userRoutes.js';
 server.register(userRoutes);
 
+// Leaderboard Routes
+import { leaderboardRoutes } from './infrastructure/http/routes/leaderboardRoutes.js';
+server.register(leaderboardRoutes);
+
 // Admin & Event Routes
 import { adminRoutes } from './infrastructure/http/routes/adminRoutes.js';
 import { eventRoutes } from './infrastructure/http/routes/eventRoutes.js';

@@ -44,9 +44,18 @@ export class PickController {
 
     async save(request: FastifyRequest<{ Body: SavePickBody }>, reply: FastifyReply) {
         try {
-            const user_id = (request as any).user.id;
-            const pickData = { ...request.body, user_id };
-            const pick = await savePickUseCase.execute(pickData);
+            // SECURITY: Enforce ID from Token (sub)
+            const user_id = (request as any).user.sub;
+
+            // Overwrite user_id from body with secure token ID
+            // Ideally, we pass it separately to UseCase, but legacy DTO might need it.
+            // Updated UseCase now accepts (dto, userId) for strict enforcement.
+            const pickData = {
+                ...request.body,
+                user_id // Keep for DTO shape, but UseCase will enforce arg
+            };
+
+            const pick = await savePickUseCase.execute(pickData, user_id);
             return reply.status(201).send(pick);
         } catch (error: any) {
             const status = error.message.includes("closed") ? 403 : 400;
@@ -56,15 +65,11 @@ export class PickController {
 
     async saveBatch(request: FastifyRequest<{ Body: { picks: Omit<SavePickBody, 'user_id'>[] } }>, reply: FastifyReply) {
         try {
-            const user_id = (request as any).user.id;
+            // SECURITY: Enforce ID from Token (sub)
+            const user_id = (request as any).user.sub;
             const { picks } = request.body;
 
-            const picksWithUser = picks.map(p => ({
-                ...p,
-                user_id
-            }));
-
-            await saveBatchPicksUseCase.execute(picksWithUser as any);
+            await saveBatchPicksUseCase.execute(picks as any, user_id);
             return reply.status(201).send({ message: "Picks saved successfully" });
         } catch (error: any) {
             const status = error.message.includes("closed") ? 403 : 400;

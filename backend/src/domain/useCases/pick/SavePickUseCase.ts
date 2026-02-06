@@ -8,8 +8,14 @@ export class SavePickUseCase {
         private fightRepository: IFightRepository
     ) { }
 
-    async execute(data: SavePickDTO): Promise<Pick> {
-        const fightWithEvent = await this.fightRepository.findByIdWithEvent(data.fight_id);
+    async execute(data: SavePickDTO, userId: string): Promise<Pick> {
+        // SECURITY: Enforce userId from token
+        const secureData = {
+            ...data,
+            user_id: userId // Overwrite with secure ID
+        };
+
+        const fightWithEvent = await this.fightRepository.findByIdWithEvent(secureData.fight_id);
 
         if (!fightWithEvent) {
             throw new Error("Fight not found");
@@ -28,7 +34,7 @@ export class SavePickUseCase {
             throw new Error("Betting is closed for this fight (Event already started)");
         }
 
-        return await this.pickRepository.save(data);
+        return await this.pickRepository.save(secureData);
     }
 }
 

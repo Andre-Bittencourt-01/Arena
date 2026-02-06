@@ -1,6 +1,8 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { UpdateFightUseCase } from "../../application/use-cases/admin/UpdateFightUseCase.js";
 import { PrismaFightRepository } from "../../infrastructure/database/repositories/PrismaFightRepository.js";
+import { PrismaPickRepository } from "../../infrastructure/database/repositories/PrismaPickRepository.js";
+import { PrismaUserRepository } from "../../infrastructure/database/repositories/PrismaUserRepository.js";
 
 export class UpdateFightController {
     async handle(request: FastifyRequest, reply: FastifyReply) {
@@ -38,7 +40,9 @@ export class UpdateFightController {
             };
 
             const repository = new PrismaFightRepository();
-            const useCase = new UpdateFightUseCase(repository);
+            const pickRepository = new PrismaPickRepository();
+            const userRepository = new PrismaUserRepository();
+            const useCase = new UpdateFightUseCase(repository, pickRepository, userRepository);
 
             await useCase.execute(fight_data);
 

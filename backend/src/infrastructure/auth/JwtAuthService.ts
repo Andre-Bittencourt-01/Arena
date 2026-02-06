@@ -21,6 +21,7 @@ export class JwtAuthService implements IAuthService {
             const decoded = jwt.verify(token, this.secret) as any;
             return {
                 id: decoded.sub,
+                sub: decoded.sub,
                 email: decoded.email,
                 role: decoded.role
             };

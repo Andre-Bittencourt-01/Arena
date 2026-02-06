@@ -69,6 +69,11 @@ export interface Fight {
     custom_lock_time?: string; // ISO String
     order?: number;
     video_url?: string;
+
+    // Stats (Aggregated)
+    fighter_a_pick_pct?: number;
+    fighter_b_pick_pct?: number;
+    total_picks?: number;
 }
 
 export interface BannerConfig {
@@ -102,6 +107,8 @@ export interface Event {
     _count?: {
         fights: number;
     };
+
+    is_calculating_points?: boolean;
 }
 
 export interface Pick {

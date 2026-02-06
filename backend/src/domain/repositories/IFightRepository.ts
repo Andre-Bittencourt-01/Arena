@@ -35,4 +35,11 @@ export interface IFightRepository {
     update(id: string, data: UpdateFightDTO): Promise<Fight>;
     create(data: CreateFightDTO): Promise<Fight>;
     findByEventId(eventId: string): Promise<any[]>;
+
+    // Transactional Method for Scoring
+    resolveFightAndScores(
+        fightId: string,
+        fightData: UpdateFightDTO,
+        calculatePointsFn: (pick: any) => number
+    ): Promise<void>;
 }

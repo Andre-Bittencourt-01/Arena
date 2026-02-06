@@ -48,7 +48,7 @@ const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(({
             </div>
 
             <div className={`relative ${fights.length > 10 ? 'h-14' : 'h-24'} shrink-0 mx-4 mt-0.5 rounded-lg overflow-hidden shadow-2xl border border-white/10 group transition-all flex items-center`}>
-                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${event.banner_url}")` }}></div>
+                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: event.banner_url ? `url("${event.banner_url}")` : undefined }}></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent"></div>
 
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 z-20">
@@ -82,6 +82,16 @@ const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(({
                     <div className="flex-1 bg-white/5 border border-white/5 rounded p-1 flex items-center justify-between px-2">
                         <span className="text-[7px] text-gray-500 uppercase font-bold"> Precisão</span>
                         <span className="text-sm font-black text-accent-green leading-none">{accuracy}%</span>
+                    </div>
+                </div>
+            )}
+
+            {event.status !== 'completed' && (
+                <div className="mx-4 mt-1.5 flex gap-1 shrink-0">
+                    <div className="w-full bg-primary/10 border border-primary/20 rounded p-1.5 flex items-center justify-center gap-2">
+                        <span className="text-[8px] text-primary uppercase font-bold tracking-widest">Buscando</span>
+                        <span className="text-sm font-black text-white leading-none">{total_points}</span>
+                        <span className="text-[8px] text-primary uppercase font-bold tracking-widest">Pontos</span>
                     </div>
                 </div>
             )}
@@ -193,7 +203,11 @@ const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(({
                                         <div className={`relative ${img_width} h-full shrink-0 transition-all border-r border-white/5
                         ${is_upcoming && my_pick_id === f_a.id ? 'border-2 border-accent-green box-border z-10' : ''}
                     `}>
-                                            <img src={f_a.image_url} alt={f_a.name} className={`w-full h-full object-cover object-top ${f1_dim ? 'grayscale opacity-50' : ''}`} />
+                                            {f_a.image_url ? (
+                                                <img src={f_a.image_url} alt={f_a.name} className={`w-full h-full object-cover object-top ${f1_dim ? 'grayscale opacity-50' : ''}`} />
+                                            ) : (
+                                                <div className={`w-full h-full bg-neutral-800 ${f1_dim ? 'grayscale opacity-50' : ''}`}></div>
+                                            )}
                                             {my_pick_id === f_a.id && <div className={`absolute bottom-0 h-0.5 w-full ${is_pick_correct ? 'bg-accent-green' : is_completed && winner_id ? 'bg-red-500' : 'bg-accent-green'}`}></div>}
 
                                             {is_completed && winner_id === f_a.id && (
@@ -299,7 +313,11 @@ const StoryCard = forwardRef<HTMLDivElement, StoryCardProps>(({
                                         <div className={`relative ${img_width} h-full shrink-0 transition-all border-l border-white/5
                        ${is_upcoming && my_pick_id === f_b.id ? 'border-2 border-accent-green box-border z-10' : ''}
                     `}>
-                                            <img src={f_b.image_url} alt={f_b.name} className={`w-full h-full object-cover object-top ${f2_dim ? 'grayscale opacity-50' : ''}`} />
+                                            {f_b.image_url ? (
+                                                <img src={f_b.image_url} alt={f_b.name} className={`w-full h-full object-cover object-top ${f2_dim ? 'grayscale opacity-50' : ''}`} />
+                                            ) : (
+                                                <div className={`w-full h-full bg-neutral-800 ${f2_dim ? 'grayscale opacity-50' : ''}`}></div>
+                                            )}
                                             {my_pick_id === f_b.id && <div className={`absolute bottom-0 h-0.5 w-full ${is_pick_correct ? 'bg-accent-green' : is_completed && winner_id ? 'bg-red-500' : 'bg-accent-green'}`}></div>}
 
                                             {is_completed && winner_id === f_b.id && (

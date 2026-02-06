@@ -87,52 +87,182 @@ export class PrismaFightRepository implements IFightRepository {
                 fighter_b: true,
                 winner: true
             },
-            // FIX 1: Sort by user-defined 'order' first, then 'id'
             orderBy: [
                 { order: 'asc' },
                 { id: 'asc' }
             ]
         });
 
-        return fights.map(f => ({
-            id: f.id,
-            event_id: f.event_id,
-            fighter_a_id: f.fighter_a_id,
-            fighter_b_id: f.fighter_b_id,
-            rounds: f.rounds,
-            is_title: f.is_title,
-            category: f.category,
-
-            // FIX 2: Include Betting / Admin Fields in the response
-            points: f.points,
-            order: f.order,
-            lock_status: f.lock_status,
-            custom_lock_time: f.custom_lock_time,
-
-            // Relations & Results
-            winner_id: f.winner_id,
-            winner: f.winner ? {
-                id: f.winner.id,
-                name: f.winner.name,
-                nickname: f.winner.nickname,
-                image_url: f.winner.image_url || ''
-            } : null,
-            method: f.method,
-            round_end: f.round_end,
-            time: f.time,
-            status: f.result ? 'COMPLETED' : 'SCHEDULED',
-            fighter_a: {
-                id: f.fighter_a.id,
-                name: f.fighter_a.name,
-                nickname: f.fighter_a.nickname,
-                image_url: f.fighter_a.image_url || ''
+        // Optimization: Batch Fetch Pick Stats
+        const pickStats = await prisma.pick.groupBy({
+            by: ['fight_id', 'fighter_id'],
+            _count: {
+                id: true
             },
-            fighter_b: {
-                id: f.fighter_b.id,
-                name: f.fighter_b.name,
-                nickname: f.fighter_b.nickname,
-                image_url: f.fighter_b.image_url || ''
+            where: {
+                event_id: eventId
             }
-        }));
+        });
+
+        // Create Lookup Map: fight_id -> fighter_id -> count
+        const statsMap: Record<string, Record<string, number>> = {};
+        pickStats.forEach(stat => {
+            if (!statsMap[stat.fight_id]) statsMap[stat.fight_id] = {};
+            statsMap[stat.fight_id][stat.fighter_id] = stat._count.id;
+        });
+
+        return fights.map(f => {
+            const fighterACount = statsMap[f.id]?.[f.fighter_a_id] || 0;
+            const fighterBCount = statsMap[f.id]?.[f.fighter_b_id] || 0;
+            const total = fighterACount + fighterBCount;
+
+            return {
+                id: f.id,
+                event_id: f.event_id,
+                fighter_a_id: f.fighter_a_id,
+                fighter_b_id: f.fighter_b_id,
+                rounds: f.rounds,
+                is_title: f.is_title,
+                category: f.category,
+
+                // Betting / Admin
+                points: f.points,
+                order: f.order,
+                lock_status: f.lock_status,
+                custom_lock_time: f.custom_lock_time,
+
+                // Relations & Results
+                winner_id: f.winner_id,
+                winner: f.winner ? {
+                    id: f.winner.id,
+                    name: f.winner.name,
+                    nickname: f.winner.nickname,
+                    image_url: f.winner.image_url || ''
+                } : null,
+                method: f.method,
+                round_end: f.round_end,
+                time: f.time,
+                status: f.result ? 'COMPLETED' : 'SCHEDULED',
+                fighter_a: {
+                    id: f.fighter_a.id,
+                    name: f.fighter_a.name,
+                    nickname: f.fighter_a.nickname,
+                    image_url: f.fighter_a.image_url || ''
+                },
+                fighter_b: {
+                    id: f.fighter_b.id,
+                    name: f.fighter_b.name,
+                    nickname: f.fighter_b.nickname,
+                    image_url: f.fighter_b.image_url || ''
+                },
+
+                // Real Stats
+                fighter_a_pick_pct: total > 0 ? Math.round((fighterACount / total) * 100) : 0,
+                fighter_b_pick_pct: total > 0 ? Math.round((fighterBCount / total) * 100) : 0,
+                total_picks: total
+            };
+        });
+    }
+
+    async resolveFightAndScores(fightId: string, fightData: UpdateFightDTO, calculatePointsFn: (pick: any) => number): Promise<void> {
+        await prisma.$transaction(async (tx) => {
+            console.log(`[SCORING] Iniciando recálculo para Luta ${fightId}`);
+
+            // 0. Update Fight Result (Atomic)
+            const updateData: any = {
+                // Scalar Fields
+                ...(fightData.category && { category: fightData.category }),
+                ...(fightData.weight_class && { weight_class: fightData.weight_class }),
+                ...(fightData.rounds && { rounds: Number(fightData.rounds) }),
+                // REMOVING STATUS FIELD - Replacing with lock_status: CLOSED for completed fights
+                lock_status: 'CLOSED',
+
+                ...(fightData.order !== undefined && { order: Number(fightData.order) }),
+                ...(fightData.video_url !== undefined && { video_url: fightData.video_url }),
+                ...(fightData.is_title !== undefined && { is_title: Boolean(fightData.is_title) }),
+
+                // Betting / Admin
+                ...(fightData.points !== undefined && { points: Number(fightData.points) }),
+                custom_lock_time: (fightData.custom_lock_time && fightData.custom_lock_time !== "")
+                    ? new Date(fightData.custom_lock_time)
+                    : null,
+
+                // Results (Scalars) - Enforcing Uppercase Enum
+                ...(fightData.method !== undefined && { method: fightData.method }),
+                ...(fightData.result !== undefined && { result: (fightData.result as string).toUpperCase() as 'WIN' | 'DRAW' | 'NC' }),
+                ...(fightData.round_end !== undefined && {
+                    round_end: fightData.round_end ? String(fightData.round_end) : null
+                }),
+                ...(fightData.time !== undefined && { time: fightData.time }),
+
+                // RELATIONS
+                // If we have a winner_id, connect it. explicit null means disconnect (Draw/NC)
+                ...(fightData.winner_id
+                    ? { winner: { connect: { id: fightData.winner_id } } }
+                    : { winner: { disconnect: true } }
+                ),
+            };
+
+            await tx.fight.update({
+                where: { id: fightId },
+                data: updateData
+            });
+
+            // 1. Lock Event
+            const fight = await tx.fight.findUnique({ where: { id: fightId } });
+            if (!fight) throw new Error("Fight not found");
+            await tx.event.update({ where: { id: fight.event_id }, data: { is_calculating_points: true } });
+
+            // 2. Rollback (Clean old points)
+            const picks = await tx.pick.findMany({ where: { fight_id: fightId } });
+            for (const pick of picks) {
+                if (pick.points_earned > 0) {
+                    await tx.user.update({
+                        where: { id: pick.user_id },
+                        data: {
+                            points: { decrement: pick.points_earned },
+                            monthly_points: { decrement: pick.points_earned },
+                            yearly_points: { decrement: pick.points_earned }
+                        }
+                    });
+                }
+            }
+
+            // 3. Calculate & Apply New Points
+            const picksToUpdate: { id: string; userId: string; points: number }[] = [];
+            for (const pick of picks) {
+                const newPoints = calculatePointsFn(pick); // Recalcula com o resultado atual
+                if (newPoints > 0) {
+                    picksToUpdate.push({ id: pick.id, userId: pick.user_id, points: newPoints });
+                } else {
+                    // Se zerou, atualiza o pick para 0
+                    await tx.pick.update({ where: { id: pick.id }, data: { points_earned: 0 } });
+                }
+            }
+
+            // 4. Batch Updates (Optimization)
+            const userIncrements: Record<string, number> = {};
+            for (const p of picksToUpdate) {
+                await tx.pick.update({ where: { id: p.id }, data: { points_earned: p.points } });
+                if (!userIncrements[p.userId]) userIncrements[p.userId] = 0;
+                userIncrements[p.userId] += p.points;
+            }
+
+            for (const userId of Object.keys(userIncrements)) {
+                const points = userIncrements[userId];
+                await tx.user.update({
+                    where: { id: userId },
+                    data: {
+                        points: { increment: points },
+                        monthly_points: { increment: points },
+                        yearly_points: { increment: points }
+                    }
+                });
+            }
+
+            // 5. Unlock Event
+            await tx.event.update({ where: { id: fight.event_id }, data: { is_calculating_points: false } });
+            console.log(`[SCORING] Recálculo finalizado com sucesso.`);
+        }, { timeout: 30000 });
     }
 }

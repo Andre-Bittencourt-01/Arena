@@ -1,5 +1,5 @@
 import { IDataService, RankingPeriod } from '../types'; // Import from the NEW unified types
-import { Event, Fight, Fighter, User, Pick, League } from '../types';
+import type { Event, Fight, Fighter, User, Pick, League } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
 
@@ -23,6 +23,10 @@ export class ApiDataService implements IDataService {
             });
 
             if (!res.ok) {
+                if (res.status === 401) {
+                    console.warn('[API] 401 Unauthorized - Dispatching Session Expired Event');
+                    window.dispatchEvent(new Event('auth:session_expired'));
+                }
                 const errorBody = await res.text();
                 throw new Error(`API Error ${res.status}: ${errorBody}`);
             }
@@ -157,9 +161,13 @@ export class ApiDataService implements IDataService {
     }
 
     // --- LEADERBOARD & USERS ---
-    async get_leaderboard(period: RankingPeriod = 'month', period_id?: string): Promise<User[]> {
-        const query = period_id ? `?period=${period}&periodId=${period_id}` : `?period=${period}`;
-        return this.fetch<User[]>(`/leaderboard${query}`);
+    async get_leaderboard(period?: RankingPeriod, period_id?: string): Promise<User[]> {
+        // Se for week, passamos o period_id como query param para a rota global
+        const url = (period === 'week' && period_id)
+            ? `/leaderboard?period=week&eventId=${period_id}`
+            : `/leaderboard?period=${period || 'all'}`;
+
+        return this.fetch<User[]>(url);
     }
 
     async login(email: string, password: string): Promise<User | null> {

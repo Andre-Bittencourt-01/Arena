@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { Screen } from '../App';
 
 interface NavigationContextType {
@@ -15,15 +15,15 @@ export const NavigationProvider: React.FC<{
 }> = ({ children, onNavigate }) => {
     const [blocker, setBlockerState] = useState<((target: Screen) => boolean) | null>(null);
 
-    const setBlocker = (fn: (target: Screen) => boolean) => {
+    const setBlocker = useCallback((fn: (target: Screen) => boolean) => {
         setBlockerState(() => fn);
-    };
+    }, []);
 
-    const removeBlocker = () => {
+    const removeBlocker = useCallback(() => {
         setBlockerState(null);
-    };
+    }, []);
 
-    const attemptNavigate = (target: Screen) => {
+    const attemptNavigate = useCallback((target: Screen) => {
         if (blocker) {
             // If blocker returns true, navigation is BLOCKED (handled internally by the blocker component)
             // If blocker returns false, navigation proceeds
@@ -34,10 +34,16 @@ export const NavigationProvider: React.FC<{
         } else {
             onNavigate(target);
         }
-    };
+    }, [blocker, onNavigate]);
+
+    const value = useMemo(() => ({
+        setBlocker,
+        removeBlocker,
+        attemptNavigate
+    }), [setBlocker, removeBlocker, attemptNavigate]);
 
     return (
-        <NavigationContext.Provider value={{ setBlocker, removeBlocker, attemptNavigate }}>
+        <NavigationContext.Provider value={value}>
             {children}
         </NavigationContext.Provider>
     );

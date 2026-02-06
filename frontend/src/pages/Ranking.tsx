@@ -20,6 +20,22 @@ const Ranking: React.FC = () => {
     if (selected_period_id) set_selected_event_id(selected_period_id);
   }, [selected_period_id]);
 
+  // Task 2: UI Sync - Monitor Calculation Status
+  // Although DataContext handles the polling and triggering, this ensures the local component
+  // is aware and can force a re-render or local fetch if necessary.
+  React.useEffect(() => {
+    const current_event = events.find(e => e.id === selected_period_id);
+    if (!current_event) return;
+
+    if (current_event.is_calculating_points) {
+      console.log('⏳ Ranking: Waiting for points calculation...');
+    } else {
+      // If we were processing and now we are done, the DataContext should have already updated the leaderboard.
+      // We can rely on 'leaderboard' prop update.
+      console.log('✅ Ranking: Displaying results.');
+    }
+  }, [events, selected_period_id]);
+
   // Auto-select default period when filter changes or on load
   React.useEffect(() => {
     if (ranking_filter === 'week') {
@@ -496,29 +512,62 @@ const Ranking: React.FC = () => {
       <div className="flex flex-col border border-white/10 bg-zinc-900/40 backdrop-blur-3xl overflow-hidden relative shadow-[0_40px_100px_rgba(0,0,0,0.6)] rounded-2xl">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none opacity-40"></div>
 
-        {/* Header Grid */}
-        <div className="grid grid-cols-12 gap-0 px-2 sm:px-8 py-2 sm:py-3 bg-black/80 border-b border-primary/20 text-[10px] sm:text-sm font-condensed text-white/40 uppercase tracking-[0.2em] sm:tracking-[0.4em] font-black z-30 sticky top-0 backdrop-blur-xl items-center">
-          <div className="col-span-2 sm:col-span-1 text-center sm:border-r border-white/5">Rank</div>
-          <div className="col-span-2 sm:col-span-3 text-center sm:border-r border-white/5 text-primary/60">{ranking_filter !== 'week' ? 'Prog' : ''}</div>
-          <div className="col-span-6 sm:col-span-5 flex items-center justify-start pl-4 sm:pl-8 border-r border-white/5 uppercase">Competidor</div>
-          <div className="col-span-2 sm:col-span-3 text-center sm:text-right pr-0 sm:pr-6 uppercase tracking-[0.2em] sm:tracking-[0.5em] font-black text-white/70">Pts</div>
-        </div>
+        {/* VISUAL LOCK CHECK */}
+        {(() => {
+          const selected_event_obj = events.find(e => e.id === current_item?.id);
+          const is_processing = ranking_filter === 'week' && selected_event_obj?.is_calculating_points;
 
-        {/* Leaderboard Lines */}
-        <div className="divide-y divide-white/10 relative z-10 border-t border-white/5">
-          {leaderboard.length > 3 ? (
-            leaderboard.slice(3).map((user, index) => render_user_row(user, index + 3))
-          ) : (
-            <div className="py-40 text-center flex flex-col items-center justify-center">
-              <span className="material-symbols-outlined text-white/5 text-9xl mb-8 animate-pulse">database_off</span>
-              <div className="text-white/20 font-condensed italic text-2xl tracking-[0.4em] uppercase font-black">SISTEMA_SEM_RESPOSTA // DADOS_NÃO_LOCALIZADOS</div>
-            </div>
-          )}
-        </div>
+          if (is_processing) {
+            return (
+              <div className="py-24 sm:py-40 flex flex-col items-center justify-center text-center px-4 relative overflow-hidden">
+                {/* Background Pulse Effect */}
+                <div className="absolute inset-0 bg-primary/5 animate-pulse"></div>
 
-        <div className="p-12 text-center text-white/5 text-[11px] font-mono border-t border-white/5 uppercase tracking-[0.7em] bg-black/60 font-black">
-          STATUS_MOTOR: ONLINE // CONEXÃO_SEGURA // v1.0.4.8_ELITE
-        </div>
+                <div className="size-20 sm:size-24 bg-zinc-900 rounded-full border border-primary/20 flex items-center justify-center mb-6 shadow-[0_0_50px_rgba(236,19,19,0.15)] relative z-10">
+                  <span className="material-symbols-outlined text-4xl sm:text-5xl text-primary animate-spin">settings</span>
+                </div>
+
+                <h3 className="font-condensed text-2xl sm:text-4xl text-white font-black uppercase italic tracking-tighter mb-2 relative z-10">
+                  Apuração em <span className="text-primary">Andamento</span>
+                </h3>
+
+                <p className="text-white/60 text-xs sm:text-sm font-bold uppercase tracking-widest max-w-md relative z-10">
+                  Os resultados oficiais estão sendo processados.<br />
+                  O ranking será atualizado em instantes.
+                </p>
+
+              </div>
+            );
+          }
+
+          return (
+            <>
+              {/* Header Grid */}
+              <div className="grid grid-cols-12 gap-0 px-2 sm:px-8 py-2 sm:py-3 bg-black/80 border-b border-primary/20 text-[10px] sm:text-sm font-condensed text-white/40 uppercase tracking-[0.2em] sm:tracking-[0.4em] font-black z-30 sticky top-0 backdrop-blur-xl items-center">
+                <div className="col-span-2 sm:col-span-1 text-center sm:border-r border-white/5">Rank</div>
+                <div className="col-span-2 sm:col-span-3 text-center sm:border-r border-white/5 text-primary/60">{ranking_filter !== 'week' ? 'Prog' : ''}</div>
+                <div className="col-span-6 sm:col-span-5 flex items-center justify-start pl-4 sm:pl-8 border-r border-white/5 uppercase">Competidor</div>
+                <div className="col-span-2 sm:col-span-3 text-center sm:text-right pr-0 sm:pr-6 uppercase tracking-[0.2em] sm:tracking-[0.5em] font-black text-white/70">Pts</div>
+              </div>
+
+              {/* Leaderboard Lines */}
+              <div className="divide-y divide-white/10 relative z-10 border-t border-white/5">
+                {leaderboard.length > 3 ? (
+                  leaderboard.slice(3).map((user, index) => render_user_row(user, index + 3))
+                ) : (
+                  <div className="py-40 text-center flex flex-col items-center justify-center">
+                    <span className="material-symbols-outlined text-white/5 text-9xl mb-8 animate-pulse">database_off</span>
+                    <div className="text-white/20 font-condensed italic text-2xl tracking-[0.4em] uppercase font-black">SISTEMA_SEM_RESPOSTA // DADOS_NÃO_LOCALIZADOS</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-12 text-center text-white/5 text-[11px] font-mono border-t border-white/5 uppercase tracking-[0.7em] bg-black/60 font-black">
+                STATUS_MOTOR: ONLINE // CONEXÃO_SEGURA // v1.0.4.8_ELITE
+              </div>
+            </>
+          );
+        })()}
       </div>
       <div className="h-40"></div>
       {/* Full Selector Overlay */}

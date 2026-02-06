@@ -9,9 +9,28 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentScreen }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { attemptNavigate } = useNavigation();
   const isActive = (screen: Screen) => currentScreen === screen;
+
+  const [is_menu_open, set_is_menu_open] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  // Click Outside Listener
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        set_is_menu_open(false);
+      }
+    };
+
+    if (is_menu_open) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [is_menu_open]);
 
   const navItems: { screen: Screen; label: string; icon: string }[] = [
     { screen: 'dashboard', label: 'Home', icon: 'home' },
@@ -53,15 +72,64 @@ const Navbar: React.FC<NavbarProps> = ({ currentScreen }) => {
             <button className="flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-surface-dark hover:bg-white/10 text-white transition-colors">
               <span className="material-symbols-outlined text-[18px] md:text-[20px]">notifications</span>
             </button>
-            <div
-              className={`h-8 w-8 md:h-9 md:w-9 overflow-hidden rounded-full border bg-white/5 hover:border-primary/50 transition-colors cursor-pointer ${isActive('profile') ? 'border-primary' : 'border-white/10'}`}
-              onClick={() => attemptNavigate('profile')}
-            >
-              <img
-                alt="User Avatar"
-                className="h-full w-full object-cover"
-                src={user?.avatar || "https://ui-avatars.com/api/?name=" + (user?.name || "User") + "&background=random"}
-              />
+            {/* User Avatar with Dropdown */}
+            <div className="relative" ref={menuRef}>
+              <div
+                className={`h-8 w-8 md:h-9 md:w-9 overflow-hidden rounded-full border bg-white/5 hover:border-primary/50 transition-colors cursor-pointer ${is_menu_open ? 'border-primary ring-2 ring-primary/20' : 'border-white/10'}`}
+                onClick={() => set_is_menu_open(!is_menu_open)}
+              >
+                <img
+                  alt="User Avatar"
+                  className="h-full w-full object-cover"
+                  src={user?.avatar || "https://ui-avatars.com/api/?name=" + (user?.name || "User") + "&background=random"}
+                />
+              </div>
+
+              {/* Dropdown Menu */}
+              {is_menu_open && (
+                <>
+                  {/* Mobile Overlay (Click Outside / Focus Trap) */}
+                  <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] md:hidden" onClick={() => set_is_menu_open(false)} />
+
+                  {/* Menu Container */}
+                  <div className="absolute right-0 top-full mt-3 w-64 rounded-xl border border-white/10 bg-[#0f0f11] shadow-2xl ring-1 ring-black/5 z-50 animate-in fade-in slide-in-from-top-2 origin-top-right overflow-hidden flex flex-col">
+
+                    {/* Header */}
+                    <div className="px-4 py-3 bg-white/5 border-b border-white/5">
+                      <p className="text-sm font-bold text-white truncate">{user?.name || "Usuário"}</p>
+                      <p className="text-xs text-gray-400 truncate font-mono mt-0.5">{user?.email}</p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="p-1.5 flex flex-col gap-0.5">
+                      <button
+                        onClick={() => {
+                          attemptNavigate('profile');
+                          set_is_menu_open(false);
+                        }}
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-gray-300 rounded-lg hover:bg-white/5 hover:text-white transition-colors group"
+                      >
+                        <span className="material-symbols-outlined text-[20px] text-gray-500 group-hover:text-primary transition-colors">person</span>
+                        Meu Perfil
+                      </button>
+
+                      <div className="h-px bg-white/5 my-1 mx-2" />
+
+                      <button
+                        onClick={() => {
+                          logout();
+                          set_is_menu_open(false);
+                          attemptNavigate('login');
+                        }}
+                        className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-red-400 rounded-lg hover:bg-red-500/10 hover:text-red-300 transition-colors group"
+                      >
+                        <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">logout</span>
+                        Sair da Conta
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

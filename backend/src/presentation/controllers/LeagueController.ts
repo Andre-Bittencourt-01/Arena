@@ -4,14 +4,17 @@ import { JoinLeagueUseCase } from '../../domain/useCases/league/JoinLeagueUseCas
 import { GetLeagueLeaderboardUseCase } from '../../domain/useCases/league/GetLeagueLeaderboardUseCase.js';
 import { GetUserLeaguesUseCase } from '../../domain/useCases/league/GetUserLeaguesUseCase.js';
 import { ListLeaguesUseCase } from '../../domain/useCases/league/ListLeaguesUseCase.js';
+
 import { PrismaLeagueRepository } from '../../infrastructure/database/repositories/PrismaLeagueRepository.js';
+import { PrismaUserRepository } from '../../infrastructure/database/repositories/PrismaUserRepository.js';
 
 const leagueRepository = new PrismaLeagueRepository();
+const userRepository = new PrismaUserRepository();
 const createLeagueUseCase = new CreateLeagueUseCase(leagueRepository);
 const joinLeagueUseCase = new JoinLeagueUseCase(leagueRepository);
 const getLeagueLeaderboardUseCase = new GetLeagueLeaderboardUseCase(leagueRepository);
 const getUserLeaguesUseCase = new GetUserLeaguesUseCase(leagueRepository);
-const listLeaguesUseCase = new ListLeaguesUseCase(leagueRepository);
+const listLeaguesUseCase = new ListLeaguesUseCase(leagueRepository, userRepository);
 
 interface CreateLeagueBody {
     name: string;
@@ -30,7 +33,8 @@ interface LeagueParams {
 export class LeagueController {
     async list(request: FastifyRequest, reply: FastifyReply) {
         try {
-            const leagues = await listLeaguesUseCase.execute();
+            const userId = (request as any).user?.id || (request as any).user?.sub;
+            const leagues = await listLeaguesUseCase.execute(userId);
             return reply.status(200).send(leagues);
         } catch (error: any) {
             console.error(error);
@@ -38,14 +42,15 @@ export class LeagueController {
         }
     }
 
-    async getLeaderboard(request: FastifyRequest<{ Params: LeagueParams }>, reply: FastifyReply) {
+    async getLeaderboard(request: FastifyRequest<{ Params: LeagueParams, Querystring: { eventId?: string, month?: string, year?: string } }>, reply: FastifyReply) {
         try {
             const { id } = request.params;
-            const leaderboard = await getLeagueLeaderboardUseCase.execute(id);
+            const { eventId, month, year } = request.query || {};
+            const leaderboard = await getLeagueLeaderboardUseCase.execute(id, { eventId, month, year });
             return reply.status(200).send(leaderboard);
         } catch (error: any) {
             console.error(error);
-            return reply.status(500).send({ error: error.message || "Internal Server Error" });
+            return reply.status(200).send([]);
         }
     }
 

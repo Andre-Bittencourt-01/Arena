@@ -10,10 +10,104 @@ const Ranking: React.FC = () => {
     set_ranking_filter,
     events,
     selected_period_id,
-    set_selected_period_id
+    set_selected_period_id,
+    get_leaderboard
   } = useData();
 
   const [selected_event_id, set_selected_event_id] = React.useState<string | null>(null);
+
+  // --- LIVE RACE MEMORY (CLIENT-SIDE) ---
+  const [liveDeltas, setLiveDeltas] = React.useState<Record<string, number>>({});
+  const prevPosRef = React.useRef<Record<string, number>>({});
+  const prevContextRef = React.useRef({ filter: ranking_filter, id: selected_period_id });
+
+  // 1. Reset Memory on Context Change (Event A -> Event B)
+  React.useEffect(() => {
+    const ctx = { filter: ranking_filter, id: selected_period_id };
+    // Simple shallow check for context switch
+    if (ctx.filter !== prevContextRef.current.filter || ctx.id !== prevContextRef.current.id) {
+      // console.log('[RANKING] Context changed. Resetting Live Race memory.');
+      setLiveDeltas({});
+      prevPosRef.current = {};
+      prevContextRef.current = ctx;
+    }
+  }, [ranking_filter, selected_period_id]);
+
+  // 2. Calculate Deltas on Leaderboard Update
+  React.useEffect(() => {
+    if (!leaderboard || leaderboard.length === 0) return;
+
+    // Only active for 'week' (Event Race)
+    if (ranking_filter === 'week') {
+      const newDeltas: Record<string, number> = {};
+      const currentPos: Record<string, number> = {};
+      let hasChanges = false;
+
+      leaderboard.forEach((user, index) => {
+        const rank = index + 1;
+        currentPos[user.id] = rank;
+
+        const prevRank = prevPosRef.current[user.id];
+        // Only calculate if we have history for this user in this session
+        if (prevRank !== undefined) {
+          const delta = prevRank - rank; // Ex: Was 5, Now 3 -> +2 (Green/Up)
+          if (delta !== 0) {
+            newDeltas[user.id] = delta;
+            hasChanges = true;
+          }
+        }
+      });
+
+      if (hasChanges) {
+        setLiveDeltas(prev => ({ ...prev, ...newDeltas }));
+      }
+
+      // Save state for NEXT update (Current becomes Previous)
+      prevPosRef.current = currentPos;
+    }
+  }, [leaderboard, ranking_filter]);
+
+  // Helper for UI
+  const getDisplayDelta = (user: any) => {
+    if (ranking_filter === 'week') {
+      return liveDeltas[user.id] || 0;
+    }
+    return user.rank_delta || 0; // Backend source
+  };
+
+
+
+  // Task 1: Ref-guarded Fetch (Stop the Loop)
+  const lastFetchRef = React.useRef<{ filter: string; id: string } | null>(null);
+
+  React.useEffect(() => {
+    // 1. Validate ID existence
+    if (!selected_period_id) return;
+
+    // 2. Safety: Prevent sending Event IDs to Month/Year filters
+    if (ranking_filter !== 'week' && selected_period_id.startsWith('evt_')) return;
+
+    // 3. Safety: Fix "Year" filter receiving "Month" IDs (Critical Fix for Backend Crash)
+    // If filter is 'year' but ID looks like 'YYYY-MM', strip it.
+    let clean_id = selected_period_id;
+    if (ranking_filter === 'year' && selected_period_id.includes('-')) {
+      clean_id = selected_period_id.split('-')[0];
+    }
+
+    // 4. Duplicate Check (The Loop Killer)
+    if (
+      lastFetchRef.current?.filter === ranking_filter &&
+      lastFetchRef.current?.id === clean_id
+    ) {
+      return;
+    }
+
+    // 5. Execute
+    lastFetchRef.current = { filter: ranking_filter, id: clean_id };
+    console.log(`[RANKING] Fetching Once: ${ranking_filter} - ${clean_id}`);
+    get_leaderboard(ranking_filter, clean_id);
+
+  }, [ranking_filter, selected_period_id, get_leaderboard]);
 
   // Sync with context
   React.useEffect(() => {
@@ -36,25 +130,62 @@ const Ranking: React.FC = () => {
     }
   }, [events, selected_period_id]);
 
-  // Auto-select default period when filter changes or on load
-  React.useEffect(() => {
-    if (ranking_filter === 'week') {
-      // For weekly ranking, find the most recent completed event
-      const sorted_events = [...events]
-        .filter(e => e.status === 'completed')
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Task 1 & 2: Explicit Filter Change Handler (Stability Fix)
+  const handleFilterChange = (newFilter: 'week' | 'month' | 'year') => {
+    set_ranking_filter(newFilter);
 
-      const last_event = sorted_events[sorted_events.length - 1];
-      if (last_event) set_selected_period_id(last_event.id);
-    } else if (ranking_filter === 'month') {
+    // Force correct ID type immediately to prevent "Zero" flash
+    if (newFilter === 'week') {
       const now = new Date();
-      const current_month_id = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-      set_selected_period_id(current_month_id);
-    } else if (ranking_filter === 'year') {
-      const current_year = new Date().getFullYear().toString();
-      set_selected_period_id(current_year);
+      // BUSINESS RULE: Status is Active OR Date is in the Past (regardless of status)
+      const visibleEvents = events
+        .filter(e => {
+          const s = (e.status || '').toLowerCase();
+          const eventDate = new Date(e.date);
+          return ['live', 'completed', 'finished'].includes(s) || eventDate < now;
+        })
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      if (visibleEvents.length > 0) {
+        set_selected_period_id(visibleEvents[0].id);
+      } else {
+        set_selected_period_id(null);
+      }
+    } else if (newFilter === 'month') {
+      const now = new Date();
+      set_selected_period_id(`${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`); // YYYY-MM
+    } else if (newFilter === 'year') {
+      set_selected_period_id(new Date().getFullYear().toString()); // YYYY
     }
-  }, [ranking_filter, events, set_selected_period_id]);
+  };
+
+  // AUTO-SELECT LATEST EVENT
+  React.useEffect(() => {
+    if (ranking_filter === 'week' && events.length > 0) {
+      const now = new Date();
+
+      // Calculate Valid List (Same logic as stepper to match UI)
+      const validEvents = events
+        .filter(e => {
+          const s = (e.status || '').toLowerCase();
+          const eventDate = new Date(e.date);
+          return ['live', 'completed', 'finished'].includes(s) || eventDate < now;
+        })
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      if (validEvents.length > 0) {
+        const latestEvent = validEvents[0]; // The one closest to now (in the past)
+
+        // Switch if no ID selected OR current ID is not in valid list
+        const currentIsValid = validEvents.some(e => e.id === selected_period_id);
+
+        if (!selected_period_id || !currentIsValid) {
+          console.log('[RANKING] Auto-selecting Latest Event:', latestEvent.title);
+          set_selected_period_id(latestEvent.id);
+        }
+      }
+    }
+  }, [ranking_filter, events, selected_period_id, set_selected_period_id]);
 
   const handle_period_select = (id: string | null) => {
     set_selected_period_id(id);
@@ -66,34 +197,51 @@ const Ranking: React.FC = () => {
     let list: { id: string, label: string, sub?: string }[] = [];
 
     if (ranking_filter === 'week') {
-      // Completed events, sorted by Date ASCENDING (Oldest -> Newest)
-      list = events.filter(e => e.status === 'completed')
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .map(e => ({ id: e.id, label: e.title, sub: e.subtitle }));
+      if (!events || events.length === 0) return [];
+
+      const now = new Date();
+
+      // 1. Filter: Include if status is LIVE/DONE OR if date is in the past
+      // This ensures we see events that happened but weren't marked as CLOSED in DB
+      const visibleEvents = events.filter(e => {
+        const s = (e.status || '').toLowerCase();
+        const eventDate = new Date(e.date);
+        return ['live', 'completed', 'finished'].includes(s) || eventDate < now;
+      });
+
+      // 2. Sort: Most Recent First (Newest to Oldest)
+      // Index 0 will be the event closest to "Now" (The last one that happened)
+      list = visibleEvents
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .map(e => ({
+          id: e.id,
+          label: e.title,
+          sub: new Date(e.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) + ((e.status || '').toLowerCase() === 'live' ? ' • AO VIVO' : '')
+        }));
     } else if (ranking_filter === 'month') {
+      // Dynamic Filter Logic: Ensure IDs are sending "YYYY-MM"
       list = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"]
         .map((label, i) => ({
-          id: `2026-${(i + 1).toString().padStart(2, '0')}`,
+          id: `2026-${(i + 1).toString().padStart(2, '0')}`, // Format: 2026-01, 2026-02...
           label: label,
           sub: '2026'
         }));
-    } else { // year or all
+    } else if (ranking_filter === 'year') {
       const current_year = new Date().getFullYear().toString();
       list = [
-        { id: current_year, label: current_year, sub: 'Anual' },
-        { id: 'all', label: 'Geral', sub: '' }
+        { id: current_year, label: current_year, sub: 'Anual' } // Format: 2026
       ];
+    } else {
+      // Fallback: Default to Year if state is somehow 'all'
+      const current_year = new Date().getFullYear().toString();
+      list = [{ id: current_year, label: current_year, sub: 'Anual' }];
     }
 
-    // Current Index
-    // Default to the LAST item (Newest/Current) if nothing selected
+    // Current Index - Default Logic
     const current_id = selected_period_id || list[list.length - 1]?.id;
     const current_index = list.findIndex(i => i.id === current_id);
 
     // Navigation:
-    // Left Arrow (Previous) -> Index - 1 (Older)
-    // Right Arrow (Next) -> Index + 1 (Newer)
-
     const prev_item = current_index > 0 ? list[current_index - 1] : null;
     const next_item = current_index < list.length - 1 ? list[current_index + 1] : null;
     const current_item = list[current_index] || list[list.length - 1];
@@ -152,12 +300,8 @@ const Ranking: React.FC = () => {
   // Get the points based on current filter for display in podium
   const get_filtered_points = (user: any) => {
     if (!user) return 0;
-    switch (ranking_filter) {
-      case 'week': return user.points || 0;
-      case 'month': return user.monthly_points || 0;
-      case 'year': return user.yearly_points || 0;
-      default: return user.points || 0;
-    }
+    // TRUST THE BACKEND: The 'points' field contains the sum calculated for the selected period.
+    return user.points || 0;
   };
 
   const period_label = {
@@ -165,60 +309,31 @@ const Ranking: React.FC = () => {
     'month': 'Performance Mensal',
     'year': 'Performance Anual',
     'all': 'Ranking Geral'
-  }[ranking_filter as string || 'all'] || 'Ranking';
+  }[ranking_filter as string || 'year'] || 'Ranking';
 
-  const render_performance = (user: any, context: 'podium' | 'table' = 'podium') => {
-    if (ranking_filter === 'week') return null;
+  const render_podium_delta = (user: any) => {
+    const delta = getDisplayDelta(user);
 
-    const delta = ranking_filter === 'month' ? user.monthly_rank_delta : user.yearly_rank_delta;
+    // Hide if 0 or undefined
+    if (!delta || delta === 0) return null;
 
-    // Sizing config based on context
-    const is_table = context === 'table';
-    const circle_size = is_table ? "size-[26px] sm:size-12" : "size-5 sm:size-10"; // Table: ~25% larger (20px -> 26px)
-    const icon_size = is_table ? "text-[15px] sm:text-2xl" : "text-[12px] sm:text-lg"; // Table: Larger icon
-    const text_size = is_table ? "text-[15px] sm:text-2xl" : "text-[12px] sm:text-xl"; // Table: Larger text
+    const isPositive = delta > 0;
+    const colorClass = isPositive ? 'text-[#4ade80]' : 'text-red-500'; // Match List Colors
+    const iconName = isPositive ? 'trending_up' : 'trending_down';
+    const sign = isPositive ? '+' : '';
 
-    if (delta === undefined) return (
-      <div className={`flex items-center gap-0.5 text-white/20 font-mono tracking-tighter ${is_table ? 'text-[10px]' : 'text-[9px]'}`}>
-        <span className={`material-symbols-outlined ${is_table ? 'text-[14px]' : 'text-[12px]'}`}>horizontal_rule</span>
-        <span>NOVO</span>
+    return (
+      <div className={`flex items-center justify-center gap-1 mt-1 ${colorClass}`}>
+        {/* Icon */}
+        <span className="material-symbols-outlined text-[16px] font-bold">
+          {iconName}
+        </span>
+        {/* Number */}
+        <span className="font-mono text-sm font-bold leading-none pt-0.5">
+          {sign}{delta}
+        </span>
       </div>
     );
-
-    if (delta > 0) {
-      return (
-        <div className="flex items-center gap-1 text-green-400 group-hover:text-green-300 transition-colors">
-          <div className={`${circle_size} rounded-full bg-green-500/10 flex items-center justify-center border border-green-500/20`}>
-            <span className={`material-symbols-outlined ${icon_size} font-bold`}>trending_up</span>
-          </div>
-          <div className="flex flex-col -space-y-0.5">
-            <span className={`font-display font-black ${text_size}`}>+{delta}</span>
-          </div>
-        </div>
-      );
-    } else if (delta < 0) {
-      return (
-        <div className="flex items-center gap-1 text-red-500 group-hover:text-red-400 transition-colors">
-          <div className={`${circle_size} rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20`}>
-            <span className={`material-symbols-outlined ${icon_size} font-bold`}>trending_down</span>
-          </div>
-          <div className="flex flex-col -space-y-0.5">
-            <span className={`font-display font-black ${text_size}`}>{delta}</span>
-          </div>
-        </div>
-      );
-    } else {
-      return (
-        <div className="flex items-center gap-1 text-white/20 transition-colors">
-          <div className={`${circle_size} rounded-full bg-white/5 flex items-center justify-center border border-white/10`}>
-            <span className={`material-symbols-outlined ${icon_size}`}>drag_handle</span>
-          </div>
-          <div className="flex flex-col -space-y-0.5">
-            <span className={`font-display font-black ${text_size}`}>--</span>
-          </div>
-        </div>
-      );
-    }
   };
 
   const render_user_row = (user: any, index: number, is_highlight: boolean = false) => {
@@ -236,15 +351,43 @@ const Ranking: React.FC = () => {
       >
         {is_current_user && !is_highlight && <div className="absolute left-0 top-0 bottom-0 w-0.5 sm:w-1 bg-primary shadow-[0_0_20px_rgba(236,19,19,0.5)]"></div>}
 
-        {/* Rank Column */}
-        <div className="col-span-2 sm:col-span-1 flex justify-center">
-          <div className={`font-display text-xl sm:text-3xl font-black italic tracking-tighter transition-all ${is_highlight || is_current_user ? 'text-primary scale-110 drop-shadow-[0_0_10px_rgba(236,19,19,0.2)]' : 'text-white/90 group-hover:text-primary group-hover:scale-105'}`}>
+        {/* Rank Column (Just Number) */}
+        <div className="col-span-2 sm:col-span-1 flex justify-center h-full items-center sm:border-r border-white/5">
+          <span className={`font-display text-xl sm:text-3xl font-black italic tracking-tighter leading-none transition-all ${is_highlight || is_current_user ? 'text-primary scale-110 drop-shadow-[0_0_10px_rgba(236,19,19,0.2)]' : 'text-white/90 group-hover:text-primary group-hover:scale-105'}`}>
             {rank}
-          </div>
+          </span>
         </div>
 
-        <div className="flex col-span-2 sm:col-span-3 justify-center sm:border-l border-white/5 sm:h-12 items-center shrink-0">
-          {ranking_filter !== 'week' && <div className="origin-center">{render_performance(user, 'table')}</div>}
+        {/* Progress Column (Trend Style) */}
+        <div className="col-span-2 sm:col-span-3 flex justify-center items-center h-full sm:border-r border-white/5">
+          <div className="flex items-center justify-center w-12 mr-2">
+            {(() => {
+              const delta = getDisplayDelta(user);
+
+              // NEUTRAL
+              if (!delta || delta === 0) {
+                return <span className="text-white/20 font-mono text-xs">-</span>;
+              }
+
+              const isPositive = delta > 0;
+              const colorClass = isPositive ? 'text-[#4ade80]' : 'text-red-500'; // Green-400 equivalent
+              const iconName = isPositive ? 'trending_up' : 'trending_down';
+              const sign = isPositive ? '+' : '';
+
+              return (
+                <div className={`flex items-center gap-1 ${colorClass}`}>
+                  {/* Icon */}
+                  <span className="material-symbols-outlined text-[16px] sm:text-[18px]">
+                    {iconName}
+                  </span>
+                  {/* Number */}
+                  <span className="font-mono font-medium text-sm sm:text-base leading-none pt-0.5">
+                    {sign}{delta}
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
         </div>
 
         {/* Competitor Column - Fixed Span 6/5 regardless of filter */}
@@ -297,7 +440,7 @@ const Ranking: React.FC = () => {
                 ].map((btn) => (
                   <button
                     key={btn.id}
-                    onClick={() => set_ranking_filter(btn.id as any)}
+                    onClick={() => handleFilterChange(btn.id as any)}
                     className={`flex-1 py-2 text-xs sm:text-sm font-condensed uppercase font-black tracking-widest transition-all rounded-md relative z-10 ${ranking_filter === btn.id ? 'bg-primary text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
                   >
                     {btn.label}
@@ -321,67 +464,79 @@ const Ranking: React.FC = () => {
         >
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent z-10 transition-opacity"></div>
 
-          {/* NAVIGATION ARROWS OVERLAY */}
-          <div className="absolute inset-0 z-30 pointer-events-none flex justify-between items-center px-1">
-            <button
-              disabled={!prev_item}
-              onClick={(e) => { e.stopPropagation(); prev_item && handle_period_select(prev_item.id); }}
-              className={`size-12 flex items-center justify-center rounded-full pointer-events-auto transition-all active:scale-95 ${prev_item ? 'text-white/50 hover:bg-black/40 hover:text-white' : 'text-white/5 opacity-0'}`}
-            >
-              <span className="material-symbols-outlined text-3xl drop-shadow-lg">chevron_left</span>
-            </button>
-            <button
-              disabled={!next_item}
-              onClick={(e) => { e.stopPropagation(); next_item && handle_period_select(next_item.id); }}
-              className={`size-12 flex items-center justify-center rounded-full pointer-events-auto transition-all active:scale-95 ${next_item ? 'text-white/50 hover:bg-black/40 hover:text-white' : 'text-white/5 opacity-0'}`}
-            >
-              <span className="material-symbols-outlined text-3xl drop-shadow-lg">chevron_right</span>
-            </button>
-          </div>
+          {/* EMPTY STATE CHECK */}
+          {full_list.length === 0 && ranking_filter === 'week' ? (
+            <div className="absolute inset-0 flex flex-col justify-center items-center z-30 pointer-events-none">
+              <div className="flex items-center gap-2 text-white/40">
+                <span className="material-symbols-outlined text-xl">event_busy</span>
+                <span className="font-condensed font-bold uppercase tracking-widest text-sm">Nenhum evento com pontuação</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* NAVIGATION ARROWS OVERLAY */}
+              <div className="absolute inset-0 z-30 pointer-events-none flex justify-between items-center px-1">
+                <button
+                  disabled={!prev_item}
+                  onClick={(e) => { e.stopPropagation(); prev_item && handle_period_select(prev_item.id); }}
+                  className={`size-12 flex items-center justify-center rounded-full pointer-events-auto transition-all active:scale-95 ${prev_item ? 'text-white/50 hover:bg-black/40 hover:text-white' : 'text-white/5 opacity-0'}`}
+                >
+                  <span className="material-symbols-outlined text-3xl drop-shadow-lg">chevron_left</span>
+                </button>
+                <button
+                  disabled={!next_item}
+                  onClick={(e) => { e.stopPropagation(); next_item && handle_period_select(next_item.id); }}
+                  className={`size-12 flex items-center justify-center rounded-full pointer-events-auto transition-all active:scale-95 ${next_item ? 'text-white/50 hover:bg-black/40 hover:text-white' : 'text-white/5 opacity-0'}`}
+                >
+                  <span className="material-symbols-outlined text-3xl drop-shadow-lg">chevron_right</span>
+                </button>
+              </div>
 
-          {/* CLICKABLE AREA TRIGGER FOR FULL SELECTION */}
-          <div
-            className="absolute inset-0 z-20 cursor-pointer active:bg-white/5 transition-colors"
-            onClick={() => set_show_full_selector(true)}
-          >
-            {ranking_filter === 'week' ? (
-              (() => {
-                const event = events.find(e => e.id === current_item?.id);
-                return event ? (
+              {/* CLICKABLE AREA TRIGGER FOR FULL SELECTION */}
+              <div
+                className="absolute inset-0 z-20 cursor-pointer active:bg-white/5 transition-colors"
+                onClick={() => set_show_full_selector(true)}
+              >
+                {ranking_filter === 'week' ? (
+                  (() => {
+                    const event = events.find(e => e.id === current_item?.id);
+                    return event ? (
+                      <>
+                        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/80 via-black/50 to-transparent"></div> {/* Darken bg for text */}
+                        <img src={event.banner_url} className="absolute inset-0 w-full h-full object-cover grayscale opacity-30 group-hover:scale-105 transition-transform duration-700 -z-20" alt="Event Banner" />
+                        <div className="absolute inset-0 flex flex-col justify-center items-center px-16 text-center">
+                          <p className="font-condensed text-[10px] text-primary uppercase font-bold tracking-widest mb-0.5 flex items-center gap-1">
+                            Visualizando Ranking <span className="material-symbols-outlined text-[10px]">expand_more</span>
+                          </p>
+                          <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300 w-full px-2" key={current_item?.id}>
+                            <h4 className="font-condensed text-xl sm:text-2xl font-black text-white italic uppercase leading-none drop-shadow-md truncate w-full max-w-[95%] text-center">{event.title}</h4>
+                            <span className="text-white/60 text-[10px] sm:text-xs uppercase tracking-wider">{current_item?.sub || event.subtitle}</span>{/* Use sub from get_stepper_data if available */}
+                          </div>
+                        </div>
+                      </>
+                    ) : null;
+                  })()
+                ) : (
                   <>
-                    <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/80 via-black/50 to-transparent"></div> {/* Darken bg for text */}
-                    <img src={event.banner_url} className="absolute inset-0 w-full h-full object-cover grayscale opacity-30 group-hover:scale-105 transition-transform duration-700 -z-20" alt="Event Banner" />
+                    <div className="absolute inset-0 bg-[#1a0c0c] flex items-center justify-center -z-10 overflow-hidden group-hover:bg-[#2a1212] transition-colors">
+                      <span className="material-symbols-outlined text-[80px] text-white/[0.02] absolute rotate-12 -right-10">history_edu</span>
+                    </div>
                     <div className="absolute inset-0 flex flex-col justify-center items-center px-16 text-center">
                       <p className="font-condensed text-[10px] text-primary uppercase font-bold tracking-widest mb-0.5 flex items-center gap-1">
-                        Visualizando Ranking <span className="material-symbols-outlined text-[10px]">expand_more</span>
+                        {ranking_filter === 'month' ? 'Ranking Mensal' : 'Ranking Anual'} <span className="material-symbols-outlined text-[10px]">expand_more</span>
                       </p>
                       <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300 w-full px-2" key={current_item?.id}>
-                        <h4 className="font-condensed text-xl sm:text-2xl font-black text-white italic uppercase leading-none drop-shadow-md truncate w-full max-w-[95%] text-center">{event.title}</h4>
-                        <span className="text-white/60 text-[10px] sm:text-xs uppercase tracking-wider">{event.subtitle}</span>
+                        <h4 className="font-condensed text-xl sm:text-2xl font-black text-white italic uppercase leading-none drop-shadow-md w-full text-center">
+                          {current_item?.label}
+                        </h4>
+                        <span className="text-white/60 text-[10px] sm:text-xs uppercase tracking-wider">{current_item?.sub}</span>
                       </div>
                     </div>
                   </>
-                ) : null;
-              })()
-            ) : (
-              <>
-                <div className="absolute inset-0 bg-[#1a0c0c] flex items-center justify-center -z-10 overflow-hidden group-hover:bg-[#2a1212] transition-colors">
-                  <span className="material-symbols-outlined text-[80px] text-white/[0.02] absolute rotate-12 -right-10">history_edu</span>
-                </div>
-                <div className="absolute inset-0 flex flex-col justify-center items-center px-16 text-center">
-                  <p className="font-condensed text-[10px] text-primary uppercase font-bold tracking-widest mb-0.5 flex items-center gap-1">
-                    {ranking_filter === 'month' ? 'Ranking Mensal' : 'Ranking Anual'} <span className="material-symbols-outlined text-[10px]">expand_more</span>
-                  </p>
-                  <div className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300 w-full px-2" key={current_item?.id}>
-                    <h4 className="font-condensed text-xl sm:text-2xl font-black text-white italic uppercase leading-none drop-shadow-md w-full text-center">
-                      {current_item?.label}
-                    </h4>
-                    <span className="text-white/60 text-[10px] sm:text-xs uppercase tracking-wider">{current_item?.sub}</span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
 
@@ -430,7 +585,7 @@ const Ranking: React.FC = () => {
                 <div className="text-center z-10 w-full mt-2">
                   <h4 className="font-condensed text-xs md:text-lg uppercase tracking-tighter text-white font-black leading-none mb-1 truncate px-1">{second.name}</h4>
                   <div className="border-t border-white/5 pt-1 md:pt-2 mt-1 md:mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-0 leading-none">
-                    {ranking_filter !== 'week' && <div className="scale-90 origin-center">{render_performance(second, 'podium')}</div>}
+                    <div className="scale-90 origin-center">{render_podium_delta(second)}</div>
                     <div className="font-display font-black text-lg md:text-2xl text-silver leading-none tracking-tight">
                       {get_filtered_points(second)}<span className="text-[9px] md:text-sm opacity-50 ml-0.5">Pts</span>
                     </div>
@@ -460,7 +615,7 @@ const Ranking: React.FC = () => {
                   <div className="font-mono text-[5px] md:text-[7px] text-gold/60 uppercase tracking-[0.4em] font-black mt-0.5 hidden sm:block">PODER_MÁXIMO</div>
                   <div className="border-t border-white/10 pt-2 md:pt-3 mt-1 md:mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-0 leading-none">
                     <div className="text-[9px] text-white/30 uppercase tracking-[0.5em] font-black hidden md:block absolute -top-3 left-1/2 -translate-x-1/2 w-full text-center">Ranking_Oficial</div>
-                    {ranking_filter !== 'week' && <div className="">{render_performance(first, 'podium')}</div>}
+                    <div className="">{render_podium_delta(first)}</div>
                     <div className="font-display font-black text-2xl md:text-5xl text-gold leading-none tracking-tight">
                       {get_filtered_points(first)}<span className="text-[10px] md:text-sm opacity-50 ml-1">Pts</span>
                     </div>
@@ -487,7 +642,7 @@ const Ranking: React.FC = () => {
                 <div className="text-center z-10 w-full mt-2">
                   <h4 className="font-condensed text-xs md:text-lg uppercase tracking-tighter text-white font-black leading-none mb-1 truncate px-1">{third.name}</h4>
                   <div className="border-t border-white/5 pt-1 md:pt-2 mt-1 md:mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-0 leading-none">
-                    {ranking_filter !== 'week' && <div className="scale-90 origin-center">{render_performance(third, 'podium')}</div>}
+                    <div className="scale-90 origin-center">{render_podium_delta(third)}</div>
                     <div className="font-display font-black text-lg md:text-2xl text-bronze leading-none tracking-tight">
                       {get_filtered_points(third)}<span className="text-[9px] md:text-sm opacity-50 ml-0.5">Pts</span>
                     </div>
@@ -545,7 +700,7 @@ const Ranking: React.FC = () => {
               {/* Header Grid */}
               <div className="grid grid-cols-12 gap-0 px-2 sm:px-8 py-2 sm:py-3 bg-black/80 border-b border-primary/20 text-[10px] sm:text-sm font-condensed text-white/40 uppercase tracking-[0.2em] sm:tracking-[0.4em] font-black z-30 sticky top-0 backdrop-blur-xl items-center">
                 <div className="col-span-2 sm:col-span-1 text-center sm:border-r border-white/5">Rank</div>
-                <div className="col-span-2 sm:col-span-3 text-center sm:border-r border-white/5 text-primary/60">{ranking_filter !== 'week' ? 'Prog' : ''}</div>
+                <div className="col-span-2 sm:col-span-3 text-center sm:border-r border-white/5 text-primary/60">{ranking_filter !== 'week' ? 'TREND' : ''}</div>
                 <div className="col-span-6 sm:col-span-5 flex items-center justify-start pl-4 sm:pl-8 border-r border-white/5 uppercase">Competidor</div>
                 <div className="col-span-2 sm:col-span-3 text-center sm:text-right pr-0 sm:pr-6 uppercase tracking-[0.2em] sm:tracking-[0.5em] font-black text-white/70">Pts</div>
               </div>

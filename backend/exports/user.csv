@@ -1,0 +1,12 @@
+id,email,password_hash,name,avatar_url,created_at,google_id,apple_subject_id,youtube_channel_id,isYoutubeMember,lastYoutubeSync,points,monthly_points,yearly_points,monthly_rank_delta,role
+1c958c3a-428f-4bce-9bac-ed7253df297b,test04@arenamma.app,$2b$10$4njGT8H2t6QnSO9zXp/IOOnXveVdPR/lN9l6BOOu1amzjlvJzBqH.,Test User 04,,2026-02-06T01:03:16.561Z,,,,false,,540,540,540,0,MEMBER
+1b9caa2b-c224-425c-a7a7-ec5cc19cae57,test08@arenamma.app,$2b$10$4njGT8H2t6QnSO9zXp/IOOnXveVdPR/lN9l6BOOu1amzjlvJzBqH.,Test User 08,,2026-02-06T01:03:17.245Z,,,,false,,140,140,140,0,MEMBER
+47046fc5-2993-4e8f-8224-50a18dafef5e,test10@arenamma.app,$2b$10$4njGT8H2t6QnSO9zXp/IOOnXveVdPR/lN9l6BOOu1amzjlvJzBqH.,Test User 10,,2026-02-06T01:03:17.592Z,,,,false,,270,270,270,0,MEMBER
+253f3d85-38f2-419d-aad7-81db772f8670,test01@arenamma.app,$2b$10$4njGT8H2t6QnSO9zXp/IOOnXveVdPR/lN9l6BOOu1amzjlvJzBqH.,Test User 01,,2026-02-06T01:03:16.038Z,,,,false,,740,740,740,0,MEMBER
+569f572b-2504-40f8-bf58-6a19681b8daa,test03@arenamma.app,$2b$10$4njGT8H2t6QnSO9zXp/IOOnXveVdPR/lN9l6BOOu1amzjlvJzBqH.,Test User 03,,2026-02-06T01:03:16.392Z,,,,false,,340,340,340,0,MEMBER
+19bd5a67-250f-4ada-90d9-8d752a0322d1,test05@arenamma.app,$2b$10$4njGT8H2t6QnSO9zXp/IOOnXveVdPR/lN9l6BOOu1amzjlvJzBqH.,Test User 05,,2026-02-06T01:03:16.726Z,,,,false,,390,390,390,0,MEMBER
+a0ddc129-1d9d-48a5-8085-5a418e1d45fa,test06@arenamma.app,$2b$10$4njGT8H2t6QnSO9zXp/IOOnXveVdPR/lN9l6BOOu1amzjlvJzBqH.,Test User 06,,2026-02-06T01:03:16.910Z,,,,false,,260,260,260,0,MEMBER
+7b9d0f71-c372-45e5-945e-731b255d9125,test07@arenamma.app,$2b$10$4njGT8H2t6QnSO9zXp/IOOnXveVdPR/lN9l6BOOu1amzjlvJzBqH.,Test User 07,,2026-02-06T01:03:17.080Z,,,,false,,230,230,230,0,MEMBER
+fcdfda84-a52e-4429-bb86-f43ba29052cf,test02@arenamma.app,$2b$10$4njGT8H2t6QnSO9zXp/IOOnXveVdPR/lN9l6BOOu1amzjlvJzBqH.,Test User 02,,2026-02-06T01:03:16.224Z,,,,false,,1590,1590,1590,0,MEMBER
+user_andre,andre@arena.com,$2b$06$c3R.v0uh69qJKLl0.f.k2e5uWr5FVlGIZ/Bs833LqsvWjRI6ceLqC,André,https://ui-avatars.com/api/?name=Andre,2026-02-05T04:37:15.378Z,,,,false,,2930,2030,2830,2,OWNER
+6e699b17-0ff3-427d-8100-f70a1499974f,test09@arenamma.app,$2b$10$4njGT8H2t6QnSO9zXp/IOOnXveVdPR/lN9l6BOOu1amzjlvJzBqH.,Test User 09,,2026-02-06T01:03:17.422Z,,,,false,,1590,1590,1590,0,MEMBER

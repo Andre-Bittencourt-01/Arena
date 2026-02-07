@@ -26,6 +26,7 @@ export interface User {
     yearly_points: number;
     monthly_rank_delta: number;
     yearly_rank_delta: number;
+    rank_delta?: number;
     youtube_channel_id: string | null;
     last_youtube_sync: string | null;
 }
@@ -129,6 +130,7 @@ export interface League {
     description: string | null;
     invite_code: string;
     logo_url: string | null;
+    is_system: boolean;
     created_at: string;
     owner_id: string;
     members_count?: number;

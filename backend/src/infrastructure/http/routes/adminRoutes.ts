@@ -12,6 +12,7 @@ import { verifyAdmin, verifyAdminSecret } from "../../../infrastructure/http/mid
 
 import { DeleteEventController } from "../../../presentation/controllers/DeleteEventController.js";
 import { UpdateFightsOrderController } from "../../../presentation/controllers/UpdateFightsOrderController.js";
+import { AdminController } from "../../../presentation/controllers/AdminController.js";
 
 const adminEventController = new AdminEventController();
 const createFighterController = new CreateFighterController();
@@ -22,7 +23,9 @@ const updateEventController = new UpdateEventController();
 const updateFightController = new UpdateFightController();
 const getAllEventsController = new GetAllEventsController();
 const deleteEventController = new DeleteEventController();
+
 const updateFightsOrderController = new UpdateFightsOrderController();
+const adminController = new AdminController();
 
 export async function adminRoutes(server: FastifyInstance) {
     // All routes in this file require JWT and Admin role
@@ -31,6 +34,9 @@ export async function adminRoutes(server: FastifyInstance) {
 
     // --- FIGHT REORDER (Static route must come before dynamic :id) ---
     server.patch('/fights/reorder', (req, reply) => updateFightsOrderController.handle(req, reply));
+
+    // --- SYSTEM SNAPSHOTS ---
+    server.post('/snapshot', (req, reply) => adminController.createSnapshot(req as any, reply));
 
     // Standard Admin CRUD Routes
     server.post('/events', (req, reply) => createEventController.handle(req, reply));

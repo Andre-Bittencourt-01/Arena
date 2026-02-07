@@ -162,11 +162,20 @@ export class ApiDataService implements IDataService {
 
     // --- LEADERBOARD & USERS ---
     async get_leaderboard(period?: RankingPeriod, period_id?: string): Promise<User[]> {
-        // Se for week, passamos o period_id como query param para a rota global
-        const url = (period === 'week' && period_id)
-            ? `/leaderboard?period=week&eventId=${period_id}`
-            : `/leaderboard?period=${period || 'all'}`;
+        let url = `/leagues/global-league/leaderboard`;
 
+        let safe_id = period_id || '';
+
+        // Backend Crash Prevention: Ensure Year is only 4 chars
+        if (period === 'year' && safe_id.length > 4) {
+            safe_id = safe_id.substring(0, 4);
+        }
+
+        if (period === 'week') url += `?eventId=${safe_id}`;
+        else if (period === 'month') url += `?month=${safe_id}`;
+        else if (period === 'year') url += `?year=${safe_id}`;
+
+        console.log(`[API] Fetching Leaderboard: ${url}`);
         return this.fetch<User[]>(url);
     }
 
